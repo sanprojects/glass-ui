@@ -8,7 +8,7 @@ Use --all to emit the whole pack instead (about 2100 icons).
 import re, sys, os, glob
 
 LUCIDE = os.environ.get('LUCIDE', '/tmp/lucide/node_modules/lucide-static/icons')
-ROOT = '/home/claude/web'
+ROOT = os.environ.get('ROOT', '.')
 SOURCES = [ROOT + '/demo.tpl.html', ROOT + '/pub/glass-ui.js', ROOT + '/pub/glass-ui.css']
 EXTRA = ['info', 'check', 'triangle-alert', 'x', 'chevron-down', 'chevron-left', 'chevron-right', 'eye', 'eye-off', 'minus', 'plus', 'circle-help',
          # a small core of common UI icons, so the pack is useful beyond what the demo happens to use
