@@ -1,0 +1,27 @@
+/* Glass UI: light theme. Load AFTER glass-ui.css:
+ *   <link rel="stylesheet" href="glass-ui.css"><link rel="stylesheet" href="glass-ui-light.css">
+ * Activate with <html data-theme="light"> or Glass.setTheme('light' | 'dark' | 'auto'). Without this file the kit is dark only. */
+[data-theme="light"] {
+  color-scheme: light;
+  --g-success-text: #12803f; --g-danger-text: #c4352d;
+  --g-ov: 0,0,0; --g-ink: #1C1C1E; --g-ink-fg: #fff;
+  --g-text: rgba(0,0,0,.88); --g-text-2: rgba(0,0,0,.70); --g-text-3: rgba(0,0,0,.56);
+  --g-fill: rgba(255,255,255,.42); --g-fill-strong: rgba(255,255,255,.58); --g-fill-tip: rgba(250,250,252,.62);
+  --g-fill-hover: rgba(255,255,255,.55); --g-fill-selected: rgba(255,255,255,.72);
+  --g-fill-recessed: rgba(0,0,0,.07); --g-line: rgba(0,0,0,.09);
+  --g-rim: inset -.5px .5px .5px rgba(255,255,255,.95), inset 0 .5px 6px rgba(255,255,255,.5);
+  --g-shadow: 0 24px 30px rgba(0,0,0,.07); --g-shadow-float: 0 24px 60px rgba(0,0,0,.16);
+  --g-recess: inset 0 .5px 1px rgba(0,0,0,.18), inset 0 -.5px 0 rgba(255,255,255,.75);
+  --g-raised: inset 0 .5px 0 rgba(255,255,255,.95), inset 0 -.5px 0 rgba(0,0,0,.12);
+  --g-field-focus-bg: rgba(255,255,255,.7);
+  --g-field-focus: inset 0 1px 1px rgba(0,0,0,.08), inset 0 0 0 1px rgba(255,255,255,.9);
+  --g-focus: 0 0 0 2px rgba(255,255,255,.95), 0 0 0 4px rgba(0,0,0,.7);
+}
+[data-theme="light"] .g-scene, [data-theme="light"] input[type="date"], [data-theme="light"] input[type="time"], [data-theme="light"] input[type="datetime-local"], [data-theme="light"] input[type="month"] { color-scheme: light; }
+[data-theme="light"] select:not([multiple]) { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-opacity='.62' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); }
+[data-theme="light"] .g-badge--warning { color: #8a5200; }
+[data-theme="light"] .g-badge--danger { color: #a3261f; }
+
+/* Scene backgrounds in light */
+[data-theme="light"] .g-scene { background-color: #dfe8f5; }
+[data-theme="light"] .g-scene--gradient { background: radial-gradient(60% 50% at 20% 15%, #9cc4ff 0%, transparent 60%), radial-gradient(50% 50% at 85% 20%, #ffc2d9 0%, transparent 60%), radial-gradient(60% 60% at 70% 90%, #9be8dc 0%, transparent 60%), #e8eefb; }
