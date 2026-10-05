@@ -5,7 +5,7 @@ import { chromium } from 'playwright';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-const page_url = 'file://' + path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../Glass-UI.html');
+const page_url = 'file://' + path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../index.html');
 let browser, page; const errors = [];
 
 before(async () => {

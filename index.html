@@ -1,0 +1,762 @@
+<title>Glass UI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Onest:wght@400;500;600;700&family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="glass-ui.css">
+<link rel="stylesheet" href="glass-ui-light.css">
+<link rel="stylesheet" href="glass-icons.css">
+<link rel="stylesheet" href="glass-appearance.css">
+<style>
+/* ---- demo page only ---- */
+:root{ color-scheme: dark; }
+html,body{ overflow-x:clip; max-width:100%; }
+body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-family:var(--g-font); font-size:16px; line-height:1.5; }
+.scene{ position:fixed; inset:-80px; z-index:-1; will-change:transform; transform:translateZ(0); contain:strict; background:#1d2b52 center/cover no-repeat; transition:opacity .3s; }
+.scene::after{ content:""; position:absolute; inset:0; background:linear-gradient(rgba(8,12,28,.18),rgba(8,12,28,.34)); }
+.scene[data-scene="custom"]{ background-size:cover; background-position:center; } .scene[data-scene="gradient"]{ background:
+  radial-gradient(60% 50% at 18% 12%,#5ea0ff 0%,transparent 60%),
+  radial-gradient(50% 50% at 88% 18%,#ff9ec2 0%,transparent 60%),
+  radial-gradient(60% 60% at 72% 92%,#46d1c1 0%,transparent 62%),
+  radial-gradient(40% 40% at 10% 85%,#a78bfa 0%,transparent 60%),#1d2b52; }
+:root[data-theme="light"]{ color-scheme: light; } [data-theme="light"] body{ background:#dfe8f5; color:var(--g-text); }
+[data-theme="light"] .scene{ background-color:#e8eefb; } [data-theme="light"] .scene::after{ background:linear-gradient(rgba(255,255,255,.05),rgba(255,255,255,.12)); }
+[data-theme="light"] .scene[data-scene="gradient"]{ background:
+  radial-gradient(60% 50% at 18% 12%,#9cc4ff 0%,transparent 60%),
+  radial-gradient(50% 50% at 88% 18%,#ffc2d9 0%,transparent 60%),
+  radial-gradient(60% 60% at 72% 92%,#9be8dc 0%,transparent 62%),
+  radial-gradient(40% 40% at 10% 85%,#c9b8f7 0%,transparent 60%),#e8eefb; }
+.scene .g-liquid{display:none} .scene[data-scene="liquid"] .g-liquid[data-for="liquid"]{display:block}
+.scene[data-scene="aerial"]{background-image:url(scenes/aerial.webp);}
+.bg-row .sw-btn[data-scene="aerial"]{--sw:url(scenes/aerial.webp) center/cover;}
+.scene[data-scene="tower"]{background-image:url(scenes/tower.webp);}
+.bg-row .sw-btn[data-scene="tower"]{--sw:url(scenes/tower.webp) center/cover;}
+.scene[data-scene="grass"]{background-image:url(scenes/grass.webp);}
+.bg-row .sw-btn[data-scene="grass"]{--sw:url(scenes/grass.webp) center/cover;}
+.scene[data-scene="water"]{background-image:url(scenes/water.webp);}
+.bg-row .sw-btn[data-scene="water"]{--sw:url(scenes/water.webp) center/cover;}
+.scene[data-scene="dunes"]{background-image:url(scenes/dunes.webp);}
+.bg-row .sw-btn[data-scene="dunes"]{--sw:url(scenes/dunes.webp) center/cover;}
+
+.page{ width:100%; max-width:1120px; margin:0 auto; padding-inline:16px; padding-block:92px 80px; display:flex; flex-direction:column; gap:28px; }
+.nav-brand-dot{ width:22px; height:22px; border-radius:50%; background:conic-gradient(from 200deg,#fff,#0071E3,#9be7ff,#fff); box-shadow:inset 0 0 0 1px rgba(255,255,255,.5); }
+.hero{ padding:40px 8px 20px; display:flex; flex-direction:column; gap:18px; max-width:760px; }
+.hero > data{ align-self:flex-start; }
+.hero h1{ font-size:clamp(40px,7vw,72px); line-height:1.02; letter-spacing:-.03em; font-weight:700; margin:0; text-wrap:balance; }
+.hero p{ margin:0; font-size:19px; line-height:1.5; color:var(--g-text-2); max-width:56ch; }
+.sec{ padding:32px; border-radius:var(--g-radius-card); display:flex; flex-direction:column; gap:var(--g-gap); min-width:0; scroll-margin-top:100px; will-change:opacity; }
+.shell-frame{ width:min(100%,220px); aspect-ratio:9/16; border-radius:var(--g-radius-field); background:rgba(255,255,255,.92); display:flex; flex-direction:column; gap:12px; padding:20px; box-shadow:0 12px 40px rgba(0,0,0,.25); } .shell-frame span{ height:14px; border-radius:7px; background:rgba(20,30,50,.14); } .shell-frame span:first-child{ width:60%; } .shell-frame span:nth-child(2){ height:64px; border-radius:var(--g-radius-sm); }
+.m-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:var(--g-gap); }
+.m-item{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+.m-item h4{ margin-top:14px; } .m-item small{ display:block; margin:0; }
+.m-tile{ aspect-ratio:1; display:grid; place-items:center; border-radius:var(--g-radius-card); background:var(--g-fill-strong); box-shadow:var(--g-rim), var(--g-shadow); font-weight:600; font-size:17px; }
+.sec__head{ display:flex; flex-direction:column; gap:6px; }
+.sec__head h2{ margin:0; font-size:26px; letter-spacing:-.015em; font-weight:650; }
+.sec__head p{ margin:0; color:var(--g-text-2); font-size:15px; max-width:70ch; }
+.pair{ display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:var(--g-gap); align-items:start; }
+.pair > *{ min-width:0; }
+.icon-grid{ display:grid; grid-template-columns:repeat(auto-fill,var(--g-h-sm)); gap:var(--g-gap); }
+.demo{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--g-gap); min-width:0; }
+.demo.col{ flex-direction:column; flex-wrap:nowrap; align-items:stretch; }
+.demo.grid2{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr)); align-items:start; }
+.code{ position:relative; min-width:0; border-radius:20px; background:rgba(0,0,0,.30); box-shadow:inset 0 1px 1px rgba(0,0,0,.3),inset 0 -1px 0 rgba(255,255,255,.14); }
+.code pre{ margin:0; padding:18px 20px; overflow:auto; max-height:340px; font:12.5px/1.6 ui-monospace,monospace; color:rgba(255,255,255,.86); tab-size:2; }
+[data-theme="light"] .code{ background:rgba(255,255,255,.5); box-shadow:inset 0 1px 1px rgba(0,0,0,.14),inset 0 -1px 0 rgba(255,255,255,.7); } [data-theme="light"] .code pre{ color:rgba(0,0,0,.8); }
+.code pre .token.comment,.code pre .token.prolog,.code pre .token.doctype{ color:rgba(255,255,255,.62); font-style:italic; }
+.code pre .token.punctuation,.code pre .token.operator{ color:rgba(255,255,255,.58); }
+.code pre .token.tag,.code pre .token.selector,.code pre .token.keyword{ color:#8fc8ff; }
+.code pre .token.attr-name,.code pre .token.property,.code pre .token.function{ color:#ffd699; }
+.code pre .token.attr-value,.code pre .token.string,.code pre .token.attr-value .punctuation{ color:#9be0b0; }
+.code pre .token.number,.code pre .token.boolean,.code pre .token.entity,.code pre .token.atrule{ color:#ffb9b4; }
+.code .copy{ position:absolute; top:8px; right:8px; --h:30px; font-size:12px; padding:0 12px; }
+.code pre{ padding-right:20px; }
+.tokens{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)); gap:10px 24px; font:13px/1.5 ui-monospace,monospace; color:var(--g-text-2); }
+.tokens div{ display:flex; gap:10px; align-items:center; min-width:0; } .tokens b{ color:#fff; font-weight:500; } .sw{ width:18px; height:18px; border-radius:6px; flex:none; box-shadow:inset 0 0 0 1px rgba(255,255,255,.4); }
+.drow{ display:flex; align-items:center; flex-wrap:wrap; gap:var(--g-gap); }
+.spec-line{ margin:0; font-size:19px; line-height:1.5; color:var(--g-text-2); }
+.row-label{ font-size:12px; font-weight:650; letter-spacing:.08em; text-transform:uppercase; color:var(--g-text-3); width:100%; }
+.inline-code{ font:13px ui-monospace,monospace; padding:2px 7px; border-radius:7px; background:rgba(0,0,0,.28); }
+.ts{ display:flex; flex-direction:column; border-radius:24px; background:rgba(0,0,0,.16); box-shadow:inset 0 1px 1px rgba(0,0,0,.22),inset 0 -1px 0 rgba(255,255,255,.18); overflow:hidden; }
+.ts-row{ display:grid; grid-template-columns:200px minmax(0,1fr); gap:8px 24px; align-items:baseline; padding:20px 24px; }
+.ts-row + .ts-row{ border-top:1px solid rgba(255,255,255,.12); }
+.ts-row > :not(.ts-meta){ min-width:0; overflow-wrap:anywhere; }
+.ts-meta{ display:flex; flex-direction:column; gap:2px; font:12.5px/1.4 ui-monospace,monospace; color:var(--g-text-3); }
+.ts-meta b{ color:#fff; font-weight:500; }
+.ts-row :is(h1,h2,h3,h4){ color:#fff; }
+.specimen{ display:grid; grid-template-columns:auto minmax(0,1fr); gap:32px; align-items:center; padding:28px; border-radius:28px; background:var(--g-fill); box-shadow:var(--g-rim); }
+.specimen__aa{ font-size:clamp(72px,14vw,132px); line-height:.95; font-weight:700; letter-spacing:-.04em; display:flex; flex-direction:column; }
+.specimen__aa span{ color:var(--g-text-3); }
+.specimen__body{ display:flex; flex-direction:column; gap:12px; min-width:0; overflow-wrap:anywhere; }
+@media (max-width:860px){ .ts-row{ grid-template-columns:minmax(0,1fr); padding:18px 20px; } .specimen{ grid-template-columns:minmax(0,1fr); gap:16px; padding:22px; } }
+@media (prefers-reduced-motion:no-preference){ html{ scroll-behavior:smooth; } }
+@media (max-width:520px){ .hide-sm{display:none} nav{padding-left:16px;gap:8px} nav > a{font-size:15px} }
+@media (max-width:860px){ .pair{ grid-template-columns:minmax(0,1fr); } .sec{ padding:24px 20px; border-radius:var(--g-radius-card); } }
+</style>
+
+<div class="scene" id="scene" data-scene="aerial" aria-hidden="true"><div class="g-liquid" data-g-liquid data-for="liquid"><i></i><i></i><i></i><i></i></div></div>
+
+<div class="page g-root">
+  <nav data-position="fixed" aria-label="Sections">
+    <a href="#top"><span class="nav-brand-dot"></span>Glass UI</a>
+    <ul data-g-nav-auto data-sections=".sec[id]"></ul>
+  </nav>
+
+  <header class="hero" id="top">
+    <data data-dot>v1.0 · CSS + vanilla JS</data>
+    <h1>Glass components for the web</h1>
+    <p>One stylesheet and one small script. Plain HTML elements are styled inside a <span class="inline-code">g-root</span> container, so every snippet below is ready to paste. Glass needs something to blur, so place components over a photo, gradient or colour field.</p>
+    <div class="drow">
+      <data>glass-ui.css · 27 KB</data><data>glass-ui.js · 14 KB</data><data>No dependencies</data>
+    </div>
+  </header>
+
+  <section class="sec g-glass" id="start" data-title="Install">
+    <div class="sec__head"><h2>Install</h2><p>Add both files, then use the <span class="inline-code">g-</span> classes. Wrap your app (or any region) in <span class="inline-code">g-root</span> so box-sizing and the font apply. Interactive pieces start on their own; after inserting markup later, call <span class="inline-code">Glass.init(container)</span>.</p></div>
+    <div class="pair">
+      <div class="code"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0">&lt;link rel="stylesheet" href="glass-ui.css"&gt;
+&lt;script src="glass-ui.js" defer&gt;&lt;/script&gt;
+
+&lt;body class="g-root g-scene g-scene--gradient"&gt;
+  …your page…
+&lt;/body&gt;</pre></div>
+      <div class="code"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0">/* Retheme from your own CSS */
+:root {
+  --g-accent: #0071E3;   /* brand colour */
+  --g-accent-fg: #fff;   /* text on accent */
+  --g-blur: blur(30px) saturate(180%);
+  --g-font: 'Manrope', system-ui, sans-serif;   /* default */
+}</pre></div>
+    </div>
+  </section>
+
+  <section class="sec g-glass" id="buttons" data-title="Buttons">
+    <div class="sec__head"><h2>Buttons</h2><p>Five variants, three sizes, icon and block forms, plus toggle and removable small buttons. Hover scales up, press scales down, disabled drops to 38%.</p></div>
+    <div class="pair">
+      <div class="stack" style="display:flex;flex-direction:column;gap:var(--g-gap)">
+        <div class="demo" data-code>
+          <button data-variant="primary" data-icon="play">Play</button>
+          <button>Glass</button>
+          <button data-variant="light" data-icon="shopping-cart">Buy for $12.99</button>
+          <button data-variant="outline" data-icon="check">Following</button>
+          <button data-variant="recessed" data-icon="download">Install</button>
+          <button data-variant="danger" data-icon="trash-2">Delete</button>
+        </div>
+        <div class="demo" data-code>
+          <button data-variant="primary" data-size="sm">Small</button>
+          <button data-variant="primary">Medium</button>
+          <button data-variant="primary" data-size="lg">Large</button>
+          <button aria-label="Favourite" data-icon="heart"></button>
+          <button disabled>Disabled</button>
+          <button id="loadBtn" data-variant="primary" aria-busy="true">Saving</button>
+        </div>
+        <div class="demo" data-code>
+        <button data-size="sm" data-g-toggle aria-pressed="true">Design</button>
+        <button data-size="sm" data-g-toggle aria-pressed="false">Engineering</button>
+        <button data-size="sm" data-g-remove>Remote</button>
+        <button data-size="sm" data-g-remove>Berlin</button>
+        </div>
+      </div>
+      <div class="code" data-for="0,1,2"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+    </div>
+  </section>
+
+  <section class="sec g-glass" id="icons" data-title="Icons">
+    <div class="sec__head"><h2>Icons</h2><p>A small Lucide pack drawn as CSS masks, in the colour of the text around it. Add <span class="inline-code">data-icon</span> to any element, or <span class="inline-code">data-icon-end</span> to put it after the content. Hover for the name, click to copy.</p></div>
+    <div class="pair">
+      <div class="icon-grid"><button data-size="sm" data-variant="recessed" data-icon="activity" title="activity" aria-label="activity"></button><button data-size="sm" data-variant="recessed" data-icon="archive" title="archive" aria-label="archive"></button><button data-size="sm" data-variant="recessed" data-icon="arrow-down" title="arrow-down" aria-label="arrow-down"></button><button data-size="sm" data-variant="recessed" data-icon="arrow-left" title="arrow-left" aria-label="arrow-left"></button><button data-size="sm" data-variant="recessed" data-icon="arrow-right" title="arrow-right" aria-label="arrow-right"></button><button data-size="sm" data-variant="recessed" data-icon="arrow-up" title="arrow-up" aria-label="arrow-up"></button><button data-size="sm" data-variant="recessed" data-icon="bell" title="bell" aria-label="bell"></button><button data-size="sm" data-variant="recessed" data-icon="bookmark" title="bookmark" aria-label="bookmark"></button><button data-size="sm" data-variant="recessed" data-icon="calendar" title="calendar" aria-label="calendar"></button><button data-size="sm" data-variant="recessed" data-icon="camera" title="camera" aria-label="camera"></button><button data-size="sm" data-variant="recessed" data-icon="check" title="check" aria-label="check"></button><button data-size="sm" data-variant="recessed" data-icon="chevron-down" title="chevron-down" aria-label="chevron-down"></button><button data-size="sm" data-variant="recessed" data-icon="chevron-left" title="chevron-left" aria-label="chevron-left"></button><button data-size="sm" data-variant="recessed" data-icon="chevron-right" title="chevron-right" aria-label="chevron-right"></button><button data-size="sm" data-variant="recessed" data-icon="chevron-up" title="chevron-up" aria-label="chevron-up"></button><button data-size="sm" data-variant="recessed" data-icon="circle-alert" title="circle-alert" aria-label="circle-alert"></button><button data-size="sm" data-variant="recessed" data-icon="circle-check" title="circle-check" aria-label="circle-check"></button><button data-size="sm" data-variant="recessed" data-icon="circle-help" title="circle-help" aria-label="circle-help"></button><button data-size="sm" data-variant="recessed" data-icon="circle-x" title="circle-x" aria-label="circle-x"></button><button data-size="sm" data-variant="recessed" data-icon="clock" title="clock" aria-label="clock"></button><button data-size="sm" data-variant="recessed" data-icon="copy" title="copy" aria-label="copy"></button><button data-size="sm" data-variant="recessed" data-icon="credit-card" title="credit-card" aria-label="credit-card"></button><button data-size="sm" data-variant="recessed" data-icon="diamond" title="diamond" aria-label="diamond"></button><button data-size="sm" data-variant="recessed" data-icon="download" title="download" aria-label="download"></button><button data-size="sm" data-variant="recessed" data-icon="ellipsis" title="ellipsis" aria-label="ellipsis"></button><button data-size="sm" data-variant="recessed" data-icon="external-link" title="external-link" aria-label="external-link"></button><button data-size="sm" data-variant="recessed" data-icon="eye" title="eye" aria-label="eye"></button><button data-size="sm" data-variant="recessed" data-icon="eye-off" title="eye-off" aria-label="eye-off"></button><button data-size="sm" data-variant="recessed" data-icon="file" title="file" aria-label="file"></button><button data-size="sm" data-variant="recessed" data-icon="filter" title="filter" aria-label="filter"></button><button data-size="sm" data-variant="recessed" data-icon="folder" title="folder" aria-label="folder"></button><button data-size="sm" data-variant="recessed" data-icon="frame" title="frame" aria-label="frame"></button><button data-size="sm" data-variant="recessed" data-icon="globe" title="globe" aria-label="globe"></button><button data-size="sm" data-variant="recessed" data-icon="heart" title="heart" aria-label="heart"></button><button data-size="sm" data-variant="recessed" data-icon="house" title="house" aria-label="house"></button><button data-size="sm" data-variant="recessed" data-icon="image" title="image" aria-label="image"></button><button data-size="sm" data-variant="recessed" data-icon="info" title="info" aria-label="info"></button><button data-size="sm" data-variant="recessed" data-icon="layout-grid" title="layout-grid" aria-label="layout-grid"></button><button data-size="sm" data-variant="recessed" data-icon="link" title="link" aria-label="link"></button><button data-size="sm" data-variant="recessed" data-icon="lock" title="lock" aria-label="lock"></button><button data-size="sm" data-variant="recessed" data-icon="log-out" title="log-out" aria-label="log-out"></button><button data-size="sm" data-variant="recessed" data-icon="mail" title="mail" aria-label="mail"></button><button data-size="sm" data-variant="recessed" data-icon="menu" title="menu" aria-label="menu"></button><button data-size="sm" data-variant="recessed" data-icon="message-circle" title="message-circle" aria-label="message-circle"></button><button data-size="sm" data-variant="recessed" data-icon="minus" title="minus" aria-label="minus"></button><button data-size="sm" data-variant="recessed" data-icon="moon" title="moon" aria-label="moon"></button><button data-size="sm" data-variant="recessed" data-icon="palette" title="palette" aria-label="palette"></button><button data-size="sm" data-variant="recessed" data-icon="pencil" title="pencil" aria-label="pencil"></button><button data-size="sm" data-variant="recessed" data-icon="phone" title="phone" aria-label="phone"></button><button data-size="sm" data-variant="recessed" data-icon="play" title="play" aria-label="play"></button><button data-size="sm" data-variant="recessed" data-icon="plus" title="plus" aria-label="plus"></button><button data-size="sm" data-variant="recessed" data-icon="refresh-cw" title="refresh-cw" aria-label="refresh-cw"></button><button data-size="sm" data-variant="recessed" data-icon="save" title="save" aria-label="save"></button><button data-size="sm" data-variant="recessed" data-icon="search" title="search" aria-label="search"></button><button data-size="sm" data-variant="recessed" data-icon="send" title="send" aria-label="send"></button><button data-size="sm" data-variant="recessed" data-icon="settings" title="settings" aria-label="settings"></button><button data-size="sm" data-variant="recessed" data-icon="share" title="share" aria-label="share"></button><button data-size="sm" data-variant="recessed" data-icon="shopping-cart" title="shopping-cart" aria-label="shopping-cart"></button><button data-size="sm" data-variant="recessed" data-icon="smartphone" title="smartphone" aria-label="smartphone"></button><button data-size="sm" data-variant="recessed" data-icon="star" title="star" aria-label="star"></button><button data-size="sm" data-variant="recessed" data-icon="sun" title="sun" aria-label="sun"></button><button data-size="sm" data-variant="recessed" data-icon="tag" title="tag" aria-label="tag"></button><button data-size="sm" data-variant="recessed" data-icon="trash-2" title="trash-2" aria-label="trash-2"></button><button data-size="sm" data-variant="recessed" data-icon="triangle-alert" title="triangle-alert" aria-label="triangle-alert"></button><button data-size="sm" data-variant="recessed" data-icon="upload" title="upload" aria-label="upload"></button><button data-size="sm" data-variant="recessed" data-icon="user" title="user" aria-label="user"></button><button data-size="sm" data-variant="recessed" data-icon="x" title="x" aria-label="x"></button></div>
+      <div class="code"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0">&lt;button data-icon="play"&gt;Play&lt;/button&gt;
+&lt;button data-icon-end="chevron-down"&gt;Actions&lt;/button&gt;
+&lt;button data-icon="heart" aria-label="Favourite"&gt;&lt;/button&gt;
+&lt;span data-icon="check"&gt;&lt;/span&gt;
+
+&lt;!-- size and colour --&gt;
+&lt;button data-icon="star" style="--g-icon-size:20px"&gt;Starred&lt;/button&gt;
+
+&lt;!-- your own icon: a variable plus two rules --&gt;
+:root { --g-i-logo: url("data:image/svg+xml,…") }
+[data-icon="logo"] { --g-is: var(--g-i-logo) }
+[data-icon-end="logo"] { --g-ie: var(--g-i-logo) }</pre></div>
+    </div>
+  </section>
+
+  <section class="sec g-glass" id="forms" data-title="Forms">
+    <div class="sec__head"><h2>Forms</h2><p>Recessed fields, a custom select with optional search (combobox), checkboxes, radios, switches and sliders. All are plain form controls underneath, so they submit and validate normally.</p></div>
+    <div class="pair">
+      <form class="demo grid2" data-code id="demoForm" novalidate>
+        <div class="g-field"><label for="f-mail">Email</label><div class="g-input-wrap"><span data-icon="mail"></span><input id="f-mail" type="email" placeholder="name@example.com" autocomplete="off"></div><small>We will never share it.</small></div>
+        <div class="g-field"><label for="f-pass">Password</label><div class="g-input-wrap"><span data-icon="lock"></span><input id="f-pass" type="password" value="correct horse" autocomplete="off"><button class="g-input-end" type="button" data-g-password data-icon="eye" aria-label="Show password"></button></div><small>At least 8 characters</small></div>
+        <div class="g-field"><label for="f-mail2">Email</label><div class="g-input-wrap"><span data-icon="mail"></span><input id="f-mail2" type="email" value="sam@example" aria-invalid="true"><span class="g-input-end" data-icon="triangle-alert"></span></div><small role="alert" data-custom>Enter a valid email address.</small></div>
+        <div class="g-field"><label for="f-tel">Phone</label><div class="g-input-wrap" title="Include the country code, e.g. +357" data-hint><span data-icon="phone"></span><input id="f-tel" type="tel" aria-invalid="false" value="+357 99 000000"><span class="g-input-end" data-icon="circle-check"></span></div><small>Verified</small></div>
+        <div class="g-field"><label for="f-user">Username</label><div class="g-input-wrap"><span data-icon="user"></span><input id="f-user" value="sam.n" disabled></div><small>Can’t be changed</small></div>
+        <div class="g-field"><label for="f-ro">Notes</label><textarea id="f-ro" readonly>Keep the hallway light warm in the evening.</textarea><small>Read only</small></div>
+        <div class="g-field"><label for="f-qty">Quantity</label><div class="g-input-wrap g-stepper" data-g-number><button class="g-input-start" type="button" data-step="-1" data-icon="minus" aria-label="Decrease"></button><input id="f-qty" type="number" value="2" min="0" max="10" step="1" inputmode="numeric"><button class="g-input-end" type="button" data-step="1" data-icon="plus" aria-label="Increase"></button></div><small>Between 0 and 10</small></div>
+        <div class="g-field"><label for="f-price">Price</label><input id="f-price" type="number" value="49.90" min="0" step="0.01" inputmode="decimal"><small>Decimal number, EUR</small></div>
+        <div class="g-field"><label for="f-date">Date</label><div class="g-input-wrap"><span data-icon="calendar"></span><input id="f-date" type="date" value="2026-10-15"></div></div>
+        <div class="g-field"><label for="f-time">Time</label><div class="g-input-wrap"><span data-icon="clock"></span><input id="f-time" type="time" value="09:30"></div></div>
+        <div class="g-field"><label for="f-col1">Brand colour</label><div class="g-input-wrap g-color" data-g-color><label class="g-color__swatch"><input type="color" value="#0071E3" aria-label="Pick colour"></label><input id="f-col1" value="#0071E3" maxlength="7" spellcheck="false" autocomplete="off"></div></div>
+        <fieldset style="grid-column:1/-1"><legend id="f-up-l">Attachments</legend><div class="g-file" id="uploader" data-g-file data-max-size="10"><label class="g-file__drop"><span data-icon="upload"></span><strong>Drop files here or choose</strong><small>PNG, JPG or PDF · up to 10 MB</small><input type="file" multiple accept="image/png,image/jpeg,application/pdf" aria-labelledby="f-up-l"></label><ul class="g-file__list" hidden></ul></div></fieldset>
+        <div class="g-field" style="grid-column:1/-1"><label for="f-msg">Message</label><textarea id="f-msg" placeholder="Tell us what you need" data-max-rows="6"></textarea></div>
+      </form>
+      <div class="code" data-for="3"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+    </div>
+
+    <div class="pair">
+      <div class="demo grid2" data-code>
+        <div class="g-field"><label for="s-role">Role</label>
+          <select id="s-role" data-g-select><option value="">Choose a role</option><option>Designer</option><option>Engineer</option><option selected>Product manager</option><option>Researcher</option><option disabled>Founder (invite only)</option></select></div>
+        <div class="g-field"><label for="s-city">City (combobox)</label>
+          <select id="s-city" data-g-select data-searchable><option value="">Search cities</option><option>Amsterdam</option><option>Berlin</option><option>Lisbon</option><option>Nairobi</option><option>Osaka</option><option>Reykjavik</option><option>Tbilisi</option><option>Vancouver</option></select></div>
+        <div class="g-field"><label for="s-skills">Skills (multiple)</label>
+          <select id="s-skills" multiple data-g-select data-placeholder="Pick skills"><option>Research</option><option selected>Prototyping</option><option>Illustration</option><option selected>Motion</option><option>Front-end</option><option>Copywriting</option></select></div>
+      </div>
+      <div class="code" data-for="4"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+    </div>
+
+    <div class="pair">
+      <div class="demo grid2" data-code>
+        <fieldset style="gap:var(--g-gap)"><legend>Notify me about</legend>
+          <label><input type="checkbox" checked> Replies</label>
+          <label><input type="checkbox"> Mentions</label>
+          <label><input type="checkbox" disabled> Billing (admin only)</label></fieldset>
+        <fieldset style="gap:var(--g-gap)"><legend>Billing cycle</legend>
+          <label><input type="radio" name="cycle" checked> Monthly</label>
+          <label><input type="radio" name="cycle"> Annual · save 20%</label></fieldset>
+        <fieldset style="gap:var(--g-gap)"><legend>Preferences</legend>
+          <label><input type="checkbox" role="switch" checked> Email digest</label>
+          <label><input type="checkbox" role="switch"> Beta features</label></fieldset>
+        <div class="g-field"><label for="sl">Volume</label><input id="sl" type="range" min="0" max="100" value="62"></div>
+        <fieldset style="grid-column:1/-1"><legend>Amenities</legend><div role="group"><label><input type="checkbox" checked> Air conditioning</label><label><input type="checkbox"> Gym</label><label><input type="checkbox"> Clubhouse</label><label><input type="checkbox"> Pool</label><label><input type="checkbox"> Balcony</label><label><input type="checkbox"> Parking</label></div></fieldset>
+      </div>
+      <div class="code" data-for="5"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+    </div>
+  </section>
+
+  <section class="sec g-glass" id="navigation" data-title="Navigation">
+    <div class="sec__head"><h2>Navigation</h2><p>The floating bar at the top of this page is a plain <span class="inline-code">&lt;nav&gt;</span>, and its links are built from the page sections. When they do not fit, the rest move into a More menu. Tabs come as a pill segmented control or an underline style. Arrow keys move between tabs.</p></div>
+    <div class="pair">
+      <div class="demo col">
+        <nav aria-label="Example">
+          <a href="#navigation"><span class="nav-brand-dot"></span>Brand</a>
+          <ul>
+            <li><a href="#navigation" aria-current="page" data-icon="house">Home</a></li>
+            <li><a href="#navigation" data-icon="tag">Pricing</a></li>
+          </ul>
+          <div><button aria-label="Search" data-icon="search" data-size="sm"></button><button aria-label="Notifications" data-icon="bell" data-size="sm"></button><a href="#navigation" role="button" data-size="sm" data-variant="primary" data-icon="plus">New</a></div>
+        </nav>
+        <div data-code data-tabs-demo>
+          <div>
+            <div role="tablist">
+              <button data-icon="layout-grid">Overview</button>
+              <button data-icon="activity">Activity</button>
+              <button data-icon="settings">Settings</button>
+            </div>
+            <div role="tabpanel">Everything about the project in one place: status, owners and the next milestone.</div>
+            <div role="tabpanel">Latest changes from your team, newest first.</div>
+            <div role="tabpanel">Rename, archive or transfer the project.</div>
+          </div>
+        </div>
+        <div data-code>
+          <div>
+            <div role="tablist" data-variant="underline">
+              <button data-icon="file">Invoices</button>
+              <button data-icon="credit-card">Payment methods</button>
+            </div>
+            <div role="tabpanel">Download invoices from the last 12 months.</div>
+            <div role="tabpanel">Add or remove cards.</div>
+          </div>
+        </div>
+      </div>
+      <div class="code" data-for="6,7"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+    </div>
+    <div class="code"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0">&lt;nav data-position="sticky"&gt;
+  &lt;a href="/"&gt;Brand&lt;/a&gt;
+  &lt;ul&gt;
+    &lt;li&gt;&lt;a href="/" aria-current="page" data-icon="house"&gt;Home&lt;/a&gt;&lt;/li&gt;
+    &lt;li&gt;&lt;a href="/pricing"&gt;Pricing&lt;/a&gt;&lt;/li&gt;
+  &lt;/ul&gt;
+  &lt;div&gt;
+    &lt;button data-size="sm" data-icon="search" aria-label="Search"&gt;&lt;/button&gt;
+    &lt;a data-size="sm" data-variant="primary" data-icon="plus" href="/signup"&gt;New&lt;/a&gt;
+  &lt;/div&gt;
+&lt;/nav&gt;
+
+&lt;!-- or build the links from page sections automatically --&gt;
+&lt;ul data-g-nav-auto data-sections=".sec[id]"&gt;&lt;/ul&gt;
+&lt;section class="sec" id="pricing" data-title="Pricing"&gt;…&lt;/section&gt;</pre></div>
+  </section>
+
+  <section class="sec g-glass" id="data" data-title="Data">
+    <div class="sec__head"><h2>Data and content</h2><p>Cards, badges, progress and a four-column table with row selection.</p></div>
+    <div class="pair">
+      <div class="demo grid2" data-code>
+        <article>
+          <figure style="background-image:linear-gradient(135deg,#5ea0ff,#a78bfa 60%,#ff9ec2)"></figure>
+          <data data-variant="accent" style="align-self:flex-start">New</data><h3>Spring release</h3><p>Faster search and a calmer inbox.</p>
+          <footer><button data-size="sm" data-variant="primary">Read notes</button></footer>
+        </article>
+        <a href="#data"><article><h3>Interactive card</h3><p>The whole card is a link. It lifts on hover and shows a focus ring on keyboard focus.</p></article></a>
+      </div>
+      <div class="code" data-for="8"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+    </div>
+    <div class="pair">
+      <div class="demo" data-code>
+        <data>Default</data><data data-variant="accent">Accent</data>
+        <data data-variant="success" data-dot>Live</data><data data-variant="warning" data-dot>Pending</data><data data-variant="danger" data-dot>Failed</data>
+        <data>18 739</data>
+        <data>9 322</data>
+      </div>
+      <div class="code" data-for="9"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+    </div>
+    <div class="pair">
+      <div class="demo col" data-code>
+        <fieldset><legend>Upload · 64%</legend><progress value="64" max="100"></progress></fieldset>
+        <fieldset><legend>Syncing (accent)</legend><progress data-variant="accent" value="38" max="100"></progress></fieldset>
+        <fieldset><legend>Working</legend><progress max="100"></progress></fieldset>
+        <div class="drow"><span role="progressbar" aria-valuenow="72" aria-valuemin="0" aria-valuemax="100" aria-label="Upload">72%</span><span role="progressbar" aria-label="Loading"></span></div>
+      </div>
+      <div class="code" data-for="10"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+    </div>
+    <div class="pair" style="grid-template-columns:minmax(0,1fr)">
+      <figure data-code>
+        <table data-g-selectable="multiple">
+          <thead><tr><th aria-sort="ascending"><button>Project</button></th><th aria-sort="none"><button>Owner</button></th><th aria-sort="none"><button>Status</button></th><th aria-sort="none" align="right"><button>Updated</button></th></tr></thead>
+          <tbody>
+            <tr><td data-icon="credit-card">Billing migration</td><td data-muted="">Jonas Weber</td><td><data data-variant="warning" data-dot>At risk</data></td><td data-sort="2026-10-02" align="right" data-muted="">Yesterday</td></tr>
+            <tr aria-selected="true"><td data-icon="layout-grid">Harbour redesign</td><td data-muted="">Mira Oduya</td><td><data data-variant="success" data-dot>On track</data></td><td data-sort="2026-10-03T10" align="right" data-muted="">2 h ago</td></tr>
+            <tr><td data-icon="smartphone">Mobile checkout</td><td data-muted="">Kenji Aoki</td><td><data data-variant="danger" data-dot>Blocked</data></td><td data-sort="2026-09-28" align="right" data-muted="">28 Sep</td></tr>
+            <tr><td data-icon="mail">Onboarding emails</td><td data-muted="">Sofia Marín</td><td><data data-dot>Draft</data></td><td data-sort="2026-10-01" align="right" data-muted="">1 Oct</td></tr>
+          </tbody>
+          <tfoot><tr><td colspan="4">
+            <span><output>1</output> selected <button data-size="sm" data-g-clear>Clear</button></span>
+            <nav data-g-pager data-total="24" data-size="4" data-page="1"></nav>
+          </td></tr></tfoot>
+        </table>
+      </figure>
+      <div class="code" data-for="11"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+    </div>
+    <div class="pair" style="grid-template-columns:minmax(0,1fr)">
+      <div class="demo col" data-code>
+        <div class="row-label">Numbered list with counts</div>
+        <ol class="g-list" data-g-more="6">
+          <li class="is-active"><span>Northwind Telecom</span><data>93 131</data></li>
+          <li><span>Bluepeak Mobile &amp; Wireless Communications of the Greater Metropolitan Area</span><data>41 074</data></li>
+          <li><span>Aurora Networks</span><data>28 560</data></li>
+          <li><span>Kestrel Wireless</span><data>19 842</data></li>
+          <li><span>Harbor Broadband</span><data>15 377</data></li>
+          <li><span>Telecomunicaciones del Sur</span><data>13 105</data></li>
+          <li><span>Multiservice Holdings Group</span><data>9 723</data></li>
+          <li><span>Lantern Fibre</span><data>8 410</data></li>
+          <li><span>Orbit Communications</span><data>7 952</data></li>
+          <li><span>Pacific Link</span><data>7 116</data></li>
+          <li><span>Westcall International</span><data>6 809</data></li>
+          <li><span>Southern Reach Systems</span><data>5 774</data></li>
+        </ol>
+        <div class="row-label" style="margin-top:12px">Bulleted list</div>
+        <ul class="g-list" data-g-more="6">
+          <li><span>Buttons</span></li>
+          <li><span>Fields</span></li>
+          <li><span>A card, a panel or any other surface that keeps the glass look, in a narrow column or a wide one, however long its caption gets</span></li>
+          <li><span>Select</span></li>
+          <li><span>Tabs</span></li>
+          <li><span>Table</span></li>
+          <li><span>Dialog</span></li>
+          <li><span>Menu</span></li>
+          <li><span>Tooltip</span></li>
+          <li><span>Toast</span></li>
+          <li><span>Navigation</span></li>
+          <li><span>Grid</span></li>
+        </ul>
+        <div class="row-label" style="margin-top:12px">Expandable text</div>
+        <h4 style="margin:0">What’s new</h4>
+        <div class="g-clamp" data-g-clamp="3">
+          <div class="g-clamp__text"><p>Thanks for updating! In this version:</p><p>• Panels remember where you left them.</p><p>• Tooltips follow the pointer and fade when you look away.</p><p>• Pages load faster, and open sessions reconnect on their own.</p><p>• A calmer home view with fewer, larger icons.</p><p>• Plus a long list of small fixes and improvements.</p></div>
+          <button class="g-clamp__btn" hidden>more</button>
+        </div>
+        <div class="row-label" style="margin-top:12px">Blockquote</div>
+        <blockquote><p>Glass gets its colour from the room behind it, not from its own fill.</p><cite>Glass UI notes</cite></blockquote>
+        <div class="row-label" style="margin-top:12px">Details</div>
+        <div>
+          <details open><summary>Can I share it with family?</summary><div>Yes — up to five people, each with their own space.</div></details>
+          <details><summary>How do I reset it?</summary><div>Open Settings, choose General, then Reset. Your content stays in the cloud.</div></details>
+          <details><summary>Does it work offline?</summary><div>Most features do. Syncing resumes as soon as you reconnect.</div></details>
+        </div>
+      </div>
+      <div class="code" data-for="12"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+    </div>
+</section>
+
+  <section class="sec g-glass" id="overlays" data-title="Overlays">
+    <div class="sec__head"><h2>Overlays</h2><p>A dialog built on the native <span class="inline-code">&lt;dialog&gt;</span> element (focus trap, Esc to close), glass tooltips, and toasts you trigger from JavaScript.</p></div>
+    <div class="pair">
+      <div class="demo" data-code>
+        <button data-g-open="#dlg" data-variant="primary">Open dialog</button>
+        <button data-g-open="#dlg2" data-variant="outline">Wide dialog</button>
+        <button title="Duplicate project">Hover me</button>
+        <button title="Updated hourly" data-hint>Revenue 1 200</button>
+        <button title="Share" aria-label="Share" data-icon="share" data-tip-position="bottom"></button>
+        <button data-g-menu="#actions" data-icon-end="chevron-down">Actions</button>
+        <div id="actions">
+          <button data-icon="pencil">Rename<kbd>F2</kbd></button>
+          <button data-icon="copy">Duplicate<kbd>⌘D</kbd></button>
+          <a href="#overlays" data-icon="link">Share link</a>
+          <hr>
+          <button aria-disabled="true" data-icon="archive">Archive</button>
+          <button data-variant="danger" data-icon="trash-2">Delete</button>
+        </div>
+        <dialog id="dlg">
+          <span data-icon="triangle-alert"></span>
+          <h3>Delete this project?</h3>
+          <p>Harbour redesign and its 24 files will be removed for everyone on the team.</p>
+          <footer><button data-g-close value="delete" data-variant="danger" data-block>Delete project</button><button data-g-close value="cancel" data-block>Keep it</button></footer>
+        </dialog>
+        <dialog id="dlg2" aria-labelledby="dlg2-t" data-size="wide">
+          <h3 id="dlg2-t">Invite a teammate</h3>
+          <p>They get an email with a link to join your workspace.</p>
+          <div class="g-field" style="margin-bottom:22px"><label for="inv">Email</label><input id="inv" type="email" placeholder="name@company.com"></div>
+          <footer><button data-g-close value="cancel">Cancel</button><button data-g-close value="send" data-variant="primary">Send invite</button></footer>
+        </dialog>
+      </div>
+      <div class="code" data-for="13"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+    </div>
+    <div class="pair">
+      <div class="demo">
+        <button data-toast="info" data-variant="primary">Info</button>
+        <button data-toast="success">Success</button>
+        <button data-toast="warning">Warning</button>
+        <button data-toast="danger">Error</button>
+      </div>
+      <div class="code"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0">Glass.toast({
+  title: 'Published',
+  text: 'Your changes are live.',
+  variant: 'success',   // info | success | warning | danger
+  duration: 4500,       // 0 keeps it until dismissed
+  position: 'top'       // or 'bottom'
+});</pre></div>
+    </div>
+  </section>
+
+
+  <section class="sec g-glass" id="layout" data-title="Layout">
+    <div class="sec__head"><h2>Layout</h2><p>An app shell with three zones: a tool panel on the left, the workspace in the middle and an inspector on the right. The inspector uses the stronger glass, so it reads as the selected, working panel. Below 900 px the panels stack.</p></div>
+    <div data-code><div class="g-shell">
+      <aside>
+        <div class="g-shell__head">
+          <div role="tablist"><button>Layers</button><button>Assets</button></div>
+          <button aria-label="Search" data-icon="search" data-size="sm" data-variant="recessed"></button>
+        </div>
+        <div class="g-shell__row g-shell__row--first"><span>Pages</span><button aria-label="Add page" data-icon="plus" data-size="sm" data-variant="recessed"></button></div>
+        <ul class="g-list"><li data-icon="file"><span>Moodboard</span></li><li class="is-active" data-icon="file"><span>Design</span></li><li data-icon="file"><span>Components</span></li></ul>
+        <ul class="g-list"><li data-icon="frame"><span>Login</span></li><li data-icon="frame"><span>Landing Page</span></li><li data-level="1" data-icon="diamond"><span>Navbar</span></li><li data-level="1" data-icon="frame"><span>Hero Section</span></li><li data-level="1" data-icon="frame"><span>Features</span></li><li data-level="1" data-icon="frame"><span>Testimonial</span></li><li data-level="1" data-icon="diamond"><span>Footer</span></li><li data-icon="frame"><span>Pricing</span></li></ul>
+      </aside>
+      <main><div class="shell-frame"><span></span><span></span><span></span></div></main>
+      <aside>
+        <div class="g-shell__head">
+          <div role="tablist"><button>Design</button><button>Prototype</button></div>
+        </div>
+        <div class="g-shell__row g-shell__row--first"><span>Frame</span></div>
+        <div class="g-shell__fields"><div class="g-input-wrap"><span class="g-shell__k">X</span><input value="240" inputmode="numeric" aria-label="X"></div><div class="g-input-wrap"><span class="g-shell__k">Y</span><input value="480" inputmode="numeric" aria-label="Y"></div><div class="g-input-wrap"><span class="g-shell__k">W</span><input value="240" inputmode="numeric" aria-label="W"></div><div class="g-input-wrap"><span class="g-shell__k">H</span><input value="240" inputmode="numeric" aria-label="H"></div></div>
+        <label style="padding:0 14px 12px"><input type="checkbox" checked> Clip content</label>
+        <div class="g-shell__row"><span>Auto layout</span><button aria-label="Add Auto layout" data-icon="plus" data-size="sm" data-variant="recessed"></button></div><div class="g-shell__row"><span>Layout grid</span><button aria-label="Add Layout grid" data-icon="plus" data-size="sm" data-variant="recessed"></button></div><div class="g-shell__row"><span>Stroke</span><button aria-label="Add Stroke" data-icon="plus" data-size="sm" data-variant="recessed"></button></div><div class="g-shell__row"><span>Effects</span><button aria-label="Add Effects" data-icon="plus" data-size="sm" data-variant="recessed"></button></div>
+      </aside>
+    </div></div>
+    <div class="code" data-for="14"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+    <div class="sec__head"><h3>Grid</h3><p>Throw any content in and it lines up in even columns with one gap (<span class="inline-code">--g-gap</span>): at least 200 px each, as many as fit. <span class="inline-code">data-grid="4"</span> caps the columns; <span class="inline-code">data-span</span> and <span class="inline-code">data-rows</span> on a child widen or heighten it.</p></div>
+    <div class="demo col" data-code>
+      <div data-grid>
+        <article><h4>One</h4><p>Any element works as a cell.</p></article>
+        <article><h4>Two</h4><p>Columns share the width equally.</p></article>
+        <article><h4>Three</h4><p>As many as fit, at least 200 px.</p></article>
+        <article><h4>Four</h4><p>The gap is always the same.</p></article>
+        <article><h4>Five</h4><p>Wraps to a new row by itself.</p></article>
+        <article><h4>Six</h4><p>No per-item markup needed.</p></article>
+        <article><h4>Seven</h4><p>The last row stays aligned.</p></article>
+      </div>
+      <div data-grid="4">
+        <article data-span="2" data-rows="2"><small>Revenue</small><h3>$48.2k</h3><data data-variant="success" data-dot>+12%</data></article>
+        <article><small>Active users</small><h3>12 480</h3></article>
+        <article><small>Conversion</small><h3>3.8%</h3></article>
+        <article><small>Uptime</small><h3>99.98%</h3></article>
+        <article><small>Errors</small><h3>0.02%</h3></article>
+      </div>
+    </div>
+    <div class="code" data-for="15"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+
+
+  </section>
+
+  <section class="sec g-glass" id="motion" data-title="Motion">
+    <div class="sec__head"><h2>Motion</h2><p>Six effects you can put on any element with a class. Each plays once; add <span class="inline-code">g-anim--loop</span> to repeat it. The tiles below replay on a timer so you can watch them.</p></div>
+    <div class="pair">
+      <div class="m-grid">
+        <div class="m-item"><div class="m-tile g-anim-appear" data-g-anim-loop="2800">appear</div><h4>Appear</h4><small>Fades in while rising from below.</small><small data-muted>1.5 s ease-out</small></div>
+        <div class="m-item"><div class="m-tile g-anim-shimmer" data-g-anim-loop="2800">shimmer</div><h4>Shimmer</h4><small>Soft gradient wave for loading states.</small><small data-muted>1.5 s ease-out</small></div>
+        <div class="m-item"><div class="m-tile g-anim-ripple" data-g-anim-loop="2800">ripple</div><h4>Ripple</h4><small>Light spreads from the touch point.</small><small data-muted>1.5 s ease-out · click the tile</small></div>
+        <div class="m-item"><div class="m-tile g-anim-pulse" data-g-anim-loop="2800">pulse</div><h4>Pulse</h4><small>A ring radiates to draw attention.</small><small data-muted>1.5 s ease-out</small></div>
+        <div class="m-item"><div class="m-tile g-anim-highlight" data-g-anim-loop="2800">highlight</div><h4>Highlight</h4><small>The element lights up, then the highlight fades out.</small><small data-muted>1.5 s ease-out</small></div>
+        <div class="m-item"><div class="g-anim-rotate" data-g-anim-loop="2800"><div class="m-tile">front</div><div class="m-tile">back</div></div><h4>Rotate</h4><small>A card with two sides turns around once.</small><small data-muted>1.5 s ease-out</small></div>
+        <div class="m-item"><div class="m-tile g-anim-zoom" data-g-anim-loop="2800">zoom</div><h4>Zoom</h4><small>Drops from above and lands, fading in. For lists that build up block by block.</small><small data-muted>1.5 s ease-out</small></div>
+        </div>
+      <div class="code"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0">&lt;article class="g-anim-appear"&gt;…&lt;/article&gt;
+&lt;article class="g-anim-pulse g-anim--loop"&gt;…&lt;/article&gt;
+/* blocks falling in one by one: random delay up to 900 ms */
+&lt;ul data-g-anim-random="900"&gt;
+  &lt;li class="g-anim-zoom"&gt;…&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;div class="g-anim-rotate"&gt;&lt;div&gt;front&lt;/div&gt;&lt;div&gt;back&lt;/div&gt;&lt;/div&gt;
+
+/* stagger a list */
+&lt;li class="g-anim-appear" style="--g-anim-delay:.08s"&gt;…&lt;/li&gt;
+&lt;li class="g-anim-appear" style="--g-anim-delay:.16s"&gt;…&lt;/li&gt;
+
+/* replay from JS */
+Glass.animate(el, 'highlight');
+
+/* ripple starts at the click, select fills from the left */
+&lt;button class="g-anim-ripple"&gt;Press&lt;/button&gt;</pre></div>
+    </div>
+  </section>
+
+  <section class="sec g-glass" id="type" data-title="Type">
+    <div class="sec__head"><h2>Типографика</h2><p>Стили текста берутся из тегов <span class="inline-code">h1</span> … <span class="inline-code">small</span>, плюс <span class="inline-code">h1[data-size="lg"]</span>, <span class="inline-code">small[data-muted]</span> и <span class="inline-code">g-prose</span> для длинных статей. Figtree не содержит кириллицы, поэтому русские буквы автоматически берутся из Inter. Выберите шрифт и язык ниже.</p></div>
+    <div class="drow" style="align-items:flex-end">
+      <div class="g-field" style="width:min(100%,280px)"><label for="fontSel">Шрифт</label>
+        <select id="fontSel" data-g-select>
+          <option value="'Manrope',system-ui,sans-serif" selected>Manrope</option>
+          <option value="'Figtree','Inter',system-ui,sans-serif">Figtree + Inter</option>
+          <option value="'Inter',system-ui,sans-serif">Inter</option>
+          <option value="'Onest',system-ui,sans-serif">Onest</option>
+          <option value="'Golos Text',system-ui,sans-serif">Golos Text</option>
+          <option value="'Onest',system-ui,sans-serif" data-display="'Unbounded','Onest',sans-serif">Unbounded + Onest</option>
+          <option value="'Golos Text',system-ui,sans-serif" data-display="'Unbounded','Golos Text',sans-serif">Unbounded + Golos Text</option>
+          <option value="system-ui,sans-serif">Системный</option>
+        </select></div>
+      <div role="tablist" id="langTabs"><button>Русский</button><button>English</button></div>
+    </div>
+    <div class="specimen">
+      <div class="specimen__aa" aria-hidden="true">Аа<span>Aa</span></div>
+      <div class="specimen__body">
+        <p class="spec-line" style="color:#fff">АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ<br>абвгдеёжзийклмнопрстуфхцчшщъыьэюя</p>
+        <p class="spec-line">ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789 ₽ € $ % № ? ! « » —</p>
+        <div class="drow" style="font-size:22px"><span style="font-weight:400">Regular 400</span><span style="font-weight:500">Medium 500</span><span style="font-weight:600">Semibold 600</span><span style="font-weight:700">Bold 700</span></div>
+      </div>
+    </div>
+    <div class="ts">
+<div class="ts-row"><div class="ts-meta"><b>h1[data-size="lg"]</b><span>56–64 / 1.04 · 700</span></div><h1 data-size="lg" data-ru="Стекло для сайтов" data-en="Glass for the web">Стекло для сайтов</h1></div>
+<div class="ts-row"><div class="ts-meta"><b>h1</b><span>40 / 1.1 · 700</span></div><h1 data-ru="Интерфейс, который дышит" data-en="An interface that breathes">Интерфейс, который дышит</h1></div>
+<div class="ts-row"><div class="ts-meta"><b>h2</b><span>28 / 1.15 · 650</span></div><h2 data-ru="Спокойные цвета и мягкий свет" data-en="Calm colour and soft light">Спокойные цвета и мягкий свет</h2></div>
+<div class="ts-row"><div class="ts-meta"><b>h3</b><span>20 / 1.25 · 600</span></div><h3 data-ru="Заголовок раздела" data-en="Section heading">Заголовок раздела</h3></div>
+<div class="ts-row"><div class="ts-meta"><b>h4</b><span>17 / 1.3 · 600</span></div><h4 data-ru="Название карточки или строки списка" data-en="Card or list row title">Название карточки или строки списка</h4></div>
+<div class="ts-row"><div class="ts-meta"><b>hgroup &gt; p</b><span>19 / 1.5 · 400</span></div><hgroup><h3 style="font-size:20px">Section heading</h3><p data-ru="Вводный абзац объясняет, зачем нужна страница, в одном-двух предложениях." data-en="An intro paragraph says why the page exists in a sentence or two.">Вводный абзац объясняет, зачем нужна страница, в одном-двух предложениях.</p></hgroup></div>
+<div class="ts-row"><div class="ts-meta"><b>p</b><span>15 / 1.5 · 400</span></div><p data-ru="Основной текст интерфейса: подписи, описания, подсказки и сообщения." data-en="Default interface text: labels, descriptions, hints and messages.">Основной текст интерфейса: подписи, описания, подсказки и сообщения.</p></div>
+<div class="ts-row"><div class="ts-meta"><b>small</b><span>13 / 1.45 · 400</span></div><small data-ru="Мелкий текст для пояснений под полями." data-en="Small text for notes under fields.">Мелкий текст для пояснений под полями.</small></div>
+<div class="ts-row"><div class="ts-meta"><b>small[data-muted]</b><span>12 / 1.4 · 400</span></div><small data-muted data-ru="Обновлено 3 октября · 4 мин чтения" data-en="Updated 3 October · 4 min read">Обновлено 3 октября · 4 мин чтения</small></div>
+<div class="ts-row"><div class="ts-meta"><b>h6</b><span>12 / 1.3 · 650 · +0.08em</span></div><h6 data-ru="Новое в версии 1.0" data-en="New in version 1.0">Новое в версии 1.0</h6></div>
+    </div>
+    <div class="pair">
+      <div class="g-prose">
+        <h6 data-ru="Для чтения" data-en="For reading">Для чтения</h6>
+        <h2 style="color:#fff" data-ru="Как выбрать фон для стеклянного интерфейса" data-en="How to pick a background for a glass interface">Как выбрать фон для стеклянного интерфейса</h2>
+        <p data-ru="Стекло работает, когда под ним есть что размывать. Берите фон с плавными переходами тона и без мелких деталей: размытие превратит его в мягкое свечение." data-en="Glass works when there is something behind it to blur. Pick a background with smooth tonal transitions and little fine detail: the blur turns it into a soft glow.">Стекло работает, когда под ним есть что размывать. Берите фон с плавными переходами тона и без мелких деталей: размытие превратит его в мягкое свечение.</p>
+        <p data-ru="Для длинного текста держите строку около <strong>65 символов</strong> и межстрочный интервал 1,6. Белый текст на стекле читается лучше всего, когда фон под ним тёмный." data-en="For long text keep lines near <strong>65 characters</strong> with a line height of 1.6. White text on glass reads best when the background behind it is dark.">Для длинного текста держите строку около <strong>65 символов</strong> и межстрочный интервал 1,6. Белый текст на стекле читается лучше всего, когда фон под ним тёмный.</p>
+      </div>
+      <div class="code"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0">&lt;h6&gt;Новое&lt;/h6&gt;
+&lt;h1 data-size="lg"&gt;Стекло для сайтов&lt;/h1&gt;
+&lt;hgroup&gt;&lt;h1&gt;Заголовок&lt;/h1&gt;&lt;p&gt;Вводный абзац.&lt;/p&gt;&lt;/hgroup&gt;
+
+&lt;div class="g-prose"&gt;
+  &lt;h2&gt;Заголовок&lt;/h2&gt;
+  &lt;p&gt;Длинный текст с комфортной строкой.&lt;/p&gt;
+&lt;/div&gt;
+
+/* смена шрифта целиком */
+:root { --g-font: 'Onest', system-ui, sans-serif;
+  --g-font-display: 'Unbounded', sans-serif; }</pre></div>
+    </div>
+    <div class="pair">
+      <div class="g-prose">
+        <h6>Смешанный текст</h6>
+        <p>Релиз <strong>Glass UI 2.0</strong> вышел в <em>beta</em>: мы переписали <abbr title="Cascading Style Sheets" tabindex="0">CSS</abbr>-токены, добавили dark mode и убрали <s>старый API</s>. Подробности в <a href="#type">changelog</a>, а <u>важное</u> — ниже. Выход помечен кодом <code>v2.0.0-beta.1</code>, сборка № <span class="g-num">9 007 199 254 740 993</span>, бюджет релиза — <span class="g-num">12 480 350,75 ₽</span>, поддержка: <span class="g-num">+7 (495) 123-45-67</span>.</p>
+        <p>Для расчёта размытия мы берём <math><mi>r</mi><mo>=</mo><mi>d</mi><mo>·</mo><mi>k</mi></math> и <math><mi>E</mi><mo>=</mo><mi>m</mi><msup><mi>c</mi><mn>2</mn></msup></math> просто для красоты. Горячая клавиша: <kbd>⌘</kbd> + <kbd>K</kbd>.</p>
+        <ul>
+          <li>Токены цвета и размера</li>
+          <li>Компоненты на <code>g-</code> классах</li>
+          <li>Поддержка современных браузеров</li>
+        </ul>
+        <ol>
+          <li>Подключите <code>glass-ui.css</code></li>
+          <li>Добавьте <code>glass-ui.js</code></li>
+          <li>Оберните страницу в <code>g-root</code></li>
+        </ol>
+      </div>
+      <div class="code"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0">&lt;article class="g-prose"&gt;
+  &lt;p&gt;
+    &lt;strong&gt;Жирный&lt;/strong&gt;, &lt;em&gt;курсив&lt;/em&gt;, &lt;u&gt;подчёркнутый&lt;/u&gt;,
+    &lt;s&gt;зачёркнутый&lt;/s&gt;, &lt;a href="#"&gt;ссылка&lt;/a&gt;, &lt;code&gt;код&lt;/code&gt;,
+    &lt;abbr class="g-tip" title="Подсказка" tabindex="0"&gt;CSS&lt;/abbr&gt;,
+    &lt;math&gt;&lt;mi&gt;E&lt;/mi&gt;&lt;mo&gt;=&lt;/mo&gt;&lt;mi&gt;m&lt;/mi&gt;&lt;msup&gt;&lt;mi&gt;c&lt;/mi&gt;&lt;mn&gt;2&lt;/mn&gt;&lt;/msup&gt;&lt;/math&gt;,
+    &lt;span class="g-num"&gt;12 480 350,75 ₽&lt;/span&gt;   &lt;!-- числа не переносятся --&gt;
+  &lt;/p&gt;
+  &lt;ul&gt;&lt;li&gt;…&lt;/li&gt;&lt;/ul&gt;
+  &lt;ol&gt;&lt;li&gt;…&lt;/li&gt;&lt;/ol&gt;
+&lt;/article&gt;</pre></div>
+    </div>
+  </section>
+
+  <section class="sec g-glass" id="tokens" data-title="Tokens">
+    <div class="sec__head"><h2>Tokens</h2><p>Override any of these on <span class="inline-code">:root</span> or on a container to retheme a region.</p></div>
+    <div class="tokens">
+      <div><span class="sw" style="background:#0071E3"></span><b>--g-accent</b> #0071E3</div>
+      <div><span class="sw" style="background:rgba(255,255,255,.10)"></span><b>--g-fill</b> rgba(255,255,255,.10)</div>
+      <div><span class="sw" style="background:rgba(0,0,0,.16)"></span><b>--g-fill-recessed</b> rgba(0,0,0,.16)</div>
+      <div><span class="sw" style="background:#fff"></span><b>--g-text</b> #fff · -2 77% · -3 60%</div>
+      <div><b>--g-blur</b> blur(30px) saturate(180%)</div>
+      <div><b>--g-radius-card</b> 32px · field 14px · pill 999px</div>
+      <div><b>--g-rim</b> inner highlight shadow</div>
+      <div><b>--g-focus</b> dark + white double ring</div>
+    </div>
+  </section>
+</div>
+
+<div class="g-root">
+  <button class="ctl-toggle" id="ctlToggle" popovertarget="ctl" data-icon="palette">Appearance</button>
+  <aside class="ctl" id="ctl" popover>
+    <div class="ctl__head"><h4>Appearance</h4><button id="ctlReset" data-size="sm" data-variant="recessed">Reset</button></div>
+    <fieldset class="ctl__group"><legend>Theme</legend>
+      <div role="tablist" id="themeTabs"><button>Dark</button><button>Light</button><button>Auto</button></div></fieldset>
+    <fieldset class="ctl__group"><legend>Background</legend>
+      <div class="sw-row bg-row" id="bgChips">
+        <button class="sw-btn" data-scene="aerial" aria-label="Mountain from above" aria-pressed="true"></button>
+        <button class="sw-btn" data-scene="tower" aria-label="Architecture" aria-pressed="false"></button>
+        <button class="sw-btn" data-scene="grass" aria-label="Grass" aria-pressed="false"></button>
+        <button class="sw-btn" data-scene="water" aria-label="Water" aria-pressed="false"></button>
+        <button class="sw-btn" data-scene="dunes" aria-label="Dunes" aria-pressed="false"></button>
+        <button class="sw-btn" data-scene="liquid" aria-label="Liquid" aria-pressed="false" style="--sw:radial-gradient(60% 60% at 28% 30%,#58c4c0,transparent 70%),radial-gradient(60% 60% at 76% 78%,#8a6ee6,transparent 70%),#2a4fa8"></button>
+        <button class="sw-btn" data-scene="gradient" aria-label="Gradient" aria-pressed="false" style="--sw:radial-gradient(60% 50% at 18% 12%,#5ea0ff,transparent 60%),radial-gradient(50% 50% at 88% 18%,#ff9ec2,transparent 60%),radial-gradient(60% 60% at 72% 92%,#46d1c1,transparent 62%),#1d2b52"></button>
+      </div>
+      <div class="g-field" id="bgField"><div class="g-file" id="bgUp" data-g-file data-max-size="20"><label class="g-file__drop"><span data-icon="upload"></span><strong>Your own image</strong><small>Drop or choose · PNG, JPG, WebP</small><input type="file" id="bgFile" accept="image/*" aria-label="Background image"></label><ul class="g-file__list" hidden></ul></div>
+      <small role="alert" id="bgErr">Could not open this image.</small></div></fieldset>
+    <fieldset class="ctl__group"><legend>Accent colour</legend>
+      <div class="sw-row" id="accentRow">
+        <button class="sw-btn" data-accent="#0071E3" style="--sw:#0071E3" aria-label="Blue" aria-pressed="true"></button>
+        <button class="sw-btn" data-accent="#7D5AF5" style="--sw:#7D5AF5" aria-label="Violet" aria-pressed="false"></button>
+        <button class="sw-btn" data-accent="#FF4F8B" style="--sw:#FF4F8B" aria-label="Pink" aria-pressed="false"></button>
+        <button class="sw-btn" data-accent="#FF8A2B" style="--sw:#FF8A2B" aria-label="Orange" aria-pressed="false"></button>
+        <button class="sw-btn" data-accent="#2FC77A" style="--sw:#2FC77A" aria-label="Green" aria-pressed="false"></button>
+        <button class="sw-btn" data-accent="#8E8E93" style="--sw:#8E8E93" aria-label="Graphite" aria-pressed="false"></button>
+        <label class="sw-btn sw-custom" aria-label="Custom accent colour"><input type="color" id="accentCustom" value="#0071E3"></label>
+      </div></fieldset>
+    <fieldset class="ctl__group"><legend>Liquid colour</legend>
+      <div class="sw-row" id="liquidRow">
+        <button class="sw-btn" data-hue="blue" style="--sw:#3f78e0" aria-label="Blue" aria-pressed="true"></button>
+        <button class="sw-btn" data-hue="265" style="--sw:hsl(265 68% 55%)" aria-label="Violet" aria-pressed="false"></button>
+        <button class="sw-btn" data-hue="175" style="--sw:hsl(175 68% 45%)" aria-label="Teal" aria-pressed="false"></button>
+        <button class="sw-btn" data-hue="12" style="--sw:hsl(12 75% 55%)" aria-label="Coral" aria-pressed="false"></button>
+        <button class="sw-btn" data-hue="gold" style="--sw:linear-gradient(135deg,#f2c66d,#b7721e)" aria-label="Gold" aria-pressed="false"></button>
+        <button class="sw-btn" data-hue="day" style="--sw:linear-gradient(90deg,#e0788f,#1abdcc,#f06143,#33388c)" aria-label="Day cycle" aria-pressed="false"></button>
+        <label class="sw-btn sw-custom" aria-label="Custom liquid colour"><input type="color" id="liquidCustom" value="#3f78e0"></label>
+      </div></fieldset>
+    <fieldset class="ctl__group"><legend>Liquid speed</legend>
+      <div role="tablist" id="speedTabs"><button>Still</button><button aria-selected="true">Calm</button><button>Mid</button><button>Lively</button></div></fieldset>
+    <div class="ctl__group"><div class="ctl__line"><label for="blurRange">Glass blur</label><output id="blurOut">30 px</output></div>
+      <input id="blurRange" type="range" min="0" max="80" value="30"></div>
+    <div class="ctl__group"><div class="ctl__line"><label for="fillRange">Glass opacity</label><output id="fillOut">10%</output></div>
+      <input id="fillRange" type="range" min="2" max="32" value="10"></div>
+  </aside>
+</div>
+
+<script>/*! Prism 1.30.0 (MIT) https://prismjs.com */
+window.Prism={manual:true};var _self="undefined"!=typeof window?window:"undefined"!=typeof WorkerGlobalScope&&self instanceof WorkerGlobalScope?self:{},Prism=function(e){var n=/(?:^|\s)lang(?:uage)?-([\w-]+)(?=\s|$)/i,t=0,r={},a={manual:e.Prism&&e.Prism.manual,disableWorkerMessageHandler:e.Prism&&e.Prism.disableWorkerMessageHandler,util:{encode:function e(n){return n instanceof i?new i(n.type,e(n.content),n.alias):Array.isArray(n)?n.map(e):n.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/\u00a0/g," ")},type:function(e){return Object.prototype.toString.call(e).slice(8,-1)},objId:function(e){return e.__id||Object.defineProperty(e,"__id",{value:++t}),e.__id},clone:function e(n,t){var r,i;switch(t=t||{},a.util.type(n)){case"Object":if(i=a.util.objId(n),t[i])return t[i];for(var l in r={},t[i]=r,n)n.hasOwnProperty(l)&&(r[l]=e(n[l],t));return r;case"Array":return i=a.util.objId(n),t[i]?t[i]:(r=[],t[i]=r,n.forEach((function(n,a){r[a]=e(n,t)})),r);default:return n}},getLanguage:function(e){for(;e;){var t=n.exec(e.className);if(t)return t[1].toLowerCase();e=e.parentElement}return"none"},setLanguage:function(e,t){e.className=e.className.replace(RegExp(n,"gi"),""),e.classList.add("language-"+t)},currentScript:function(){if("undefined"==typeof document)return null;if(document.currentScript&&"SCRIPT"===document.currentScript.tagName)return document.currentScript;try{throw new Error}catch(r){var e=(/at [^(\r\n]*\((.*):[^:]+:[^:]+\)$/i.exec(r.stack)||[])[1];if(e){var n=document.getElementsByTagName("script");for(var t in n)if(n[t].src==e)return n[t]}return null}},isActive:function(e,n,t){for(var r="no-"+n;e;){var a=e.classList;if(a.contains(n))return!0;if(a.contains(r))return!1;e=e.parentElement}return!!t}},languages:{plain:r,plaintext:r,text:r,txt:r,extend:function(e,n){var t=a.util.clone(a.languages[e]);for(var r in n)t[r]=n[r];return t},insertBefore:function(e,n,t,r){var i=(r=r||a.languages)[e],l={};for(var o in i)if(i.hasOwnProperty(o)){if(o==n)for(var s in t)t.hasOwnProperty(s)&&(l[s]=t[s]);t.hasOwnProperty(o)||(l[o]=i[o])}var u=r[e];return r[e]=l,a.languages.DFS(a.languages,(function(n,t){t===u&&n!=e&&(this[n]=l)})),l},DFS:function e(n,t,r,i){i=i||{};var l=a.util.objId;for(var o in n)if(n.hasOwnProperty(o)){t.call(n,o,n[o],r||o);var s=n[o],u=a.util.type(s);"Object"!==u||i[l(s)]?"Array"!==u||i[l(s)]||(i[l(s)]=!0,e(s,t,o,i)):(i[l(s)]=!0,e(s,t,null,i))}}},plugins:{},highlightAll:function(e,n){a.highlightAllUnder(document,e,n)},highlightAllUnder:function(e,n,t){var r={callback:t,container:e,selector:'code[class*="language-"], [class*="language-"] code, code[class*="lang-"], [class*="lang-"] code'};a.hooks.run("before-highlightall",r),r.elements=Array.prototype.slice.apply(r.container.querySelectorAll(r.selector)),a.hooks.run("before-all-elements-highlight",r);for(var i,l=0;i=r.elements[l++];)a.highlightElement(i,!0===n,r.callback)},highlightElement:function(n,t,r){var i=a.util.getLanguage(n),l=a.languages[i];a.util.setLanguage(n,i);var o=n.parentElement;o&&"pre"===o.nodeName.toLowerCase()&&a.util.setLanguage(o,i);var s={element:n,language:i,grammar:l,code:n.textContent};function u(e){s.highlightedCode=e,a.hooks.run("before-insert",s),s.element.innerHTML=s.highlightedCode,a.hooks.run("after-highlight",s),a.hooks.run("complete",s),r&&r.call(s.element)}if(a.hooks.run("before-sanity-check",s),(o=s.element.parentElement)&&"pre"===o.nodeName.toLowerCase()&&!o.hasAttribute("tabindex")&&o.setAttribute("tabindex","0"),!s.code)return a.hooks.run("complete",s),void(r&&r.call(s.element));if(a.hooks.run("before-highlight",s),s.grammar)if(t&&e.Worker){var c=new Worker(a.filename);c.onmessage=function(e){u(e.data)},c.postMessage(JSON.stringify({language:s.language,code:s.code,immediateClose:!0}))}else u(a.highlight(s.code,s.grammar,s.language));else u(a.util.encode(s.code))},highlight:function(e,n,t){var r={code:e,grammar:n,language:t};if(a.hooks.run("before-tokenize",r),!r.grammar)throw new Error('The language "'+r.language+'" has no grammar.');return r.tokens=a.tokenize(r.code,r.grammar),a.hooks.run("after-tokenize",r),i.stringify(a.util.encode(r.tokens),r.language)},tokenize:function(e,n){var t=n.rest;if(t){for(var r in t)n[r]=t[r];delete n.rest}var a=new s;return u(a,a.head,e),o(e,a,n,a.head,0),function(e){for(var n=[],t=e.head.next;t!==e.tail;)n.push(t.value),t=t.next;return n}(a)},hooks:{all:{},add:function(e,n){var t=a.hooks.all;t[e]=t[e]||[],t[e].push(n)},run:function(e,n){var t=a.hooks.all[e];if(t&&t.length)for(var r,i=0;r=t[i++];)r(n)}},Token:i};function i(e,n,t,r){this.type=e,this.content=n,this.alias=t,this.length=0|(r||"").length}function l(e,n,t,r){e.lastIndex=n;var a=e.exec(t);if(a&&r&&a[1]){var i=a[1].length;a.index+=i,a[0]=a[0].slice(i)}return a}function o(e,n,t,r,s,g){for(var f in t)if(t.hasOwnProperty(f)&&t[f]){var h=t[f];h=Array.isArray(h)?h:[h];for(var d=0;d<h.length;++d){if(g&&g.cause==f+","+d)return;var v=h[d],p=v.inside,m=!!v.lookbehind,y=!!v.greedy,k=v.alias;if(y&&!v.pattern.global){var x=v.pattern.toString().match(/[imsuy]*$/)[0];v.pattern=RegExp(v.pattern.source,x+"g")}for(var b=v.pattern||v,w=r.next,A=s;w!==n.tail&&!(g&&A>=g.reach);A+=w.value.length,w=w.next){var P=w.value;if(n.length>e.length)return;if(!(P instanceof i)){var E,S=1;if(y){if(!(E=l(b,A,e,m))||E.index>=e.length)break;var L=E.index,O=E.index+E[0].length,C=A;for(C+=w.value.length;L>=C;)C+=(w=w.next).value.length;if(A=C-=w.value.length,w.value instanceof i)continue;for(var j=w;j!==n.tail&&(C<O||"string"==typeof j.value);j=j.next)S++,C+=j.value.length;S--,P=e.slice(A,C),E.index-=A}else if(!(E=l(b,0,P,m)))continue;L=E.index;var N=E[0],_=P.slice(0,L),M=P.slice(L+N.length),W=A+P.length;g&&W>g.reach&&(g.reach=W);var I=w.prev;if(_&&(I=u(n,I,_),A+=_.length),c(n,I,S),w=u(n,I,new i(f,p?a.tokenize(N,p):N,k,N)),M&&u(n,w,M),S>1){var T={cause:f+","+d,reach:W};o(e,n,t,w.prev,A,T),g&&T.reach>g.reach&&(g.reach=T.reach)}}}}}}function s(){var e={value:null,prev:null,next:null},n={value:null,prev:e,next:null};e.next=n,this.head=e,this.tail=n,this.length=0}function u(e,n,t){var r=n.next,a={value:t,prev:n,next:r};return n.next=a,r.prev=a,e.length++,a}function c(e,n,t){for(var r=n.next,a=0;a<t&&r!==e.tail;a++)r=r.next;n.next=r,r.prev=n,e.length-=a}if(e.Prism=a,i.stringify=function e(n,t){if("string"==typeof n)return n;if(Array.isArray(n)){var r="";return n.forEach((function(n){r+=e(n,t)})),r}var i={type:n.type,content:e(n.content,t),tag:"span",classes:["token",n.type],attributes:{},language:t},l=n.alias;l&&(Array.isArray(l)?Array.prototype.push.apply(i.classes,l):i.classes.push(l)),a.hooks.run("wrap",i);var o="";for(var s in i.attributes)o+=" "+s+'="'+(i.attributes[s]||"").replace(/"/g,"&quot;")+'"';return"<"+i.tag+' class="'+i.classes.join(" ")+'"'+o+">"+i.content+"</"+i.tag+">"},!e.document)return e.addEventListener?(a.disableWorkerMessageHandler||e.addEventListener("message",(function(n){var t=JSON.parse(n.data),r=t.language,i=t.code,l=t.immediateClose;e.postMessage(a.highlight(i,a.languages[r],r)),l&&e.close()}),!1),a):a;var g=a.util.currentScript();function f(){a.manual||a.highlightAll()}if(g&&(a.filename=g.src,g.hasAttribute("data-manual")&&(a.manual=!0)),!a.manual){var h=document.readyState;"loading"===h||"interactive"===h&&g&&g.defer?document.addEventListener("DOMContentLoaded",f):window.requestAnimationFrame?window.requestAnimationFrame(f):window.setTimeout(f,16)}return a}(_self);"undefined"!=typeof module&&module.exports&&(module.exports=Prism),"undefined"!=typeof global&&(global.Prism=Prism);Prism.languages.markup={comment:{pattern:/<!--(?:(?!<!--)[\s\S])*?-->/,greedy:!0},prolog:{pattern:/<\?[\s\S]+?\?>/,greedy:!0},doctype:{pattern:/<!DOCTYPE(?:[^>"'[\]]|"[^"]*"|'[^']*')+(?:\[(?:[^<"'\]]|"[^"]*"|'[^']*'|<(?!!--)|<!--(?:[^-]|-(?!->))*-->)*\]\s*)?>/i,greedy:!0,inside:{"internal-subset":{pattern:/(^[^\[]*\[)[\s\S]+(?=\]>$)/,lookbehind:!0,greedy:!0,inside:null},string:{pattern:/"[^"]*"|'[^']*'/,greedy:!0},punctuation:/^<!|>$|[[\]]/,"doctype-tag":/^DOCTYPE/i,name:/[^\s<>'"]+/}},cdata:{pattern:/<!\[CDATA\[[\s\S]*?\]\]>/i,greedy:!0},tag:{pattern:/<\/?(?!\d)[^\s>\/=$<%]+(?:\s(?:\s*[^\s>\/=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s'">=]+(?=[\s>]))|(?=[\s/>])))+)?\s*\/?>/,greedy:!0,inside:{tag:{pattern:/^<\/?[^\s>\/]+/,inside:{punctuation:/^<\/?/,namespace:/^[^\s>\/:]+:/}},"special-attr":[],"attr-value":{pattern:/=\s*(?:"[^"]*"|'[^']*'|[^\s'">=]+)/,inside:{punctuation:[{pattern:/^=/,alias:"attr-equals"},{pattern:/^(\s*)["']|["']$/,lookbehind:!0}]}},punctuation:/\/?>/,"attr-name":{pattern:/[^\s>\/]+/,inside:{namespace:/^[^\s>\/:]+:/}}}},entity:[{pattern:/&[\da-z]{1,8};/i,alias:"named-entity"},/&#x?[\da-f]{1,8};/i]},Prism.languages.markup.tag.inside["attr-value"].inside.entity=Prism.languages.markup.entity,Prism.languages.markup.doctype.inside["internal-subset"].inside=Prism.languages.markup,Prism.hooks.add("wrap",(function(a){"entity"===a.type&&(a.attributes.title=a.content.replace(/&amp;/,"&"))})),Object.defineProperty(Prism.languages.markup.tag,"addInlined",{value:function(a,e){var s={};s["language-"+e]={pattern:/(^<!\[CDATA\[)[\s\S]+?(?=\]\]>$)/i,lookbehind:!0,inside:Prism.languages[e]},s.cdata=/^<!\[CDATA\[|\]\]>$/i;var t={"included-cdata":{pattern:/<!\[CDATA\[[\s\S]*?\]\]>/i,inside:s}};t["language-"+e]={pattern:/[\s\S]+/,inside:Prism.languages[e]};var n={};n[a]={pattern:RegExp("(<__[^>]*>)(?:<!\\[CDATA\\[(?:[^\\]]|\\](?!\\]>))*\\]\\]>|(?!<!\\[CDATA\\[)[^])*?(?=</__>)".replace(/__/g,(function(){return a})),"i"),lookbehind:!0,greedy:!0,inside:t},Prism.languages.insertBefore("markup","cdata",n)}}),Object.defineProperty(Prism.languages.markup.tag,"addAttribute",{value:function(a,e){Prism.languages.markup.tag.inside["special-attr"].push({pattern:RegExp("(^|[\"'\\s])(?:"+a+")\\s*=\\s*(?:\"[^\"]*\"|'[^']*'|[^\\s'\">=]+(?=[\\s>]))","i"),lookbehind:!0,inside:{"attr-name":/^[^\s=]+/,"attr-value":{pattern:/=[\s\S]+/,inside:{value:{pattern:/(^=\s*(["']|(?!["'])))\S[\s\S]*(?=\2$)/,lookbehind:!0,alias:[e,"language-"+e],inside:Prism.languages[e]},punctuation:[{pattern:/^=/,alias:"attr-equals"},/"|'/]}}}})}}),Prism.languages.html=Prism.languages.markup,Prism.languages.mathml=Prism.languages.markup,Prism.languages.svg=Prism.languages.markup,Prism.languages.xml=Prism.languages.extend("markup",{}),Prism.languages.ssml=Prism.languages.xml,Prism.languages.atom=Prism.languages.xml,Prism.languages.rss=Prism.languages.xml;!function(s){var e=/(?:"(?:\\(?:\r\n|[\s\S])|[^"\\\r\n])*"|'(?:\\(?:\r\n|[\s\S])|[^'\\\r\n])*')/;s.languages.css={comment:/\/\*[\s\S]*?\*\//,atrule:{pattern:RegExp("@[\\w-](?:[^;{\\s\"']|\\s+(?!\\s)|"+e.source+")*?(?:;|(?=\\s*\\{))"),inside:{rule:/^@[\w-]+/,"selector-function-argument":{pattern:/(\bselector\s*\(\s*(?![\s)]))(?:[^()\s]|\s+(?![\s)])|\((?:[^()]|\([^()]*\))*\))+(?=\s*\))/,lookbehind:!0,alias:"selector"},keyword:{pattern:/(^|[^\w-])(?:and|not|only|or)(?![\w-])/,lookbehind:!0}}},url:{pattern:RegExp("\\burl\\((?:"+e.source+"|(?:[^\\\\\r\n()\"']|\\\\[^])*)\\)","i"),greedy:!0,inside:{function:/^url/i,punctuation:/^\(|\)$/,string:{pattern:RegExp("^"+e.source+"$"),alias:"url"}}},selector:{pattern:RegExp("(^|[{}\\s])[^{}\\s](?:[^{};\"'\\s]|\\s+(?![\\s{])|"+e.source+")*(?=\\s*\\{)"),lookbehind:!0},string:{pattern:e,greedy:!0},property:{pattern:/(^|[^-\w\xA0-\uFFFF])(?!\s)[-_a-z\xA0-\uFFFF](?:(?!\s)[-\w\xA0-\uFFFF])*(?=\s*:)/i,lookbehind:!0},important:/!important\b/i,function:{pattern:/(^|[^-a-z0-9])[-a-z0-9]+(?=\()/i,lookbehind:!0},punctuation:/[(){};:,]/},s.languages.css.atrule.inside.rest=s.languages.css;var t=s.languages.markup;t&&(t.tag.addInlined("style","css"),t.tag.addAttribute("style","css"))}(Prism);Prism.languages.clike={comment:[{pattern:/(^|[^\\])\/\*[\s\S]*?(?:\*\/|$)/,lookbehind:!0,greedy:!0},{pattern:/(^|[^\\:])\/\/.*/,lookbehind:!0,greedy:!0}],string:{pattern:/(["'])(?:\\(?:\r\n|[\s\S])|(?!\1)[^\\\r\n])*\1/,greedy:!0},"class-name":{pattern:/(\b(?:class|extends|implements|instanceof|interface|new|trait)\s+|\bcatch\s+\()[\w.\\]+/i,lookbehind:!0,inside:{punctuation:/[.\\]/}},keyword:/\b(?:break|catch|continue|do|else|finally|for|function|if|in|instanceof|new|null|return|throw|try|while)\b/,boolean:/\b(?:false|true)\b/,function:/\b\w+(?=\()/,number:/\b0x[\da-f]+\b|(?:\b\d+(?:\.\d*)?|\B\.\d+)(?:e[+-]?\d+)?/i,operator:/[<>]=?|[!=]=?=?|--?|\+\+?|&&?|\|\|?|[?*/~^%]/,punctuation:/[{}[\];(),.:]/};Prism.languages.javascript=Prism.languages.extend("clike",{"class-name":[Prism.languages.clike["class-name"],{pattern:/(^|[^$\w\xA0-\uFFFF])(?!\s)[_$A-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\.(?:constructor|prototype))/,lookbehind:!0}],keyword:[{pattern:/((?:^|\})\s*)catch\b/,lookbehind:!0},{pattern:/(^|[^.]|\.\.\.\s*)\b(?:as|assert(?=\s*\{)|async(?=\s*(?:function\b|\(|[$\w\xA0-\uFFFF]|$))|await|break|case|class|const|continue|debugger|default|delete|do|else|enum|export|extends|finally(?=\s*(?:\{|$))|for|from(?=\s*(?:['"]|$))|function|(?:get|set)(?=\s*(?:[#\[$\w\xA0-\uFFFF]|$))|if|implements|import|in|instanceof|interface|let|new|null|of|package|private|protected|public|return|static|super|switch|this|throw|try|typeof|undefined|var|void|while|with|yield)\b/,lookbehind:!0}],function:/#?(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\s*(?:\.\s*(?:apply|bind|call)\s*)?\()/,number:{pattern:RegExp("(^|[^\\w$])(?:NaN|Infinity|0[bB][01]+(?:_[01]+)*n?|0[oO][0-7]+(?:_[0-7]+)*n?|0[xX][\\dA-Fa-f]+(?:_[\\dA-Fa-f]+)*n?|\\d+(?:_\\d+)*n|(?:\\d+(?:_\\d+)*(?:\\.(?:\\d+(?:_\\d+)*)?)?|\\.\\d+(?:_\\d+)*)(?:[Ee][+-]?\\d+(?:_\\d+)*)?)(?![\\w$])"),lookbehind:!0},operator:/--|\+\+|\*\*=?|=>|&&=?|\|\|=?|[!=]==|<<=?|>>>?=?|[-+*/%&|^!=<>]=?|\.{3}|\?\?=?|\?\.?|[~:]/}),Prism.languages.javascript["class-name"][0].pattern=/(\b(?:class|extends|implements|instanceof|interface|new)\s+)[\w.\\]+/,Prism.languages.insertBefore("javascript","keyword",{regex:{pattern:RegExp("((?:^|[^$\\w\\xA0-\\uFFFF.\"'\\])\\s]|\\b(?:return|yield))\\s*)/(?:(?:\\[(?:[^\\]\\\\\r\n]|\\\\.)*\\]|\\\\.|[^/\\\\\\[\r\n])+/[dgimyus]{0,7}|(?:\\[(?:[^[\\]\\\\\r\n]|\\\\.|\\[(?:[^[\\]\\\\\r\n]|\\\\.|\\[(?:[^[\\]\\\\\r\n]|\\\\.)*\\])*\\])*\\]|\\\\.|[^/\\\\\\[\r\n])+/[dgimyus]{0,7}v[dgimyus]{0,7})(?=(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*(?:$|[\r\n,.;:})\\]]|//))"),lookbehind:!0,greedy:!0,inside:{"regex-source":{pattern:/^(\/)[\s\S]+(?=\/[a-z]*$)/,lookbehind:!0,alias:"language-regex",inside:Prism.languages.regex},"regex-delimiter":/^\/|\/$/,"regex-flags":/^[a-z]+$/}},"function-variable":{pattern:/#?(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\s*[=:]\s*(?:async\s*)?(?:\bfunction\b|(?:\((?:[^()]|\([^()]*\))*\)|(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*)\s*=>))/,alias:"function"},parameter:[{pattern:/(function(?:\s+(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*)?\s*\(\s*)(?!\s)(?:[^()\s]|\s+(?![\s)])|\([^()]*\))+(?=\s*\))/,lookbehind:!0,inside:Prism.languages.javascript},{pattern:/(^|[^$\w\xA0-\uFFFF])(?!\s)[_$a-z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\s*=>)/i,lookbehind:!0,inside:Prism.languages.javascript},{pattern:/(\(\s*)(?!\s)(?:[^()\s]|\s+(?![\s)])|\([^()]*\))+(?=\s*\)\s*=>)/,lookbehind:!0,inside:Prism.languages.javascript},{pattern:/((?:\b|\s|^)(?!(?:as|async|await|break|case|catch|class|const|continue|debugger|default|delete|do|else|enum|export|extends|finally|for|from|function|get|if|implements|import|in|instanceof|interface|let|new|null|of|package|private|protected|public|return|set|static|super|switch|this|throw|try|typeof|undefined|var|void|while|with|yield)(?![$\w\xA0-\uFFFF]))(?:(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*\s*)\(\s*|\]\s*\(\s*)(?!\s)(?:[^()\s]|\s+(?![\s)])|\([^()]*\))+(?=\s*\)\s*\{)/,lookbehind:!0,inside:Prism.languages.javascript}],constant:/\b[A-Z](?:[A-Z_]|\dx?)*\b/}),Prism.languages.insertBefore("javascript","string",{hashbang:{pattern:/^#!.*/,greedy:!0,alias:"comment"},"template-string":{pattern:/`(?:\\[\s\S]|\$\{(?:[^{}]|\{(?:[^{}]|\{[^}]*\})*\})+\}|(?!\$\{)[^\\`])*`/,greedy:!0,inside:{"template-punctuation":{pattern:/^`|`$/,alias:"string"},interpolation:{pattern:/((?:^|[^\\])(?:\\{2})*)\$\{(?:[^{}]|\{(?:[^{}]|\{[^}]*\})*\})+\}/,lookbehind:!0,inside:{"interpolation-punctuation":{pattern:/^\$\{|\}$/,alias:"punctuation"},rest:Prism.languages.javascript}},string:/[\s\S]+/}},"string-property":{pattern:/((?:^|[,{])[ \t]*)(["'])(?:\\(?:\r\n|[\s\S])|(?!\2)[^\\\r\n])*\2(?=\s*:)/m,lookbehind:!0,greedy:!0,alias:"property"}}),Prism.languages.insertBefore("javascript","operator",{"literal-property":{pattern:/((?:^|[,{])[ \t]*)(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\s*:)/m,lookbehind:!0,alias:"property"}}),Prism.languages.markup&&(Prism.languages.markup.tag.addInlined("script","javascript"),Prism.languages.markup.tag.addAttribute("on(?:abort|blur|change|click|composition(?:end|start|update)|dblclick|error|focus(?:in|out)?|key(?:down|up)|load|mouse(?:down|enter|leave|move|out|over|up)|reset|resize|scroll|select|slotchange|submit|unload|wheel)","javascript")),Prism.languages.js=Prism.languages.javascript;</script>
+<script src="glass-ui.js"></script>
+<script src="glass-ui-liquid.js"></script>
+<script src="glass-appearance.js"></script>
+<script>
+(function(){
+  /* Fill code panels from the live markup before glass-ui.js enhances it */
+  var demos = Array.prototype.slice.call(document.querySelectorAll('[data-code]'));
+  function dedent(s){ var lines=s.replace(/^\n+|\s+$/g,'').split('\n'), min=1e9; lines.forEach(function(l){ if(l.trim()){ var m=l.match(/^\s*/)[0].length; if(m<min)min=m; } }); return lines.map(function(l){return l.slice(min===1e9?0:min);}).join('\n'); }
+function fmt(h){
+    var root=document.createElement('div'); root.innerHTML=h;
+    var INL=/^(a|abbr|b|code|data|em|i|kbd|mark|small|span|strong|sub|sup|svg|u)$/, VOID=/^(input|br|img|hr)$/;
+    function pad(n){ return new Array(n+1).join('  '); }
+    function open(e){ var o=e.cloneNode(false).outerHTML; return o.slice(0,o.indexOf('>')+1).replace(/ (?!value=)([\w-]+)=""/g,' $1'); }
+    function close(e){ return '</'+e.tagName.toLowerCase()+'>'; }
+    function isInl(n){ return n.nodeType===3 || (n.nodeType===1 && INL.test(n.tagName.toLowerCase())); }
+    function inline(n){
+      if(n.nodeType===3) return n.nodeValue.replace(/\s+/g,' ');
+      var t=n.tagName.toLowerCase();
+      if(t==='svg') return '<svg viewBox="0 0 24 24">…</svg>';
+      if(VOID.test(t)) return open(n);
+      return open(n)+runOf(n)+close(n);
+    }
+    function runOf(e){ return Array.prototype.map.call(e.childNodes,inline).join('').replace(/\s+/g,' ').trim(); }
+    function onlyInline(e){ return Array.prototype.every.call(e.childNodes,isInl); }
+    function ser(e,d,out){
+      var t=e.tagName.toLowerCase();
+      if(t==='svg'||VOID.test(t)){ out.push(pad(d)+inline(e)); return; }
+      if(!e.childNodes.length){ out.push(pad(d)+open(e)+close(e)); return; }
+      if(onlyInline(e)){
+        var one=open(e)+runOf(e)+close(e);
+        if(one.length<=110){ out.push(pad(d)+one); return; }
+        out.push(pad(d)+open(e)); out.push(pad(d+1)+runOf(e)); out.push(pad(d)+close(e)); return;
+      }
+      out.push(pad(d)+open(e));
+      kids(e,d+1,out);
+      out.push(pad(d)+close(e));
+    }
+    function kids(p,d,out){
+      var nodes=Array.prototype.filter.call(p.childNodes,function(n){ return !(n.nodeType===3&&!n.nodeValue.trim()); }), k=0;
+      while(k<nodes.length){
+        var n=nodes[k];
+        if(n.nodeType===1&&!INL.test(n.tagName.toLowerCase())){ ser(n,d,out); k++; continue; }
+        var run=[]; while(k<nodes.length&&isInl(nodes[k])){ run.push(nodes[k]); k++; }
+        var hasText=run.some(function(x){ return x.nodeType===3; });
+        if(hasText){ var s=run.map(inline).join('').replace(/\s+/g,' ').trim(); if(s) out.push(pad(d)+s); }
+        else run.forEach(function(x){ ser(x,d,out); });
+      }
+    }
+    var out=[]; kids(root,0,out); return out.join('\n');
+  }
+  var snippets = demos.map(function(d){
+    var c = d.cloneNode(true);
+    Array.prototype.forEach.call(c.querySelectorAll('[style*="background-image"]'), function(x){ x.setAttribute('style','background-image:url(photo.jpg)'); });
+    return fmt(c.innerHTML.replace(/ aria-invalid="true"/,'').replace(/ data-g-tip="/g,' title="'));
+  });
+  document.addEventListener('click', function(e){   // icon pack: click copies the attribute
+    var b=e.target.closest && e.target.closest('.icon-grid button'); if(!b) return;
+    var s='data-icon="'+b.getAttribute('data-icon')+'"';
+    if(navigator.clipboard) navigator.clipboard.writeText(s).catch(function(){});
+    Glass.toast({title:'Copied', text:s, variant:'success', duration:1800});
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.code[data-for]'), function(box){
+    box.querySelector('pre').textContent = box.getAttribute('data-for').split(',').map(function(i){ return snippets[+i]; }).join('\n\n');
+  });
+  /* Syntax highlighting with Prism (third party). Copy still reads textContent, so the copied code is plain. */
+  Array.prototype.forEach.call(document.querySelectorAll('.code pre'), function(pre){
+    var txt = pre.textContent, lang = /^\s*</.test(txt) ? 'markup' : /Glass\.|=>|function\s/.test(txt) ? 'javascript' : 'css';
+    if (window.Prism && Prism.languages[lang]) pre.innerHTML = Prism.highlight(txt, Prism.languages[lang], lang);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.code .copy'), function(b){
+    b.addEventListener('click', function(){
+      var pre = b.parentNode.querySelector('pre'), txt = pre.textContent;
+      function done(ok){ b.textContent = ok ? 'Copied' : 'Press Ctrl+C'; setTimeout(function(){ b.textContent='Copy'; }, 1600); }
+      function fallback(){ var r=document.createRange(); r.selectNodeContents(pre); var s=getSelection(); s.removeAllRanges(); s.addRange(r); done(false); }
+      try { navigator.clipboard.writeText(txt).then(function(){ done(true); }, fallback); } catch(e){ fallback(); }
+    });
+  });
+})();
+document.addEventListener('DOMContentLoaded', function(){
+  if(!document.documentElement.lang) document.documentElement.lang='en';
+  var T = { info:['Heads up','A new version of this project is available.'], success:['Published','Your changes are live.'], warning:['Storage almost full','You have used 92% of your plan.'], danger:['Upload failed','report.pdf is over the 25 MB limit.'] };
+  Array.prototype.forEach.call(document.querySelectorAll('[data-toast]'), function(b){ b.addEventListener('click', function(){ var v=b.getAttribute('data-toast'); Glass.toast({ title:T[v][0], text:T[v][1], variant:v }); }); });
+  var lb = document.getElementById('loadBtn'); if (lb) setTimeout(function(){ lb.removeAttribute('aria-busy'); lb.textContent='Saved'; }, 2600);
+  document.getElementById('dlg').addEventListener('close', function(e){ if (e.target.returnValue==='delete') Glass.toast({ title:'Project deleted', variant:'danger' }); });
+  document.getElementById('dlg2').addEventListener('close', function(e){ if (e.target.returnValue==='send') Glass.toast({ title:'Invite sent', variant:'success' }); });
+
+  var fs=document.getElementById('fontSel'); if(fs) fs.addEventListener('change', function(){ var r=document.documentElement.style, d=fs.options[fs.selectedIndex].getAttribute('data-display'); r.setProperty('--g-font', fs.value); if(d){ r.setProperty('--g-font-display', d); r.setProperty('--g-display-tracking','-.01em'); } else { r.removeProperty('--g-font-display'); r.removeProperty('--g-display-tracking'); } });
+  var lt=document.getElementById('langTabs'); if(lt) lt.addEventListener('g:tabchange', function(e){ var l=e.detail.index===0?'ru':'en'; Array.prototype.forEach.call(document.querySelectorAll('#type [data-ru]'), function(n){ n.innerHTML=n.getAttribute('data-'+l); }); });
+});
+
+  /* demo only: fake upload progress so the bar can be seen. In a real app call Glass.fileProgress() from your XHR/fetch progress events. */
+  (function(){ var up=document.getElementById('uploader'), inp=up && up.querySelector('input'), sim={}; if(!inp) return;
+    inp.addEventListener('change', function(){ Array.prototype.forEach.call(inp.files, function(f){ var k=f.name+'|'+f.size+'|'+f.lastModified; if(sim[k] || f.size>10*1048576) return; sim[k]=1; var p=0;
+      (function tick(){ p=Math.min(100, p+Math.random()*14+5); Glass.fileProgress(up, f, Math.round(p)); if(p<100) setTimeout(tick, 260); })(); }); }); })();
+</script>

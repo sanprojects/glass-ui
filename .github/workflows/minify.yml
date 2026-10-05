@@ -1,0 +1,29 @@
+name: Minify
+
+# The demo page (index.html) loads the plain source files, so Pages serves the repo as it is.
+# This job only keeps the *.min.* files next to the sources up to date on every push.
+on:
+  push:
+    branches: [main]
+    paths: ['glass-*.css', 'glass-*.js', '!*.min.*']
+
+permissions:
+  contents: write
+
+jobs:
+  minify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Minify
+        run: |
+          for f in glass-*.css glass-*.js; do
+            case "$f" in *.min.*) continue;; esac
+            npx --yes esbuild@0.24.2 "$f" --minify --log-level=error --outfile="${f%.*}.min.${f##*.}"
+          done
+      - name: Commit the minified files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- '*.min.css' '*.min.js'
+          git diff --cached --quiet || { git commit -m "Update minified files [skip ci]" && git push; }

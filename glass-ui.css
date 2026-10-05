@@ -33,6 +33,7 @@
   --g-fill-tip: rgba(28,28,30,.5);     /* tooltip fallback without JS: dark underlay (a blur inside a button cannot see the page) */
   --g-fill-hover: rgba(255,255,255,.14);
   --g-fill-selected: rgba(255,255,255,.20);
+  --g-fill-active: rgba(var(--g-ov), .30);   /* the chosen list item / table row: the same glass, more frosted */
   --g-fill-recessed: rgba(0,0,0,.16);
   --g-line: rgba(255,255,255,.12);
 
@@ -427,6 +428,9 @@ button.g-input-end:hover, .g-input-start:hover { background: var(--g-fill-hover)
 :where(:is(.g-root,[role="listbox"]) nav[data-position="sticky"]) { position: sticky; top: 12px; z-index: 50; }
 :where(:is(.g-root,[role="listbox"]) nav[data-position="fixed"]) { position: fixed; z-index: 50; top: calc(12px + env(safe-area-inset-top, 0px)); left: 16px; right: 16px; max-width: 1088px; margin-inline: auto; }
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > a) { display: flex; align-items: center; gap: 8px; flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; font-weight: 700; font-size: 17px; letter-spacing: -.01em; color: var(--g-text); text-decoration: none; margin-right: auto; }   /* on the narrowest bars the name is clipped before anything overlaps */
+/* Logo dot for the brand link: <nav><a href="/"><span class="g-brand-dot"></span>Name</a>…</nav> */
+.g-brand-dot { width: 22px; height: 22px; border-radius: 50%; background: conic-gradient(from 200deg, #fff, var(--g-accent), #9be7ff, #fff); box-shadow: inset 0 0 0 1px rgba(255,255,255,.5); }
+
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > a > *) { flex: none; }   /* the logo keeps its size while the name is clipped */
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > ul) { display: flex; flex: 1 1 0; min-width: 46px; justify-content: flex-end; gap: 2px; list-style: none; margin: 0; padding: 0; }
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > ul > li) { flex: none; color: inherit; }
@@ -518,7 +522,7 @@ button.g-input-end:hover, .g-input-start:hover { background: var(--g-fill-hover)
 :where(:is(.g-root,[role="listbox"]) tbody tr) { transition: background var(--g-dur); }
 :where(:is(.g-root,[role="listbox"]) tbody tr:hover) { background: rgba(var(--g-ov),.08); }
 :where(:is(.g-root,[role="listbox"]) table[data-g-selectable] tbody tr) { cursor: pointer; }
-:where(:is(.g-root,[role="listbox"]) tbody tr[aria-selected="true"]) { background: color-mix(in srgb, var(--g-accent) 40%, transparent); box-shadow: inset 3px 0 0 var(--g-accent); } /* clearly stronger than hover */
+:where(:is(.g-root,[role="listbox"]) tbody tr[aria-selected="true"]) { background: var(--g-fill-active); } /* clearly stronger than hover */
 /* Table footer: <tfoot><tr><td colspan="N"><span>selection status</span><nav data-g-pager></nav></td></tr></tfoot>: the first child on the left, the last on the right */
 :where(:is(.g-root,[role="listbox"]) tfoot td) { height: auto; padding: 0; font-size: 14px; font-weight: 400; color: var(--g-text-3); }
 :where(:is(.g-root,[role="listbox"]) tfoot td > *) { display: inline-flex; align-items: center; gap: 8px; min-height: var(--g-h-lg); padding-inline: 24px; transition: opacity var(--g-dur); }
@@ -537,7 +541,7 @@ button.g-input-end:hover, .g-input-start:hover { background: var(--g-fill-hover)
 .g-list > li data { flex: none; }
 ol.g-list > li::before { content: counter(g-n) "."; flex: none; min-width: 2.4ch; text-align: right; color: var(--g-text-3); font-variant-numeric: tabular-nums; }
 .g-list:not(ul:not(:has(> li[data-icon]))) > li:hover { background: var(--g-fill-hover); cursor: pointer; }
-.g-list > li.is-active { background: color-mix(in srgb, var(--g-accent) 40%, transparent); }
+.g-list > li.is-active { background: var(--g-fill-active); backdrop-filter: blur(12px); }
 ul.g-list:not(:has(> li[data-icon])) { display: block; column-count: 2; column-gap: 32px; }
 ul.g-list:not(:has(> li[data-icon])) > li { break-inside: avoid; gap: 12px; }
 ul.g-list:not(:has(> li[data-icon])) > li::before { content: ""; flex: none; width: 6px; height: 6px; margin: 0 9px; border-radius: 50%; background: var(--g-text-3); }
