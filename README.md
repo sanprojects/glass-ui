@@ -17,7 +17,7 @@ npm i glass-ui-css
 </body>
 ```
 
-Native elements (`button`, `input`, `table`, `dialog`, `nav`, `article`…) are styled inside `.g-root`; variants and states are attributes (`data-variant`, `data-size`, `aria-*`). The live demo, `Glass-UI.html`, shows every component with its markup.
+Native elements (`button`, `input`, `table`, `dialog`, `nav`, `article`…) are styled inside `.g-root`; variants and states are attributes (`data-variant`, `data-size`, `aria-*`). The [live demo](https://sanprojects.github.io/glass-ui/) (`Glass-UI.html`, rebuilt from `main` on every push) shows every component with its markup.
 
 | File | What |
 |---|---|
