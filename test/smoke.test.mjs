@@ -56,7 +56,10 @@ test('table: rows select, Clear empties the selection', async () => {
 });
 
 test('grid: columns are equal and every gap is --g-gap', async () => {
-  const r = await page.evaluate(() => { const g = document.querySelector('[data-grid]'), c = getComputedStyle(g);
-    return { cols: new Set(c.gridTemplateColumns.split(' ')).size, gap: c.columnGap + ' ' + c.rowGap }; });
-  assert.equal(r.cols, 1); assert.equal(r.gap, '16px 16px');
+  // the grid of the Grid section (the icon list above is a [data-grid] too, with a gap of its own); auto-fit collapses the empty tracks to 0px, the rest differ only by subpixel rounding
+  const r = await page.evaluate(() => { const h = [...document.querySelectorAll('.sec__head h3')].find(e => e.textContent.trim() === 'Grid');
+    const g = h.closest('.sec__head').nextElementSibling.querySelector('[data-grid]'), c = getComputedStyle(g);
+    const w = c.gridTemplateColumns.split(' ').map(parseFloat).filter(v => v > 0);
+    return { cols: w.length, spread: Math.max(...w) - Math.min(...w), gap: c.columnGap + ' ' + c.rowGap }; });
+  assert.ok(r.cols > 1, 'columns: ' + r.cols); assert.ok(r.spread < 1, 'columns differ by ' + r.spread + 'px'); assert.equal(r.gap, '16px 16px');
 });

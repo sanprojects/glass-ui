@@ -489,12 +489,12 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
       </aside>
     </div></div>
     <div class="code" data-for="14"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
-    <div class="sec__head"><h3>Grid</h3><p class="g-desc">The grid only sets the layout: any content lines up in even columns with one gap (<span class="inline-code">--g-gap</span>), as many as fit, at least 200 px each (<span class="inline-code">--g-grid-min</span>). <span class="inline-code">data-grid="4"</span> caps the columns; <span class="inline-code">data-span</span> and <span class="inline-code">data-rows</span> on a child widen or heighten it. A tile is an <span class="inline-code">article data-tile</span>, a square card of its own (below).</p></div>
+    <div class="sec__head"><h3>Grid</h3><p class="g-desc">The grid only sets the layout: any content lines up in even columns with one gap (<span class="inline-code">--g-gap</span>), as many as fit, up to 12, each at least 1/12 of the width; <span class="inline-code">--g-grid-min</span> sets a wider minimum (a grid of fields has 200 px).<span class="inline-code">data-grid="4"</span> caps the columns; <span class="inline-code">data-span</span> and <span class="inline-code">data-rows</span> on a child widen or heighten it. A tile is an <span class="inline-code">article data-tile</span>, a square card of its own (below).</p></div>
     <div class="demo col" data-code>
       <div data-grid>
         <article><h4>One</h4><p>Any element works as a cell.</p></article>
         <article><h4>Two</h4><p>Columns share the width equally.</p></article>
-        <article><h4>Three</h4><p>As many as fit, at least 200 px.</p></article>
+        <article><h4>Three</h4><p>As many as fit, up to 12.</p></article>
         <article><h4>Four</h4><p>The gap is always the same.</p></article>
         <article><h4>Five</h4><p>Wraps to a new row by itself.</p></article>
         <article><h4>Six</h4><p>No per-item markup needed.</p></article>

@@ -649,15 +649,16 @@ span.g-input-end { right: var(--g-inset); width: var(--g-icon-md); height: var(-
 /* ---------- Grid: <div data-grid> ----------
  * Throw any content in: the children line up in even columns, every gap is --g-gap. Fine-tune by hand where needed.
  *   <div data-grid> <article>…</article> <article>…</article> <p>…</p> </div>
- * data-grid        as many columns as fit, each at least --g-grid-min (200px) and sharing the width equally
+ * data-grid        as many columns as fit, at most --g-cols (12), each at least 1/12 of the width and --g-grid-min, sharing the width equally
  * data-grid="1…6"  at most that many columns, fewer when narrow (1 = a single column)
  * On a child: data-span="2|3|full" widens it (only when the grid is wide enough; keep it within the column count), data-rows="2|3" makes it taller.
- * The grid decides the layout only. The size of a cell comes from the cell itself (see Tile) and --g-grid-min (200px) sets the narrowest column. */
+ * The grid decides the layout only. The size of a cell comes from the cell itself (see Tile) and --g-grid-min sets the narrowest column:
+ * --g-h-sm by default, 200px in a grid of fields or checkboxes (see Forms); set it on the grid for wider cells (cards: 160px, stat tiles: about 11rem). */
 :where([data-grid]) { --g-cols: 12; display: grid; grid-template-columns: repeat(auto-fit, minmax(max(var(--g-grid-min, var(--g-h-sm)), calc((100% - (var(--g-cols) - 1) * var(--g-gap)) / var(--g-cols))), 1fr));
   grid-auto-columns: auto; gap: var(--g-gap); container-type: inline-size; }
 :where([data-grid="1"]) { --g-cols: 1; } :where([data-grid="2"]) { --g-cols: 2; } :where([data-grid="3"]) { --g-cols: 3; } :where([data-grid="4"]) { --g-cols: 4; } :where([data-grid="5"]) { --g-cols: 5; } :where([data-grid="6"]) { --g-cols: 6; }
 :where([data-grid] > *) { min-width: 0; }
-/* A grid with round icon buttons in it is a toolbar: the buttons keep their own size (a column of the grid is never narrower than 200px, which is right for a field and wrong for a 40px button),
+/* A grid with round icon buttons in it is a toolbar: the buttons keep their own size (a column of the grid is a share of the width, 1/12 at least and 200px in a grid of fields, which is right for a field and wrong for a 40px button),
    the other cells share what is left, at 200px at least, and wrap when they do not fit. Checkboxes keep their own width as well. A grid of fields (.g-field) stays a grid. */
 :is(.g-root,[role="listbox"]) [data-grid]:has(> :is(button, a[role="button"])[data-icon]:empty):not(:has(> .g-field)) { display: flex; flex-wrap: wrap; align-items: center; }
 :is(.g-root,[role="listbox"]) [data-grid]:has(> :is(button, a[role="button"])[data-icon]:empty):not(:has(> .g-field)) > * { flex: 1 1 var(--g-grid-min, 200px); min-width: 0; }
