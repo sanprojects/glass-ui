@@ -36,13 +36,15 @@ Native elements (`button`, `input`, `table`, `dialog`, `nav`, `article`…) are 
 
 ### [Buttons and icons](https://sanprojects.github.io/glass-ui/#buttons)
 
-Primary, glass, light, outline, recessed and danger variants, three sizes, icon-only and block buttons, toggle and removable chips, plus a Lucide icon pack added with `data-icon`.
+Primary, glass, light, outline, recessed, plain (an icon or text without a pad: `data-variant="plain"`) and danger variants, three sizes, icon-only and block buttons, toggle and removable chips, plus a Lucide icon pack added with `data-icon`.
 
 <img src="docs/buttons.webp" alt="Buttons and icons" width="100%">
 
 ### [Forms](https://sanprojects.github.io/glass-ui/#forms)
 
 Recessed fields with icons and validation states, number stepper, date, time and colour pickers, file drop zone, select with search and multi-select, checkboxes, radios, switches and sliders. All are plain form controls, so they submit and validate natively.
+
+A form is an adaptive grid: any container that holds `.g-field` children lays them out in columns of equal width, never narrower than an input (200px), with one gap between them. The labels, controls and hints of one line share their rows (subgrid), so the controls stand on one line. A lone field takes the whole row. A field without a label (a button: `<div class="g-field"><button>Go</button></div>`) stands at the height of the controls beside it, and in a grid too narrow to put anything beside it becomes a row of its own.
 
 <img src="docs/forms-1.webp" alt="Form controls" width="100%">
 
@@ -74,6 +76,8 @@ An app shell with a tool panel, a workspace and an inspector. The inspector uses
 
 <img src="docs/layout.webp" alt="Three-panel app shell" width="100%">
 
+**Ruler**: a section index for a long scrolling box. Put `data-ruler="Name"` on the elements that start a section (without a value the name is the element's `id`, else its text): the nearest scrolling box (a block or flex container) gets the ruler by itself (`data-g-ruler` on a box asks for it explicitly): a hairline with the name under it appears at the right edge, left of the scroll bar, as tall as the section's share of the scroll height; the section in view is lit; a click jumps there. Every mark is a link to its section (`#id`, the id of the marked element, or one made of the name): a click puts it into the address, and an address with `#id` opens that section on load and on back / forward. It floats over the content and does not move it; to keep the content clear of it add `padding-inline-end: calc(var(--g-ruler-w) + 2 * var(--g-gap))` to the box. The standard scroll bar stays. When nothing around the marked elements scrolls, the page does: the ruler is then fixed at the right edge of the window, under a fixed or sticky `<nav>` / `<header>`. For virtual lists pass the sections by hand: `Glass.ruler(box, [{ label, from, to }])` (px of the scrollable height).
+
 ### [Motion](https://sanprojects.github.io/glass-ui/#motion)
 
 Seven effects you add with a single class: appear, shimmer, ripple, pulse, highlight, rotate and zoom. Each plays once; add `g-anim--loop` to repeat, `--g-anim-delay` to stagger a list, or call `Glass.animate(el, 'highlight')` from JavaScript.
@@ -103,6 +107,8 @@ An optional settings panel (`glass-appearance.css` / `.js`) that the demo uses t
 Also in the demo, without screenshots here:
 
 - **[Type](https://sanprojects.github.io/glass-ui/#type)**: styles for `h1`…`small` and `g-prose`, with a font and language switcher.
+- **Empty state**: `<div class="g-empty" data-icon="search"><h4>Title</h4><p>Hint</p></div>`, a centred icon with a title and a hint, for a search with no results.
+- **Message**: `<div class="g-alert" data-icon="triangle-alert" data-tone="warning" role="status">Text with <b>emphasis</b>.</div>`, an icon and a text inside the page; `data-tone` is `warning`, `danger` or `success`, no tone is neutral.
 - **[Tokens](https://sanprojects.github.io/glass-ui/#tokens)**: `--g-accent`, `--g-fill`, `--g-blur`, `--g-radius-*` and more; override on `:root` or any container to retheme a region.
 
 ## Files
@@ -119,7 +125,8 @@ Each file also ships as `.min.css` / `.min.js`.
 
 ## Good to know
 
-- **Spacing** between neighbours is the `--g-gap` token (14px).
+- **Spacing** is one rhythm owned by the parent (`gap`), children carry no outer margin: `--g-gap` (16px) between neighbours, `--g-gap-inner` (8px) inside one component, `--g-inset` (16px) a control's side padding, `--g-pad` (24px) container padding. Documented exceptions: optical alignment of icons, the card media bleed, menu separators and `.g-prose`. `test/spacing.test.mjs` measures the gaps in the demo and fails on off-rhythm values.
+- **Type scale** is seven steps: `--g-fs-caption` 12, `-footnote` 13, `-subhead` 15 (controls), `-body` 17 (running text), `-title3` 20, `-title1` 28, `-title-lg` 34. Use the tokens, not px values; sizes in `em` (inline code, math) stay relative to their text.
 - **Fonts** are not shipped. The kit uses `Manrope` if you load it, otherwise the system font. Set `--g-font` to use your own.
 - **Icons** are a subset of [Lucide](https://lucide.dev) (ISC licence, © Lucide Contributors), generated into `glass-icons.css`. Add your own as described in that file.
 - **Browsers:** current evergreen browsers.

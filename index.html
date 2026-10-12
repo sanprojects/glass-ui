@@ -1,3 +1,9 @@
+<meta charset="utf-8">
+<script>/* the saved theme, background and colour are applied before the first paint, so a light or auto visitor never sees the dark page first and the background never starts in other colours (glass-appearance.js keeps them from here).
+   The background is set by an observer that fires as soon as #scene is parsed: a script in the middle of the page would hold the parser and the page would appear in pieces. */
+try{var D={"g":[["#00283c","#33a7e1","#9bbbf9","#34b8c9","#74b7f9"],["#e8f6ff","#79bfe8","#d1e0fd","#89cfda","#add5fe"]],"q":[["#00283c","#33a7e1","#9bbbf9","#34b8c9"],["#b2def9","#79bfe8","#d1e0fd","#89cfda"]],"lt":["#fff8f2","#ffffff"]};function colour(sc){var P;try{P=JSON.parse(localStorage.getItem('g-palette'))}catch(e){}if(!P||!P.g)P=D;var i=document.documentElement.getAttribute('data-theme')==='light'?1:0;P.g[i].forEach(function(c,n){sc.style.setProperty('--sc'+n,c)});var q=sc.querySelector('.g-liquid');if(!q)return false;q.setAttribute('data-colors',P.q[i].join());q.setAttribute('data-light',P.lt[i]);q.style.background=P.q[i][0];if(P.day)q.setAttribute('data-day',i?'.55':'0');var b=q.querySelectorAll('i');b.forEach(function(e,n){e.style.setProperty('--c',P.q[i][n])});return b.length>3}
+var t=localStorage.getItem('g-theme');if(t==='auto')t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');
+new MutationObserver(function(_,o){var sc=document.getElementById('scene');if(!sc)return;if(!sc.__s){sc.__s=1;try{var k=localStorage.getItem('g-scene')||'gradient',c;if(k.indexOf('custom:')===0){c=(JSON.parse(localStorage.getItem('g-bg-custom')||'[]')||[]).find(function(x){return'custom:'+x.id===k});if(c){sc.setAttribute('data-scene','custom');sc.style.backgroundImage='url("'+c.src+'")'}}else if(/^[a-z-]+$/.test(k))sc.setAttribute('data-scene',k)}catch(e){}}if(colour(sc))o.disconnect()}).observe(document,{childList:true,subtree:true})}catch(e){}</script>
 <title>Glass UI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Onest:wght@400;500;600;700&family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap">
@@ -9,56 +15,64 @@
 /* ---- demo page only ---- */
 :root{ color-scheme: dark; }
 html,body{ overflow-x:clip; max-width:100%; }
-body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-family:var(--g-font); font-size:16px; line-height:1.5; }
-.scene{ position:fixed; inset:-80px; z-index:-1; will-change:transform; transform:translateZ(0); contain:strict; background:#1d2b52 center/cover no-repeat; transition:opacity .3s; }
+body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-family:var(--g-font); font-size:var(--g-fs-body); line-height:1.5; }
+.scene{ position:fixed; inset:-80px; z-index:-1; will-change:transform; transform:translateZ(0); contain:strict; background:#00283c center/cover no-repeat; transition:opacity .3s; }
 .scene::after{ content:""; position:absolute; inset:0; background:linear-gradient(rgba(8,12,28,.18),rgba(8,12,28,.34)); }
+/* fine noise over the gradient: 8-bit colour steps would show as bands, the grain dithers them */
+.scene[data-scene="gradient"]::after{ background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 0 0 0 0 .04'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0/200px,linear-gradient(rgba(8,12,28,.18),rgba(8,12,28,.34)); }
 .scene[data-scene="custom"]{ background-size:cover; background-position:center; } .scene[data-scene="gradient"]{ background:
-  radial-gradient(60% 50% at 18% 12%,#5ea0ff 0%,transparent 60%),
-  radial-gradient(50% 50% at 88% 18%,#ff9ec2 0%,transparent 60%),
-  radial-gradient(60% 60% at 72% 92%,#46d1c1 0%,transparent 62%),
-  radial-gradient(40% 40% at 10% 85%,#a78bfa 0%,transparent 60%),#1d2b52; }
+  radial-gradient(60% 50% at calc(18% + var(--gx1,0%)) calc(12% + var(--gy1,0%)), var(--sc1,#33a7e1) 0%, color-mix(in srgb, var(--sc1,#33a7e1) 93%, transparent) 10%, color-mix(in srgb, var(--sc1,#33a7e1) 74%, transparent) 20%, color-mix(in srgb, var(--sc1,#33a7e1) 50%, transparent) 30%, color-mix(in srgb, var(--sc1,#33a7e1) 26%, transparent) 40%, color-mix(in srgb, var(--sc1,#33a7e1) 7%, transparent) 50%, transparent 60%),
+  radial-gradient(50% 50% at calc(88% + var(--gx2,0%)) calc(18% + var(--gy2,0%)), var(--sc2,#9bbbf9) 0%, color-mix(in srgb, var(--sc2,#9bbbf9) 93%, transparent) 10%, color-mix(in srgb, var(--sc2,#9bbbf9) 74%, transparent) 20%, color-mix(in srgb, var(--sc2,#9bbbf9) 50%, transparent) 30%, color-mix(in srgb, var(--sc2,#9bbbf9) 26%, transparent) 40%, color-mix(in srgb, var(--sc2,#9bbbf9) 7%, transparent) 50%, transparent 60%),
+  radial-gradient(60% 60% at calc(72% + var(--gx3,0%)) calc(92% + var(--gy3,0%)), var(--sc3,#34b8c9) 0%, color-mix(in srgb, var(--sc3,#34b8c9) 93%, transparent) 10%, color-mix(in srgb, var(--sc3,#34b8c9) 74%, transparent) 21%, color-mix(in srgb, var(--sc3,#34b8c9) 50%, transparent) 31%, color-mix(in srgb, var(--sc3,#34b8c9) 26%, transparent) 41%, color-mix(in srgb, var(--sc3,#34b8c9) 7%, transparent) 52%, transparent 62%),
+  radial-gradient(40% 40% at calc(10% + var(--gx4,0%)) calc(85% + var(--gy4,0%)), var(--sc4,#74b7f9) 0%, color-mix(in srgb, var(--sc4,#74b7f9) 93%, transparent) 10%, color-mix(in srgb, var(--sc4,#74b7f9) 74%, transparent) 20%, color-mix(in srgb, var(--sc4,#74b7f9) 50%, transparent) 30%, color-mix(in srgb, var(--sc4,#74b7f9) 26%, transparent) 40%, color-mix(in srgb, var(--sc4,#74b7f9) 7%, transparent) 50%, transparent 60%),
+  var(--sc0,#00283c); }
 :root[data-theme="light"]{ color-scheme: light; } [data-theme="light"] body{ background:#dfe8f5; color:var(--g-text); }
-[data-theme="light"] .scene{ background-color:#e8eefb; } [data-theme="light"] .scene::after{ background:linear-gradient(rgba(255,255,255,.05),rgba(255,255,255,.12)); }
+[data-theme="light"] .scene{ background-color:#e8f6ff; } [data-theme="light"] .scene::after{ background:linear-gradient(rgba(255,255,255,.05),rgba(255,255,255,.12)); }
+[data-theme="light"] .scene[data-scene="gradient"]::after{ background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 0 0 0 0 .04'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0/200px,linear-gradient(rgba(255,255,255,.05),rgba(255,255,255,.12)); }
 [data-theme="light"] .scene[data-scene="gradient"]{ background:
-  radial-gradient(60% 50% at 18% 12%,#9cc4ff 0%,transparent 60%),
-  radial-gradient(50% 50% at 88% 18%,#ffc2d9 0%,transparent 60%),
-  radial-gradient(60% 60% at 72% 92%,#9be8dc 0%,transparent 62%),
-  radial-gradient(40% 40% at 10% 85%,#c9b8f7 0%,transparent 60%),#e8eefb; }
+  radial-gradient(60% 50% at calc(18% + var(--gx1,0%)) calc(12% + var(--gy1,0%)), var(--sc1,#79bfe8) 0%, color-mix(in srgb, var(--sc1,#79bfe8) 93%, transparent) 10%, color-mix(in srgb, var(--sc1,#79bfe8) 74%, transparent) 20%, color-mix(in srgb, var(--sc1,#79bfe8) 50%, transparent) 30%, color-mix(in srgb, var(--sc1,#79bfe8) 26%, transparent) 40%, color-mix(in srgb, var(--sc1,#79bfe8) 7%, transparent) 50%, transparent 60%),
+  radial-gradient(50% 50% at calc(88% + var(--gx2,0%)) calc(18% + var(--gy2,0%)), var(--sc2,#d1e0fd) 0%, color-mix(in srgb, var(--sc2,#d1e0fd) 93%, transparent) 10%, color-mix(in srgb, var(--sc2,#d1e0fd) 74%, transparent) 20%, color-mix(in srgb, var(--sc2,#d1e0fd) 50%, transparent) 30%, color-mix(in srgb, var(--sc2,#d1e0fd) 26%, transparent) 40%, color-mix(in srgb, var(--sc2,#d1e0fd) 7%, transparent) 50%, transparent 60%),
+  radial-gradient(60% 60% at calc(72% + var(--gx3,0%)) calc(92% + var(--gy3,0%)), var(--sc3,#89cfda) 0%, color-mix(in srgb, var(--sc3,#89cfda) 93%, transparent) 10%, color-mix(in srgb, var(--sc3,#89cfda) 74%, transparent) 21%, color-mix(in srgb, var(--sc3,#89cfda) 50%, transparent) 31%, color-mix(in srgb, var(--sc3,#89cfda) 26%, transparent) 41%, color-mix(in srgb, var(--sc3,#89cfda) 7%, transparent) 52%, transparent 62%),
+  radial-gradient(40% 40% at calc(10% + var(--gx4,0%)) calc(85% + var(--gy4,0%)), var(--sc4,#add5fe) 0%, color-mix(in srgb, var(--sc4,#add5fe) 93%, transparent) 10%, color-mix(in srgb, var(--sc4,#add5fe) 74%, transparent) 20%, color-mix(in srgb, var(--sc4,#add5fe) 50%, transparent) 30%, color-mix(in srgb, var(--sc4,#add5fe) 26%, transparent) 40%, color-mix(in srgb, var(--sc4,#add5fe) 7%, transparent) 50%, transparent 60%),
+  var(--sc0,#e8f6ff); }
 .scene .g-liquid{display:none} .scene[data-scene="liquid"] .g-liquid[data-for="liquid"]{display:block}
-.scene[data-scene="aerial"]{background-image:url(scenes/aerial.webp);}
-.bg-row .sw-btn[data-scene="aerial"]{--sw:url(scenes/aerial.webp) center/cover;}
-.scene[data-scene="tower"]{background-image:url(scenes/tower.webp);}
-.bg-row .sw-btn[data-scene="tower"]{--sw:url(scenes/tower.webp) center/cover;}
-.scene[data-scene="grass"]{background-image:url(scenes/grass.webp);}
-.bg-row .sw-btn[data-scene="grass"]{--sw:url(scenes/grass.webp) center/cover;}
-.scene[data-scene="water"]{background-image:url(scenes/water.webp);}
-.bg-row .sw-btn[data-scene="water"]{--sw:url(scenes/water.webp) center/cover;}
-.scene[data-scene="dunes"]{background-image:url(scenes/dunes.webp);}
-.bg-row .sw-btn[data-scene="dunes"]{--sw:url(scenes/dunes.webp) center/cover;}
+.scene.is-gl[data-scene="gradient"], [data-theme="light"] .scene.is-gl[data-scene="gradient"] { background: none; } .scene.is-gl[data-scene="gradient"]::after, [data-theme="light"] .scene.is-gl[data-scene="gradient"]::after { background: none; }
+.scene[data-scene="peak"]{background-image:url(scenes/peak.webp);}
+.bg-row .sw-btn[data-scene="peak"]{--sw:url(scenes/peak.webp) center/cover;}
+.scene[data-scene="ice"]{background-image:url(scenes/ice.webp);}
+.bg-row .sw-btn[data-scene="ice"]{--sw:url(scenes/ice.webp) center/cover;}
+.scene[data-scene="ripples"]{background-image:url(scenes/ripples.webp);}
+.bg-row .sw-btn[data-scene="ripples"]{--sw:url(scenes/ripples.webp) center/cover;}
+.scene[data-scene="forest"]{background-image:url(scenes/forest.webp);}
+.bg-row .sw-btn[data-scene="forest"]{--sw:url(scenes/forest.webp) center/cover;}
+.scene[data-scene="desert"]{background-image:url(scenes/desert.webp);}
+.bg-row .sw-btn[data-scene="desert"]{--sw:url(scenes/desert.webp) center/cover;}
+.scene[data-scene="mountains"]{background-image:url(scenes/mountains.webp);}
+.bg-row .sw-btn[data-scene="mountains"]{--sw:url(scenes/mountains.webp) center/cover;}
+.scene[data-scene="drops"]{background-image:url(scenes/drops.webp);}
+.bg-row .sw-btn[data-scene="drops"]{--sw:url(scenes/drops.webp) center/cover;}
 
 .page{ width:100%; max-width:1120px; margin:0 auto; padding-inline:16px; padding-block:92px 80px; display:flex; flex-direction:column; gap:28px; }
 .nav-brand-dot{ width:22px; height:22px; border-radius:50%; background:conic-gradient(from 200deg,#fff,#0071E3,#9be7ff,#fff); box-shadow:inset 0 0 0 1px rgba(255,255,255,.5); }
 .hero{ padding:40px 8px 20px; display:flex; flex-direction:column; gap:18px; max-width:760px; }
 .hero > data{ align-self:flex-start; }
 .hero h1{ font-size:clamp(40px,7vw,72px); line-height:1.02; letter-spacing:-.03em; font-weight:700; margin:0; text-wrap:balance; }
-.hero p{ margin:0; font-size:19px; line-height:1.5; color:var(--g-text-2); max-width:56ch; }
+.hero p{ margin:0; font-size:var(--g-fs-title3); line-height:1.5; color:var(--g-text-2); max-width:56ch; }
 .sec{ padding:32px; border-radius:var(--g-radius-card); display:flex; flex-direction:column; gap:var(--g-gap); min-width:0; scroll-margin-top:100px; will-change:opacity; }
-.shell-frame{ width:min(100%,220px); aspect-ratio:9/16; border-radius:var(--g-radius-field); background:rgba(255,255,255,.92); display:flex; flex-direction:column; gap:12px; padding:20px; box-shadow:0 12px 40px rgba(0,0,0,.25); } .shell-frame span{ height:14px; border-radius:7px; background:rgba(20,30,50,.14); } .shell-frame span:first-child{ width:60%; } .shell-frame span:nth-child(2){ height:64px; border-radius:var(--g-radius-sm); }
+.shell-frame{ width:min(100%,220px); aspect-ratio:9/16; border-radius:var(--g-radius-field); background:rgba(255,255,255,.92); display:grid; grid-template-columns:minmax(0,1fr); align-content:start; gap:var(--g-gap); padding:var(--g-inset); box-shadow:0 12px 40px rgba(0,0,0,.25); } .shell-frame span{ height:14px; border-radius:7px; background:rgba(20,30,50,.14); } .shell-frame span:first-child{ width:60%; } .shell-frame span:nth-child(2){ height:64px; border-radius:var(--g-radius-sm); }
 .m-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:var(--g-gap); }
 .m-item{ display:flex; flex-direction:column; gap:4px; min-width:0; }
 .m-item h4{ margin-top:14px; } .m-item small{ display:block; margin:0; }
 .m-tile{ aspect-ratio:1; display:grid; place-items:center; border-radius:var(--g-radius-card); background:var(--g-fill-strong); box-shadow:var(--g-rim), var(--g-shadow); font-weight:600; font-size:17px; }
 .sec__head{ display:flex; flex-direction:column; gap:6px; }
-.sec__head h2{ margin:0; font-size:26px; letter-spacing:-.015em; font-weight:650; }
-.sec__head p{ margin:0; color:var(--g-text-2); font-size:15px; max-width:70ch; }
+.sec__head h2{ margin:0; font-size:var(--g-fs-title1); letter-spacing:0; font-weight:600; }
 .pair{ display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:var(--g-gap); align-items:start; }
 .pair > *{ min-width:0; }
-.icon-grid{ display:grid; grid-template-columns:repeat(auto-fill,var(--g-h-sm)); gap:var(--g-gap); }
-.demo{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--g-gap); min-width:0; }
+
+.demo{ display:flex; flex-wrap:wrap; align-items:center; align-content:flex-start; gap:var(--g-gap); min-width:0; }
 .demo.col{ flex-direction:column; flex-wrap:nowrap; align-items:stretch; }
-.demo.grid2{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr)); align-items:start; }
 .code{ position:relative; min-width:0; border-radius:20px; background:rgba(0,0,0,.30); box-shadow:inset 0 1px 1px rgba(0,0,0,.3),inset 0 -1px 0 rgba(255,255,255,.14); }
-.code pre{ margin:0; padding:18px 20px; overflow:auto; max-height:340px; font:12.5px/1.6 ui-monospace,monospace; color:rgba(255,255,255,.86); tab-size:2; }
+.code pre{ margin:0; padding:18px 20px; overflow:auto; max-height:340px; font:var(--g-fs-footnote)/1.6 ui-monospace,monospace; color:rgba(255,255,255,.86); tab-size:2; }
 [data-theme="light"] .code{ background:rgba(255,255,255,.5); box-shadow:inset 0 1px 1px rgba(0,0,0,.14),inset 0 -1px 0 rgba(255,255,255,.7); } [data-theme="light"] .code pre{ color:rgba(0,0,0,.8); }
 .code pre .token.comment,.code pre .token.prolog,.code pre .token.doctype{ color:rgba(255,255,255,.62); font-style:italic; }
 .code pre .token.punctuation,.code pre .token.operator{ color:rgba(255,255,255,.58); }
@@ -68,17 +82,18 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
 .code pre .token.number,.code pre .token.boolean,.code pre .token.entity,.code pre .token.atrule{ color:#ffb9b4; }
 .code .copy{ position:absolute; top:8px; right:8px; --h:30px; font-size:12px; padding:0 12px; }
 .code pre{ padding-right:20px; }
+#start .pair{ align-items:stretch; } #start .code{ display:flex; } #start .code pre{ flex:1; min-width:0; }
 .tokens{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)); gap:10px 24px; font:13px/1.5 ui-monospace,monospace; color:var(--g-text-2); }
 .tokens div{ display:flex; gap:10px; align-items:center; min-width:0; } .tokens b{ color:#fff; font-weight:500; } .sw{ width:18px; height:18px; border-radius:6px; flex:none; box-shadow:inset 0 0 0 1px rgba(255,255,255,.4); }
 .drow{ display:flex; align-items:center; flex-wrap:wrap; gap:var(--g-gap); }
-.spec-line{ margin:0; font-size:19px; line-height:1.5; color:var(--g-text-2); }
-.row-label{ font-size:12px; font-weight:650; letter-spacing:.08em; text-transform:uppercase; color:var(--g-text-3); width:100%; }
+.spec-line{ margin:0; font-size:var(--g-fs-title3); line-height:1.5; color:var(--g-text-2); }
+.row-label{ font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--g-text-3); width:100%; }
 .inline-code{ font:13px ui-monospace,monospace; padding:2px 7px; border-radius:7px; background:rgba(0,0,0,.28); }
 .ts{ display:flex; flex-direction:column; border-radius:24px; background:rgba(0,0,0,.16); box-shadow:inset 0 1px 1px rgba(0,0,0,.22),inset 0 -1px 0 rgba(255,255,255,.18); overflow:hidden; }
 .ts-row{ display:grid; grid-template-columns:200px minmax(0,1fr); gap:8px 24px; align-items:baseline; padding:20px 24px; }
 .ts-row + .ts-row{ border-top:1px solid rgba(255,255,255,.12); }
 .ts-row > :not(.ts-meta){ min-width:0; overflow-wrap:anywhere; }
-.ts-meta{ display:flex; flex-direction:column; gap:2px; font:12.5px/1.4 ui-monospace,monospace; color:var(--g-text-3); }
+.ts-meta{ display:flex; flex-direction:column; gap:2px; font:12px/1.4 ui-monospace,monospace; color:var(--g-text-3); }
 .ts-meta b{ color:#fff; font-weight:500; }
 .ts-row :is(h1,h2,h3,h4){ color:#fff; }
 .specimen{ display:grid; grid-template-columns:auto minmax(0,1fr); gap:32px; align-items:center; padding:28px; border-radius:28px; background:var(--g-fill); box-shadow:var(--g-rim); }
@@ -91,7 +106,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
 @media (max-width:860px){ .pair{ grid-template-columns:minmax(0,1fr); } .sec{ padding:24px 20px; border-radius:var(--g-radius-card); } }
 </style>
 
-<div class="scene" id="scene" data-scene="aerial" aria-hidden="true"><div class="g-liquid" data-g-liquid data-for="liquid"><i></i><i></i><i></i><i></i></div></div>
+<div class="scene" id="scene" data-scene="gradient" data-g-gradient aria-hidden="true"><div class="g-liquid" data-g-liquid data-for="liquid" data-colors="#00283c,#33a7e1,#9bbbf9,#34b8c9"><i></i><i></i><i></i><i></i></div></div>
 
 <div class="page g-root">
   <nav data-position="fixed" aria-label="Sections">
@@ -109,7 +124,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
   </header>
 
   <section class="sec g-glass" id="start" data-title="Install">
-    <div class="sec__head"><h2>Install</h2><p>Add both files, then use the <span class="inline-code">g-</span> classes. Wrap your app (or any region) in <span class="inline-code">g-root</span> so box-sizing and the font apply. Interactive pieces start on their own; after inserting markup later, call <span class="inline-code">Glass.init(container)</span>.</p></div>
+    <div class="sec__head"><h2>Install</h2><p class="g-desc">Add both files, then use the <span class="inline-code">g-</span> classes. Wrap your app (or any region) in <span class="inline-code">g-root</span> so box-sizing and the font apply. Interactive pieces start on their own; after inserting markup later, call <span class="inline-code">Glass.init(container)</span>.</p></div>
     <div class="pair">
       <div class="code"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0">&lt;link rel="stylesheet" href="glass-ui.css"&gt;
 &lt;script src="glass-ui.js" defer&gt;&lt;/script&gt;
@@ -127,8 +142,8 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
     </div>
   </section>
 
-  <section class="sec g-glass" id="buttons" data-title="Buttons">
-    <div class="sec__head"><h2>Buttons</h2><p>Five variants, three sizes, icon and block forms, plus toggle and removable small buttons. Hover scales up, press scales down, disabled drops to 38%.</p></div>
+  <section class="sec g-glass g-anim-scroll" id="buttons" data-title="Buttons">
+    <div class="sec__head"><h2>Buttons</h2><p class="g-desc">Five variants, three sizes, icon and block forms, plus toggle and removable small buttons. Hover highlights, press scales down with a spring release, disabled drops to 38%.</p></div>
     <div class="pair">
       <div class="stack" style="display:flex;flex-direction:column;gap:var(--g-gap)">
         <div class="demo" data-code>
@@ -158,17 +173,17 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
     </div>
   </section>
 
-  <section class="sec g-glass" id="icons" data-title="Icons">
-    <div class="sec__head"><h2>Icons</h2><p>A small Lucide pack drawn as CSS masks, in the colour of the text around it. Add <span class="inline-code">data-icon</span> to any element, or <span class="inline-code">data-icon-end</span> to put it after the content. Hover for the name, click to copy.</p></div>
+  <section class="sec g-glass g-anim-scroll" id="icons" data-title="Icons">
+    <div class="sec__head"><h2>Icons</h2><p class="g-desc">A small Lucide pack drawn as CSS masks, in the colour of the text around it. Add <span class="inline-code">data-icon</span> to any element, or <span class="inline-code">data-icon-end</span> to put it after the content. Hover for the name, click to copy.</p></div>
     <div class="pair">
-      <div class="icon-grid"><button data-size="sm" data-variant="recessed" data-icon="activity" title="activity" aria-label="activity"></button><button data-size="sm" data-variant="recessed" data-icon="archive" title="archive" aria-label="archive"></button><button data-size="sm" data-variant="recessed" data-icon="arrow-down" title="arrow-down" aria-label="arrow-down"></button><button data-size="sm" data-variant="recessed" data-icon="arrow-left" title="arrow-left" aria-label="arrow-left"></button><button data-size="sm" data-variant="recessed" data-icon="arrow-right" title="arrow-right" aria-label="arrow-right"></button><button data-size="sm" data-variant="recessed" data-icon="arrow-up" title="arrow-up" aria-label="arrow-up"></button><button data-size="sm" data-variant="recessed" data-icon="bell" title="bell" aria-label="bell"></button><button data-size="sm" data-variant="recessed" data-icon="bookmark" title="bookmark" aria-label="bookmark"></button><button data-size="sm" data-variant="recessed" data-icon="calendar" title="calendar" aria-label="calendar"></button><button data-size="sm" data-variant="recessed" data-icon="camera" title="camera" aria-label="camera"></button><button data-size="sm" data-variant="recessed" data-icon="check" title="check" aria-label="check"></button><button data-size="sm" data-variant="recessed" data-icon="chevron-down" title="chevron-down" aria-label="chevron-down"></button><button data-size="sm" data-variant="recessed" data-icon="chevron-left" title="chevron-left" aria-label="chevron-left"></button><button data-size="sm" data-variant="recessed" data-icon="chevron-right" title="chevron-right" aria-label="chevron-right"></button><button data-size="sm" data-variant="recessed" data-icon="chevron-up" title="chevron-up" aria-label="chevron-up"></button><button data-size="sm" data-variant="recessed" data-icon="circle-alert" title="circle-alert" aria-label="circle-alert"></button><button data-size="sm" data-variant="recessed" data-icon="circle-check" title="circle-check" aria-label="circle-check"></button><button data-size="sm" data-variant="recessed" data-icon="circle-help" title="circle-help" aria-label="circle-help"></button><button data-size="sm" data-variant="recessed" data-icon="circle-x" title="circle-x" aria-label="circle-x"></button><button data-size="sm" data-variant="recessed" data-icon="clock" title="clock" aria-label="clock"></button><button data-size="sm" data-variant="recessed" data-icon="copy" title="copy" aria-label="copy"></button><button data-size="sm" data-variant="recessed" data-icon="credit-card" title="credit-card" aria-label="credit-card"></button><button data-size="sm" data-variant="recessed" data-icon="diamond" title="diamond" aria-label="diamond"></button><button data-size="sm" data-variant="recessed" data-icon="download" title="download" aria-label="download"></button><button data-size="sm" data-variant="recessed" data-icon="ellipsis" title="ellipsis" aria-label="ellipsis"></button><button data-size="sm" data-variant="recessed" data-icon="external-link" title="external-link" aria-label="external-link"></button><button data-size="sm" data-variant="recessed" data-icon="eye" title="eye" aria-label="eye"></button><button data-size="sm" data-variant="recessed" data-icon="eye-off" title="eye-off" aria-label="eye-off"></button><button data-size="sm" data-variant="recessed" data-icon="file" title="file" aria-label="file"></button><button data-size="sm" data-variant="recessed" data-icon="filter" title="filter" aria-label="filter"></button><button data-size="sm" data-variant="recessed" data-icon="folder" title="folder" aria-label="folder"></button><button data-size="sm" data-variant="recessed" data-icon="frame" title="frame" aria-label="frame"></button><button data-size="sm" data-variant="recessed" data-icon="globe" title="globe" aria-label="globe"></button><button data-size="sm" data-variant="recessed" data-icon="heart" title="heart" aria-label="heart"></button><button data-size="sm" data-variant="recessed" data-icon="house" title="house" aria-label="house"></button><button data-size="sm" data-variant="recessed" data-icon="image" title="image" aria-label="image"></button><button data-size="sm" data-variant="recessed" data-icon="info" title="info" aria-label="info"></button><button data-size="sm" data-variant="recessed" data-icon="layout-grid" title="layout-grid" aria-label="layout-grid"></button><button data-size="sm" data-variant="recessed" data-icon="link" title="link" aria-label="link"></button><button data-size="sm" data-variant="recessed" data-icon="lock" title="lock" aria-label="lock"></button><button data-size="sm" data-variant="recessed" data-icon="log-out" title="log-out" aria-label="log-out"></button><button data-size="sm" data-variant="recessed" data-icon="mail" title="mail" aria-label="mail"></button><button data-size="sm" data-variant="recessed" data-icon="menu" title="menu" aria-label="menu"></button><button data-size="sm" data-variant="recessed" data-icon="message-circle" title="message-circle" aria-label="message-circle"></button><button data-size="sm" data-variant="recessed" data-icon="minus" title="minus" aria-label="minus"></button><button data-size="sm" data-variant="recessed" data-icon="moon" title="moon" aria-label="moon"></button><button data-size="sm" data-variant="recessed" data-icon="palette" title="palette" aria-label="palette"></button><button data-size="sm" data-variant="recessed" data-icon="pencil" title="pencil" aria-label="pencil"></button><button data-size="sm" data-variant="recessed" data-icon="phone" title="phone" aria-label="phone"></button><button data-size="sm" data-variant="recessed" data-icon="play" title="play" aria-label="play"></button><button data-size="sm" data-variant="recessed" data-icon="plus" title="plus" aria-label="plus"></button><button data-size="sm" data-variant="recessed" data-icon="refresh-cw" title="refresh-cw" aria-label="refresh-cw"></button><button data-size="sm" data-variant="recessed" data-icon="save" title="save" aria-label="save"></button><button data-size="sm" data-variant="recessed" data-icon="search" title="search" aria-label="search"></button><button data-size="sm" data-variant="recessed" data-icon="send" title="send" aria-label="send"></button><button data-size="sm" data-variant="recessed" data-icon="settings" title="settings" aria-label="settings"></button><button data-size="sm" data-variant="recessed" data-icon="share" title="share" aria-label="share"></button><button data-size="sm" data-variant="recessed" data-icon="shopping-cart" title="shopping-cart" aria-label="shopping-cart"></button><button data-size="sm" data-variant="recessed" data-icon="smartphone" title="smartphone" aria-label="smartphone"></button><button data-size="sm" data-variant="recessed" data-icon="star" title="star" aria-label="star"></button><button data-size="sm" data-variant="recessed" data-icon="sun" title="sun" aria-label="sun"></button><button data-size="sm" data-variant="recessed" data-icon="tag" title="tag" aria-label="tag"></button><button data-size="sm" data-variant="recessed" data-icon="trash-2" title="trash-2" aria-label="trash-2"></button><button data-size="sm" data-variant="recessed" data-icon="triangle-alert" title="triangle-alert" aria-label="triangle-alert"></button><button data-size="sm" data-variant="recessed" data-icon="upload" title="upload" aria-label="upload"></button><button data-size="sm" data-variant="recessed" data-icon="user" title="user" aria-label="user"></button><button data-size="sm" data-variant="recessed" data-icon="x" title="x" aria-label="x"></button></div>
+      <div data-grid style="--g-gap: 8px"><button data-size="sm" data-variant="recessed" data-icon="activity" title="activity" aria-label="activity"></button><button data-size="sm" data-variant="recessed" data-icon="archive" title="archive" aria-label="archive"></button><button data-size="sm" data-variant="recessed" data-icon="arrow-down" title="arrow-down" aria-label="arrow-down"></button><button data-size="sm" data-variant="recessed" data-icon="arrow-left" title="arrow-left" aria-label="arrow-left"></button><button data-size="sm" data-variant="recessed" data-icon="arrow-right" title="arrow-right" aria-label="arrow-right"></button><button data-size="sm" data-variant="recessed" data-icon="arrow-up" title="arrow-up" aria-label="arrow-up"></button><button data-size="sm" data-variant="recessed" data-icon="asterisk" title="asterisk" aria-label="asterisk"></button><button data-size="sm" data-variant="recessed" data-icon="ban" title="ban" aria-label="ban"></button><button data-size="sm" data-variant="recessed" data-icon="bell" title="bell" aria-label="bell"></button><button data-size="sm" data-variant="recessed" data-icon="book-open" title="book-open" aria-label="book-open"></button><button data-size="sm" data-variant="recessed" data-icon="bookmark" title="bookmark" aria-label="bookmark"></button><button data-size="sm" data-variant="recessed" data-icon="calendar" title="calendar" aria-label="calendar"></button><button data-size="sm" data-variant="recessed" data-icon="camera" title="camera" aria-label="camera"></button><button data-size="sm" data-variant="recessed" data-icon="check" title="check" aria-label="check"></button><button data-size="sm" data-variant="recessed" data-icon="chevron-down" title="chevron-down" aria-label="chevron-down"></button><button data-size="sm" data-variant="recessed" data-icon="chevron-left" title="chevron-left" aria-label="chevron-left"></button><button data-size="sm" data-variant="recessed" data-icon="chevron-right" title="chevron-right" aria-label="chevron-right"></button><button data-size="sm" data-variant="recessed" data-icon="chevron-up" title="chevron-up" aria-label="chevron-up"></button><button data-size="sm" data-variant="recessed" data-icon="circle-alert" title="circle-alert" aria-label="circle-alert"></button><button data-size="sm" data-variant="recessed" data-icon="circle-check" title="circle-check" aria-label="circle-check"></button><button data-size="sm" data-variant="recessed" data-icon="circle-help" title="circle-help" aria-label="circle-help"></button><button data-size="sm" data-variant="recessed" data-icon="circle-x" title="circle-x" aria-label="circle-x"></button><button data-size="sm" data-variant="recessed" data-icon="clock" title="clock" aria-label="clock"></button><button data-size="sm" data-variant="recessed" data-icon="copy" title="copy" aria-label="copy"></button><button data-size="sm" data-variant="recessed" data-icon="copyright" title="copyright" aria-label="copyright"></button><button data-size="sm" data-variant="recessed" data-icon="credit-card" title="credit-card" aria-label="credit-card"></button><button data-size="sm" data-variant="recessed" data-icon="diamond" title="diamond" aria-label="diamond"></button><button data-size="sm" data-variant="recessed" data-icon="download" title="download" aria-label="download"></button><button data-size="sm" data-variant="recessed" data-icon="ellipsis" title="ellipsis" aria-label="ellipsis"></button><button data-size="sm" data-variant="recessed" data-icon="external-link" title="external-link" aria-label="external-link"></button><button data-size="sm" data-variant="recessed" data-icon="eye" title="eye" aria-label="eye"></button><button data-size="sm" data-variant="recessed" data-icon="eye-off" title="eye-off" aria-label="eye-off"></button><button data-size="sm" data-variant="recessed" data-icon="file" title="file" aria-label="file"></button><button data-size="sm" data-variant="recessed" data-icon="filter" title="filter" aria-label="filter"></button><button data-size="sm" data-variant="recessed" data-icon="folder" title="folder" aria-label="folder"></button><button data-size="sm" data-variant="recessed" data-icon="frame" title="frame" aria-label="frame"></button><button data-size="sm" data-variant="recessed" data-icon="globe" title="globe" aria-label="globe"></button><button data-size="sm" data-variant="recessed" data-icon="hash" title="hash" aria-label="hash"></button><button data-size="sm" data-variant="recessed" data-icon="heart" title="heart" aria-label="heart"></button><button data-size="sm" data-variant="recessed" data-icon="house" title="house" aria-label="house"></button><button data-size="sm" data-variant="recessed" data-icon="image" title="image" aria-label="image"></button><button data-size="sm" data-variant="recessed" data-icon="info" title="info" aria-label="info"></button><button data-size="sm" data-variant="recessed" data-icon="layout-grid" title="layout-grid" aria-label="layout-grid"></button><button data-size="sm" data-variant="recessed" data-icon="link" title="link" aria-label="link"></button><button data-size="sm" data-variant="recessed" data-icon="lock" title="lock" aria-label="lock"></button><button data-size="sm" data-variant="recessed" data-icon="log-out" title="log-out" aria-label="log-out"></button><button data-size="sm" data-variant="recessed" data-icon="mail" title="mail" aria-label="mail"></button><button data-size="sm" data-variant="recessed" data-icon="menu" title="menu" aria-label="menu"></button><button data-size="sm" data-variant="recessed" data-icon="message-circle" title="message-circle" aria-label="message-circle"></button><button data-size="sm" data-variant="recessed" data-icon="minus" title="minus" aria-label="minus"></button><button data-size="sm" data-variant="recessed" data-icon="moon" title="moon" aria-label="moon"></button><button data-size="sm" data-variant="recessed" data-icon="palette" title="palette" aria-label="palette"></button><button data-size="sm" data-variant="recessed" data-icon="pencil" title="pencil" aria-label="pencil"></button><button data-size="sm" data-variant="recessed" data-icon="phone" title="phone" aria-label="phone"></button><button data-size="sm" data-variant="recessed" data-icon="play" title="play" aria-label="play"></button><button data-size="sm" data-variant="recessed" data-icon="plus" title="plus" aria-label="plus"></button><button data-size="sm" data-variant="recessed" data-icon="refresh-cw" title="refresh-cw" aria-label="refresh-cw"></button><button data-size="sm" data-variant="recessed" data-icon="save" title="save" aria-label="save"></button><button data-size="sm" data-variant="recessed" data-icon="search" title="search" aria-label="search"></button><button data-size="sm" data-variant="recessed" data-icon="send" title="send" aria-label="send"></button><button data-size="sm" data-variant="recessed" data-icon="settings" title="settings" aria-label="settings"></button><button data-size="sm" data-variant="recessed" data-icon="share" title="share" aria-label="share"></button><button data-size="sm" data-variant="recessed" data-icon="shopping-cart" title="shopping-cart" aria-label="shopping-cart"></button><button data-size="sm" data-variant="recessed" data-icon="smartphone" title="smartphone" aria-label="smartphone"></button><button data-size="sm" data-variant="recessed" data-icon="star" title="star" aria-label="star"></button><button data-size="sm" data-variant="recessed" data-icon="sun" title="sun" aria-label="sun"></button><button data-size="sm" data-variant="recessed" data-icon="tag" title="tag" aria-label="tag"></button><button data-size="sm" data-variant="recessed" data-icon="trash-2" title="trash-2" aria-label="trash-2"></button><button data-size="sm" data-variant="recessed" data-icon="triangle-alert" title="triangle-alert" aria-label="triangle-alert"></button><button data-size="sm" data-variant="recessed" data-icon="upload" title="upload" aria-label="upload"></button><button data-size="sm" data-variant="recessed" data-icon="user" title="user" aria-label="user"></button><button data-size="sm" data-variant="recessed" data-icon="x" title="x" aria-label="x"></button></div>
       <div class="code"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0">&lt;button data-icon="play"&gt;Play&lt;/button&gt;
 &lt;button data-icon-end="chevron-down"&gt;Actions&lt;/button&gt;
 &lt;button data-icon="heart" aria-label="Favourite"&gt;&lt;/button&gt;
 &lt;span data-icon="check"&gt;&lt;/span&gt;
 
 &lt;!-- size and colour --&gt;
-&lt;button data-icon="star" style="--g-icon-size:20px"&gt;Starred&lt;/button&gt;
+&lt;button data-icon="star" style="--g-icon-size:var(--g-icon-md)"&gt;Starred&lt;/button&gt;
 
 &lt;!-- your own icon: a variable plus two rules --&gt;
 :root { --g-i-logo: url("data:image/svg+xml,…") }
@@ -177,21 +192,24 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
     </div>
   </section>
 
-  <section class="sec g-glass" id="forms" data-title="Forms">
-    <div class="sec__head"><h2>Forms</h2><p>Recessed fields, a custom select with optional search (combobox), checkboxes, radios, switches and sliders. All are plain form controls underneath, so they submit and validate normally.</p></div>
+  <section class="sec g-glass g-anim-scroll" id="forms" data-title="Forms">
+    <div class="sec__head"><h2>Forms</h2><p class="g-desc">Recessed fields, a custom select with optional search (combobox), checkboxes, radios, switches and sliders. All are plain form controls underneath, so they submit and validate normally.</p></div>
     <div class="pair">
-      <form class="demo grid2" data-code id="demoForm" novalidate>
+      <form data-code id="demoForm" novalidate>
         <div class="g-field"><label for="f-mail">Email</label><div class="g-input-wrap"><span data-icon="mail"></span><input id="f-mail" type="email" placeholder="name@example.com" autocomplete="off"></div><small>We will never share it.</small></div>
         <div class="g-field"><label for="f-pass">Password</label><div class="g-input-wrap"><span data-icon="lock"></span><input id="f-pass" type="password" value="correct horse" autocomplete="off"><button class="g-input-end" type="button" data-g-password data-icon="eye" aria-label="Show password"></button></div><small>At least 8 characters</small></div>
         <div class="g-field"><label for="f-mail2">Email</label><div class="g-input-wrap"><span data-icon="mail"></span><input id="f-mail2" type="email" value="sam@example" aria-invalid="true"><span class="g-input-end" data-icon="triangle-alert"></span></div><small role="alert" data-custom>Enter a valid email address.</small></div>
-        <div class="g-field"><label for="f-tel">Phone</label><div class="g-input-wrap" title="Include the country code, e.g. +357" data-hint><span data-icon="phone"></span><input id="f-tel" type="tel" aria-invalid="false" value="+357 99 000000"><span class="g-input-end" data-icon="circle-check"></span></div><small>Verified</small></div>
+        <div class="g-field"><label for="f-tel">Phone</label><div class="g-input-wrap" title="Include the country code, e.g. +357"><span data-icon="phone"></span><input id="f-tel" type="tel" aria-invalid="false" value="+357 99 000000"><span class="g-input-end" data-icon="circle-check"></span></div><small>Verified</small></div>
         <div class="g-field"><label for="f-user">Username</label><div class="g-input-wrap"><span data-icon="user"></span><input id="f-user" value="sam.n" disabled></div><small>Can’t be changed</small></div>
+        <div class="g-field"><label for="f-find">Search</label><div class="g-input-wrap"><span data-icon="search"></span><input id="f-find" type="search" value="ключ" placeholder="Search"><span class="g-input-note">26 found</span><button class="g-input-end" type="button" data-icon="x" data-g-clear-input aria-label="Clear"></button></div><small>The count sits before the clear cross and moves with it.</small></div>
+        <div class="g-field"><label for="f-find2">Filter</label><div class="g-input-wrap"><span data-icon="filter"></span><input id="f-find2" value="" placeholder="Filter"><span class="g-input-note">3 of 12</span></div><small>No cross: the count takes its place.</small></div>
         <div class="g-field"><label for="f-ro">Notes</label><textarea id="f-ro" readonly>Keep the hallway light warm in the evening.</textarea><small>Read only</small></div>
         <div class="g-field"><label for="f-qty">Quantity</label><div class="g-input-wrap g-stepper" data-g-number><button class="g-input-start" type="button" data-step="-1" data-icon="minus" aria-label="Decrease"></button><input id="f-qty" type="number" value="2" min="0" max="10" step="1" inputmode="numeric"><button class="g-input-end" type="button" data-step="1" data-icon="plus" aria-label="Increase"></button></div><small>Between 0 and 10</small></div>
         <div class="g-field"><label for="f-price">Price</label><input id="f-price" type="number" value="49.90" min="0" step="0.01" inputmode="decimal"><small>Decimal number, EUR</small></div>
         <div class="g-field"><label for="f-date">Date</label><div class="g-input-wrap"><span data-icon="calendar"></span><input id="f-date" type="date" value="2026-10-15"></div></div>
         <div class="g-field"><label for="f-time">Time</label><div class="g-input-wrap"><span data-icon="clock"></span><input id="f-time" type="time" value="09:30"></div></div>
         <div class="g-field"><label for="f-col1">Brand colour</label><div class="g-input-wrap g-color" data-g-color><label class="g-color__swatch"><input type="color" value="#0071E3" aria-label="Pick colour"></label><input id="f-col1" value="#0071E3" maxlength="7" spellcheck="false" autocomplete="off"></div></div>
+        <div class="g-field"><button type="button" data-variant="primary" data-icon="check">Apply colour</button></div>
         <fieldset style="grid-column:1/-1"><legend id="f-up-l">Attachments</legend><div class="g-file" id="uploader" data-g-file data-max-size="10"><label class="g-file__drop"><span data-icon="upload"></span><strong>Drop files here or choose</strong><small>PNG, JPG or PDF · up to 10 MB</small><input type="file" multiple accept="image/png,image/jpeg,application/pdf" aria-labelledby="f-up-l"></label><ul class="g-file__list" hidden></ul></div></fieldset>
         <div class="g-field" style="grid-column:1/-1"><label for="f-msg">Message</label><textarea id="f-msg" placeholder="Tell us what you need" data-max-rows="6"></textarea></div>
       </form>
@@ -199,7 +217,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
     </div>
 
     <div class="pair">
-      <div class="demo grid2" data-code>
+      <div data-grid data-code>
         <div class="g-field"><label for="s-role">Role</label>
           <select id="s-role" data-g-select><option value="">Choose a role</option><option>Designer</option><option>Engineer</option><option selected>Product manager</option><option>Researcher</option><option disabled>Founder (invite only)</option></select></div>
         <div class="g-field"><label for="s-city">City (combobox)</label>
@@ -211,15 +229,15 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
     </div>
 
     <div class="pair">
-      <div class="demo grid2" data-code>
-        <fieldset style="gap:var(--g-gap)"><legend>Notify me about</legend>
+      <div data-grid data-code>
+        <fieldset><legend>Notify me about</legend>
           <label><input type="checkbox" checked> Replies</label>
           <label><input type="checkbox"> Mentions</label>
           <label><input type="checkbox" disabled> Billing (admin only)</label></fieldset>
-        <fieldset style="gap:var(--g-gap)"><legend>Billing cycle</legend>
+        <fieldset><legend>Billing cycle</legend>
           <label><input type="radio" name="cycle" checked> Monthly</label>
           <label><input type="radio" name="cycle"> Annual · save 20%</label></fieldset>
-        <fieldset style="gap:var(--g-gap)"><legend>Preferences</legend>
+        <fieldset><legend>Preferences</legend>
           <label><input type="checkbox" role="switch" checked> Email digest</label>
           <label><input type="checkbox" role="switch"> Beta features</label></fieldset>
         <div class="g-field"><label for="sl">Volume</label><input id="sl" type="range" min="0" max="100" value="62"></div>
@@ -229,8 +247,8 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
     </div>
   </section>
 
-  <section class="sec g-glass" id="navigation" data-title="Navigation">
-    <div class="sec__head"><h2>Navigation</h2><p>The floating bar at the top of this page is a plain <span class="inline-code">&lt;nav&gt;</span>, and its links are built from the page sections. When they do not fit, the rest move into a More menu. Tabs come as a pill segmented control or an underline style. Arrow keys move between tabs.</p></div>
+  <section class="sec g-glass g-anim-scroll" id="navigation" data-title="Navigation">
+    <div class="sec__head"><h2>Navigation</h2><p class="g-desc">The floating bar at the top of this page is a plain <span class="inline-code">&lt;nav&gt;</span>, and its links are built from the page sections. When they do not fit, the rest move into a More menu. Tabs come as a pill segmented control or an underline style. Arrow keys move between tabs.</p></div>
     <div class="pair">
       <div class="demo col">
         <nav aria-label="Example">
@@ -283,12 +301,12 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
 &lt;section class="sec" id="pricing" data-title="Pricing"&gt;…&lt;/section&gt;</pre></div>
   </section>
 
-  <section class="sec g-glass" id="data" data-title="Data">
-    <div class="sec__head"><h2>Data and content</h2><p>Cards, badges, progress and a four-column table with row selection.</p></div>
+  <section class="sec g-glass g-anim-scroll" id="data" data-title="Data">
+    <div class="sec__head"><h2>Data and content</h2><p class="g-desc">Cards, badges, progress and a four-column table with row selection.</p></div>
     <div class="pair">
-      <div class="demo grid2" data-code>
+      <div data-grid data-code>
         <article>
-          <figure style="background-image:linear-gradient(135deg,#5ea0ff,#a78bfa 60%,#ff9ec2)"></figure>
+          <figure style="background-image:linear-gradient(135deg,#33a7e1,#74b7f9 60%,#9bbbf9)"></figure>
           <data data-variant="accent" style="align-self:flex-start">New</data><h3>Spring release</h3><p>Faster search and a calmer inbox.</p>
           <footer><button data-size="sm" data-variant="primary">Read notes</button></footer>
         </article>
@@ -349,7 +367,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
           <li><span>Westcall International</span><data>6 809</data></li>
           <li><span>Southern Reach Systems</span><data>5 774</data></li>
         </ol>
-        <div class="row-label" style="margin-top:12px">Bulleted list</div>
+        <div class="row-label">Bulleted list</div>
         <ul class="g-list" data-g-more="6">
           <li><span>Buttons</span></li>
           <li><span>Fields</span></li>
@@ -364,18 +382,31 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
           <li><span>Navigation</span></li>
           <li><span>Grid</span></li>
         </ul>
-        <div class="row-label" style="margin-top:12px">Expandable text</div>
-        <h4 style="margin:0">What’s new</h4>
+        <div class="row-label">Adaptive list: an icon, the text, equal cells in as many columns as fit at 200 px (every .g-list)</div>
+        <ul class="g-list" data-plain>
+          <li data-icon="plus"><span><b>Balanasios Ani</b></span></li>
+          <li data-icon="map"><span>Independence 1, Limassol</span></li>
+          <li data-icon="clock"><span>Open until 8:00 tomorrow</span></li>
+          <li data-icon="phone"><p><a href="tel:+35722524387">+357 22 524387</a></p></li>
+        </ul>
+        <div class="row-label">Expandable text</div>
+        <h4>What’s new</h4>
         <div class="g-clamp" data-g-clamp="3">
           <div class="g-clamp__text"><p>Thanks for updating! In this version:</p><p>• Panels remember where you left them.</p><p>• Tooltips follow the pointer and fade when you look away.</p><p>• Pages load faster, and open sessions reconnect on their own.</p><p>• A calmer home view with fewer, larger icons.</p><p>• Plus a long list of small fixes and improvements.</p></div>
           <button class="g-clamp__btn" hidden>more</button>
         </div>
-        <div class="row-label" style="margin-top:12px">Blockquote</div>
+        <div class="row-label">Blockquote</div>
         <blockquote><p>Glass gets its colour from the room behind it, not from its own fill.</p><cite>Glass UI notes</cite></blockquote>
-        <div class="row-label" style="margin-top:12px">Details</div>
+        <div class="row-label">Message</div>
+        <div class="g-alert" data-icon="info" role="status">Results are sorted by word length.</div>
+        <div class="g-alert" data-icon="triangle-alert" data-tone="warning" role="status">Russian and English letters were mixed in the word. Only the <b>Russian</b> ones are used.</div>
+        <div class="g-alert" data-icon="circle-alert" data-tone="danger" role="alert">The dictionary could not be loaded.</div>
+        <div class="row-label">Empty state</div>
+        <div class="g-empty" data-icon="search"><h4>No results</h4><p>Check the spelling or try fewer filters.</p></div>
+        <div class="row-label">Details</div>
         <div>
-          <details open><summary>Can I share it with family?</summary><div>Yes — up to five people, each with their own space.</div></details>
-          <details><summary>How do I reset it?</summary><div>Open Settings, choose General, then Reset. Your content stays in the cloud.</div></details>
+          <details open><summary>Can I share it with family?<small>Up to 5 people</small></summary><div>Yes — up to five people, each with their own space.</div></details>
+          <details><summary>How do I reset it?<small>3 steps</small></summary><div>Open Settings, choose General, then Reset. Your content stays in the cloud.</div></details>
           <details><summary>Does it work offline?</summary><div>Most features do. Syncing resumes as soon as you reconnect.</div></details>
         </div>
       </div>
@@ -383,14 +414,14 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
     </div>
 </section>
 
-  <section class="sec g-glass" id="overlays" data-title="Overlays">
-    <div class="sec__head"><h2>Overlays</h2><p>A dialog built on the native <span class="inline-code">&lt;dialog&gt;</span> element (focus trap, Esc to close), glass tooltips, and toasts you trigger from JavaScript.</p></div>
+  <section class="sec g-glass g-anim-scroll" id="overlays" data-title="Overlays">
+    <div class="sec__head"><h2>Overlays</h2><p class="g-desc">A dialog built on the native <span class="inline-code">&lt;dialog&gt;</span> element (focus trap, Esc to close), glass tooltips, and toasts you trigger from JavaScript.</p></div>
     <div class="pair">
       <div class="demo" data-code>
-        <button data-g-open="#dlg" data-variant="primary">Open dialog</button>
-        <button data-g-open="#dlg2" data-variant="outline">Wide dialog</button>
+        <button command="show-modal" commandfor="dlg" data-variant="primary">Open dialog</button>
+        <button command="show-modal" commandfor="dlg2" data-variant="outline">Wide dialog</button>
         <button title="Duplicate project">Hover me</button>
-        <button title="Updated hourly" data-hint>Revenue 1 200</button>
+        <button title="Updated hourly" data-no-hint>Revenue 1 200</button>
         <button title="Share" aria-label="Share" data-icon="share" data-tip-position="bottom"></button>
         <button data-g-menu="#actions" data-icon-end="chevron-down">Actions</button>
         <div id="actions">
@@ -401,17 +432,17 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
           <button aria-disabled="true" data-icon="archive">Archive</button>
           <button data-variant="danger" data-icon="trash-2">Delete</button>
         </div>
-        <dialog id="dlg">
+        <dialog id="dlg" closedby="any">
           <span data-icon="triangle-alert"></span>
           <h3>Delete this project?</h3>
           <p>Harbour redesign and its 24 files will be removed for everyone on the team.</p>
-          <footer><button data-g-close value="delete" data-variant="danger" data-block>Delete project</button><button data-g-close value="cancel" data-block>Keep it</button></footer>
+          <footer><button command="close" commandfor="dlg" value="delete" data-variant="danger" data-block>Delete project</button><button command="close" commandfor="dlg" value="cancel" data-block>Keep it</button></footer>
         </dialog>
-        <dialog id="dlg2" aria-labelledby="dlg2-t" data-size="wide">
+        <dialog id="dlg2" closedby="any" aria-labelledby="dlg2-t" data-size="wide">
           <h3 id="dlg2-t">Invite a teammate</h3>
           <p>They get an email with a link to join your workspace.</p>
-          <div class="g-field" style="margin-bottom:22px"><label for="inv">Email</label><input id="inv" type="email" placeholder="name@company.com"></div>
-          <footer><button data-g-close value="cancel">Cancel</button><button data-g-close value="send" data-variant="primary">Send invite</button></footer>
+          <div class="g-field"><label for="inv">Email</label><input id="inv" type="email" placeholder="name@company.com"></div>
+          <footer><button command="close" commandfor="dlg2" value="cancel">Cancel</button><button command="close" commandfor="dlg2" value="send" data-variant="primary">Send invite</button></footer>
         </dialog>
       </div>
       <div class="code" data-for="13"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
@@ -434,8 +465,8 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
   </section>
 
 
-  <section class="sec g-glass" id="layout" data-title="Layout">
-    <div class="sec__head"><h2>Layout</h2><p>An app shell with three zones: a tool panel on the left, the workspace in the middle and an inspector on the right. The inspector uses the stronger glass, so it reads as the selected, working panel. Below 900 px the panels stack.</p></div>
+  <section class="sec g-glass g-anim-scroll" id="layout" data-title="Layout">
+    <div class="sec__head"><h2>Layout</h2><p class="g-desc">An app shell with three zones: a tool panel on the left, the workspace in the middle and an inspector on the right. The inspector uses the stronger glass, so it reads as the selected, working panel. Below 900 px the panels stack.</p></div>
     <div data-code><div class="g-shell">
       <aside>
         <div class="g-shell__head">
@@ -452,13 +483,13 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
           <div role="tablist"><button>Design</button><button>Prototype</button></div>
         </div>
         <div class="g-shell__row g-shell__row--first"><span>Frame</span></div>
-        <div class="g-shell__fields"><div class="g-input-wrap"><span class="g-shell__k">X</span><input value="240" inputmode="numeric" aria-label="X"></div><div class="g-input-wrap"><span class="g-shell__k">Y</span><input value="480" inputmode="numeric" aria-label="Y"></div><div class="g-input-wrap"><span class="g-shell__k">W</span><input value="240" inputmode="numeric" aria-label="W"></div><div class="g-input-wrap"><span class="g-shell__k">H</span><input value="240" inputmode="numeric" aria-label="H"></div></div>
-        <label style="padding:0 14px 12px"><input type="checkbox" checked> Clip content</label>
-        <div class="g-shell__row"><span>Auto layout</span><button aria-label="Add Auto layout" data-icon="plus" data-size="sm" data-variant="recessed"></button></div><div class="g-shell__row"><span>Layout grid</span><button aria-label="Add Layout grid" data-icon="plus" data-size="sm" data-variant="recessed"></button></div><div class="g-shell__row"><span>Stroke</span><button aria-label="Add Stroke" data-icon="plus" data-size="sm" data-variant="recessed"></button></div><div class="g-shell__row"><span>Effects</span><button aria-label="Add Effects" data-icon="plus" data-size="sm" data-variant="recessed"></button></div>
+        <div class="g-shell__fields" data-grid="2"><div class="g-input-wrap"><span class="g-shell__k">X</span><input value="240" inputmode="numeric" aria-label="X"></div><div class="g-input-wrap"><span class="g-shell__k">Y</span><input value="480" inputmode="numeric" aria-label="Y"></div><div class="g-input-wrap"><span class="g-shell__k">W</span><input value="240" inputmode="numeric" aria-label="W"></div><div class="g-input-wrap"><span class="g-shell__k">H</span><input value="240" inputmode="numeric" aria-label="H"></div></div>
+        <label><input type="checkbox" checked> Clip content</label>
+        <div class="g-shell__group"><details open><summary>Auto layout<small>Vertical</small></summary><div>Direction, spacing and padding of the children.</div></details><details><summary>Layout grid<small>3 columns</small></summary><div>Columns, rows and gutters.</div></details><details><summary>Stroke</summary><div>Colour, weight and position of the outline.</div></details><details><summary>Effects</summary><div>Shadows, blurs and blend modes.</div></details></div>
       </aside>
     </div></div>
     <div class="code" data-for="14"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
-    <div class="sec__head"><h3>Grid</h3><p>Throw any content in and it lines up in even columns with one gap (<span class="inline-code">--g-gap</span>): at least 200 px each, as many as fit. <span class="inline-code">data-grid="4"</span> caps the columns; <span class="inline-code">data-span</span> and <span class="inline-code">data-rows</span> on a child widen or heighten it.</p></div>
+    <div class="sec__head"><h3>Grid</h3><p class="g-desc">The grid only sets the layout: any content lines up in even columns with one gap (<span class="inline-code">--g-gap</span>), as many as fit, at least 200 px each (<span class="inline-code">--g-grid-min</span>). <span class="inline-code">data-grid="4"</span> caps the columns; <span class="inline-code">data-span</span> and <span class="inline-code">data-rows</span> on a child widen or heighten it. A tile is an <span class="inline-code">article data-tile</span>, a square card of its own (below).</p></div>
     <div class="demo col" data-code>
       <div data-grid>
         <article><h4>One</h4><p>Any element works as a cell.</p></article>
@@ -476,14 +507,68 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
         <article><small>Uptime</small><h3>99.98%</h3></article>
         <article><small>Errors</small><h3>0.02%</h3></article>
       </div>
+
+      <div data-grid style="--g-grid-min: 160px">
+        <a href="#"><article data-tile><span data-icon="utensils"></span><h4>Alcoholic drinks</h4><data>10</data></article></a>
+        <a href="#"><article data-tile><span data-icon="utensils"></span><h4>Groceries</h4><data>61</data></article></a>
+        <a href="#"><article data-tile><span data-icon="utensils"></span><h4>Water</h4><data>12</data></article></a>
+        <a href="#"><article data-tile><span data-icon="utensils"></span><h4>Juices</h4><data>23</data></article></a>
+        <a href="#"><article data-tile><span data-icon="utensils"></span><h4>Sweets</h4><data>122</data></article></a>
+        <a href="#"><article data-tile><span data-icon="utensils"></span><h4>Meat</h4><data>50</data></article></a>
+      </div>
     </div>
     <div class="code" data-for="15"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
 
+    <div class="sec__head"><h3>Stack and cluster</h3><p class="g-desc"><span class="inline-code">g-stack</span> puts the children one under another with one <span class="inline-code">--g-gap</span>. <span class="inline-code">g-cluster</span> is a row that wraps and is centred on its line: chips, a key, a few buttons. <span class="inline-code">data-align="center | end | between"</span> places the row.</p></div>
+    <div class="demo col" data-code>
+      <div class="g-stack">
+        <article><h4>One</h4><p>Each child is a row of the stack.</p></article>
+        <article><h4>Two</h4><p>The gap is always the same.</p></article>
+      </div>
+      <div class="g-cluster">
+        <data data-variant="success" data-dot>Found</data><data data-variant="danger" data-dot>Missing</data><small data-muted>A caption sits on the same line</small>
+      </div>
+      <div class="g-cluster" data-align="end">
+        <button data-variant="outline">Cancel</button><button data-variant="primary">Save</button>
+      </div>
+    </div>
+    <div class="code" data-for="16"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
 
+    <div class="sec__head"><h3>Tools layout</h3><p class="g-desc"><span class="inline-code">g-shell g-shell--tools</span>: a toolbar on the left and the workspace on the right. The panels touch, each scrolls on its own, and under 900 px they stack. Give the shell a height, or let it fill a column.</p></div>
+    <div class="demo col" data-code>
+      <div class="g-shell g-shell--tools" style="height: 260px">
+        <aside>
+          <div class="g-field"><label for="t-word">Word</label><div class="g-input-wrap"><span data-icon="search"></span><input id="t-word" placeholder="Search"></div></div>
+          <label><input type="checkbox" checked> Letters may repeat</label>
+        </aside>
+        <main><p>The workspace: results, an editor, a canvas.</p></main>
+      </div>
+    </div>
+    <div class="code" data-for="17"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
   </section>
 
-  <section class="sec g-glass" id="motion" data-title="Motion">
-    <div class="sec__head"><h2>Motion</h2><p>Six effects you can put on any element with a class. Each plays once; add <span class="inline-code">g-anim--loop</span> to repeat it. The tiles below replay on a timer so you can watch them.</p></div>
+  <section class="sec g-glass g-anim-scroll" id="ruler" data-title="Ruler">
+    <div class="sec__head"><h2>Ruler</h2><p class="g-desc">A section index for a long scrolling box. Mark where each section starts with <code>data-ruler="Name"</code> and nothing else: a hairline with the name under it appears at the right edge, as tall as the section's share of the scroll. The section in view is lit; a click jumps to it. It floats over the box, so give the box <code>padding-inline-end</code> if the content must stay clear of it.</p></div>
+    <div data-code><div style="height: 22rem; overflow: auto; display: flex; flex-direction: column; gap: var(--g-gap); padding: var(--g-gap) calc(var(--g-ruler-w, 96px) + 2 * var(--g-gap)) var(--g-gap) var(--g-gap); border-radius: var(--g-radius-field); background: var(--g-fill)">
+      <h4 data-ruler="Intro">Intro</h4>
+      <p>Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it. Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it.</p>
+      <h4 data-ruler="Colour">Colour</h4>
+      <p>Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it. Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it. Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it. Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it. Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it. Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it.</p>
+      <h4 data-ruler="Blur">Blur</h4>
+      <p>Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it. Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it. Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it. Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it.</p>
+      <h4 data-ruler="Motion">Motion</h4>
+      <p>Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it. Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it. Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it. Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it. Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it. Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it. Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it. Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it. Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it.</p>
+      <h4 data-ruler="Tiny">Tiny: a section of one line</h4>
+      <h4 data-ruler="Layout">Layout</h4>
+      <p>Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it. Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it. Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it.</p>
+      <h4 data-ruler="Notes">Notes</h4>
+      <p>Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it. Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it. Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it. Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it. Glass surfaces blur what is behind them, so the content under a panel stays readable without competing with it.</p>
+    </div></div>
+  </section>
+
+
+  <section class="sec g-glass g-anim-scroll" id="motion" data-title="Motion">
+    <div class="sec__head"><h2>Motion</h2><p class="g-desc">Eight effects you can put on any element with a class. Each plays once; add <span class="inline-code">g-anim--loop</span> to repeat it. The tiles below replay on a timer so you can watch them.</p></div>
     <div class="pair">
       <div class="m-grid">
         <div class="m-item"><div class="m-tile g-anim-appear" data-g-anim-loop="2800">appear</div><h4>Appear</h4><small>Fades in while rising from below.</small><small data-muted>1.5 s ease-out</small></div>
@@ -493,6 +578,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
         <div class="m-item"><div class="m-tile g-anim-highlight" data-g-anim-loop="2800">highlight</div><h4>Highlight</h4><small>The element lights up, then the highlight fades out.</small><small data-muted>1.5 s ease-out</small></div>
         <div class="m-item"><div class="g-anim-rotate" data-g-anim-loop="2800"><div class="m-tile">front</div><div class="m-tile">back</div></div><h4>Rotate</h4><small>A card with two sides turns around once.</small><small data-muted>1.5 s ease-out</small></div>
         <div class="m-item"><div class="m-tile g-anim-zoom" data-g-anim-loop="2800">zoom</div><h4>Zoom</h4><small>Drops from above and lands, fading in. For lists that build up block by block.</small><small data-muted>1.5 s ease-out</small></div>
+        <div class="m-item"><div class="m-tile g-anim-scroll">scroll</div><h4>Scroll</h4><small>Materialises as it scrolls into view. No script.</small></div>
         </div>
       <div class="code"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0">&lt;article class="g-anim-appear"&gt;…&lt;/article&gt;
 &lt;article class="g-anim-pulse g-anim--loop"&gt;…&lt;/article&gt;
@@ -515,8 +601,8 @@ Glass.animate(el, 'highlight');
     </div>
   </section>
 
-  <section class="sec g-glass" id="type" data-title="Type">
-    <div class="sec__head"><h2>Типографика</h2><p>Стили текста берутся из тегов <span class="inline-code">h1</span> … <span class="inline-code">small</span>, плюс <span class="inline-code">h1[data-size="lg"]</span>, <span class="inline-code">small[data-muted]</span> и <span class="inline-code">g-prose</span> для длинных статей. Figtree не содержит кириллицы, поэтому русские буквы автоматически берутся из Inter. Выберите шрифт и язык ниже.</p></div>
+  <section class="sec g-glass g-anim-scroll" id="type" data-title="Type">
+    <div class="sec__head"><h2>Типографика</h2><p class="g-desc">Стили текста берутся из тегов <span class="inline-code">h1</span> … <span class="inline-code">small</span>, плюс <span class="inline-code">h1[data-size="lg"]</span>, <span class="inline-code">small[data-muted]</span> и <span class="inline-code">g-prose</span> для длинных статей. Figtree не содержит кириллицы, поэтому русские буквы автоматически берутся из Inter. Выберите шрифт и язык ниже.</p></div>
     <div class="drow" style="align-items:flex-end">
       <div class="g-field" style="width:min(100%,280px)"><label for="fontSel">Шрифт</label>
         <select id="fontSel" data-g-select>
@@ -536,20 +622,20 @@ Glass.animate(el, 'highlight');
       <div class="specimen__body">
         <p class="spec-line" style="color:#fff">АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ<br>абвгдеёжзийклмнопрстуфхцчшщъыьэюя</p>
         <p class="spec-line">ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789 ₽ € $ % № ? ! « » —</p>
-        <div class="drow" style="font-size:22px"><span style="font-weight:400">Regular 400</span><span style="font-weight:500">Medium 500</span><span style="font-weight:600">Semibold 600</span><span style="font-weight:700">Bold 700</span></div>
+        <div class="drow" style="font-size:var(--g-fs-title3)"><span style="font-weight:400">Regular 400</span><span style="font-weight:500">Medium 500</span><span style="font-weight:600">Semibold 600</span><span style="font-weight:700">Bold 700</span></div>
       </div>
     </div>
     <div class="ts">
 <div class="ts-row"><div class="ts-meta"><b>h1[data-size="lg"]</b><span>56–64 / 1.04 · 700</span></div><h1 data-size="lg" data-ru="Стекло для сайтов" data-en="Glass for the web">Стекло для сайтов</h1></div>
-<div class="ts-row"><div class="ts-meta"><b>h1</b><span>40 / 1.1 · 700</span></div><h1 data-ru="Интерфейс, который дышит" data-en="An interface that breathes">Интерфейс, который дышит</h1></div>
-<div class="ts-row"><div class="ts-meta"><b>h2</b><span>28 / 1.15 · 650</span></div><h2 data-ru="Спокойные цвета и мягкий свет" data-en="Calm colour and soft light">Спокойные цвета и мягкий свет</h2></div>
+<div class="ts-row"><div class="ts-meta"><b>h1</b><span>34 / 1.2 · 700</span></div><h1 data-ru="Интерфейс, который дышит" data-en="An interface that breathes">Интерфейс, который дышит</h1></div>
+<div class="ts-row"><div class="ts-meta"><b>h2</b><span>28 / 1.2 · 600 · 0</span></div><h2 data-ru="Спокойные цвета и мягкий свет" data-en="Calm colour and soft light">Спокойные цвета и мягкий свет</h2></div>
 <div class="ts-row"><div class="ts-meta"><b>h3</b><span>20 / 1.25 · 600</span></div><h3 data-ru="Заголовок раздела" data-en="Section heading">Заголовок раздела</h3></div>
 <div class="ts-row"><div class="ts-meta"><b>h4</b><span>17 / 1.3 · 600</span></div><h4 data-ru="Название карточки или строки списка" data-en="Card or list row title">Название карточки или строки списка</h4></div>
-<div class="ts-row"><div class="ts-meta"><b>hgroup &gt; p</b><span>19 / 1.5 · 400</span></div><hgroup><h3 style="font-size:20px">Section heading</h3><p data-ru="Вводный абзац объясняет, зачем нужна страница, в одном-двух предложениях." data-en="An intro paragraph says why the page exists in a sentence or two.">Вводный абзац объясняет, зачем нужна страница, в одном-двух предложениях.</p></hgroup></div>
-<div class="ts-row"><div class="ts-meta"><b>p</b><span>15 / 1.5 · 400</span></div><p data-ru="Основной текст интерфейса: подписи, описания, подсказки и сообщения." data-en="Default interface text: labels, descriptions, hints and messages.">Основной текст интерфейса: подписи, описания, подсказки и сообщения.</p></div>
-<div class="ts-row"><div class="ts-meta"><b>small</b><span>13 / 1.45 · 400</span></div><small data-ru="Мелкий текст для пояснений под полями." data-en="Small text for notes under fields.">Мелкий текст для пояснений под полями.</small></div>
-<div class="ts-row"><div class="ts-meta"><b>small[data-muted]</b><span>12 / 1.4 · 400</span></div><small data-muted data-ru="Обновлено 3 октября · 4 мин чтения" data-en="Updated 3 October · 4 min read">Обновлено 3 октября · 4 мин чтения</small></div>
-<div class="ts-row"><div class="ts-meta"><b>h6</b><span>12 / 1.3 · 650 · +0.08em</span></div><h6 data-ru="Новое в версии 1.0" data-en="New in version 1.0">Новое в версии 1.0</h6></div>
+<div class="ts-row"><div class="ts-meta"><b>hgroup &gt; p</b><span>20 / 1.25 · 400</span></div><hgroup><h3 style="font-size:20px">Section heading</h3><p data-ru="Вводный абзац объясняет, зачем нужна страница, в одном-двух предложениях." data-en="An intro paragraph says why the page exists in a sentence or two.">Вводный абзац объясняет, зачем нужна страница, в одном-двух предложениях.</p></hgroup></div>
+<div class="ts-row"><div class="ts-meta"><b>p</b><span>17 / 1.3 · 400</span></div><p data-ru="Основной текст интерфейса: подписи, описания, подсказки и сообщения." data-en="Default interface text: labels, descriptions, hints and messages.">Основной текст интерфейса: подписи, описания, подсказки и сообщения.</p></div>
+<div class="ts-row"><div class="ts-meta"><b>small</b><span>13 / 1.38 · 400</span></div><small data-ru="Мелкий текст для пояснений под полями." data-en="Small text for notes under fields.">Мелкий текст для пояснений под полями.</small></div>
+<div class="ts-row"><div class="ts-meta"><b>small[data-muted]</b><span>12 / 1.33 · 400</span></div><small data-muted data-ru="Обновлено 3 октября · 4 мин чтения" data-en="Updated 3 October · 4 min read">Обновлено 3 октября · 4 мин чтения</small></div>
+<div class="ts-row"><div class="ts-meta"><b>h6</b><span>12 / 1.3 · 600 · +0.08em</span></div><h6 data-ru="Новое в версии 1.0" data-en="New in version 1.0">Новое в версии 1.0</h6></div>
     </div>
     <div class="pair">
       <div class="g-prose">
@@ -601,15 +687,15 @@ Glass.animate(el, 'highlight');
     </div>
   </section>
 
-  <section class="sec g-glass" id="tokens" data-title="Tokens">
-    <div class="sec__head"><h2>Tokens</h2><p>Override any of these on <span class="inline-code">:root</span> or on a container to retheme a region.</p></div>
+  <section class="sec g-glass g-anim-scroll" id="tokens" data-title="Tokens">
+    <div class="sec__head"><h2>Tokens</h2><p class="g-desc">Override any of these on <span class="inline-code">:root</span> or on a container to retheme a region.</p></div>
     <div class="tokens">
       <div><span class="sw" style="background:#0071E3"></span><b>--g-accent</b> #0071E3</div>
       <div><span class="sw" style="background:rgba(255,255,255,.10)"></span><b>--g-fill</b> rgba(255,255,255,.10)</div>
       <div><span class="sw" style="background:rgba(0,0,0,.16)"></span><b>--g-fill-recessed</b> rgba(0,0,0,.16)</div>
       <div><span class="sw" style="background:#fff"></span><b>--g-text</b> #fff · -2 77% · -3 60%</div>
       <div><b>--g-blur</b> blur(30px) saturate(180%)</div>
-      <div><b>--g-radius-card</b> 32px · field 14px · pill 999px</div>
+      <div><b>--g-radius-card</b> 32px · field height/3 (≈15px) · small 8px · pill 999px</div>
       <div><b>--g-rim</b> inner highlight shadow</div>
       <div><b>--g-focus</b> dark + white double ring</div>
     </div>
@@ -624,13 +710,15 @@ Glass.animate(el, 'highlight');
       <div role="tablist" id="themeTabs"><button>Dark</button><button>Light</button><button>Auto</button></div></fieldset>
     <fieldset class="ctl__group"><legend>Background</legend>
       <div class="sw-row bg-row" id="bgChips">
-        <button class="sw-btn" data-scene="aerial" aria-label="Mountain from above" aria-pressed="true"></button>
-        <button class="sw-btn" data-scene="tower" aria-label="Architecture" aria-pressed="false"></button>
-        <button class="sw-btn" data-scene="grass" aria-label="Grass" aria-pressed="false"></button>
-        <button class="sw-btn" data-scene="water" aria-label="Water" aria-pressed="false"></button>
-        <button class="sw-btn" data-scene="dunes" aria-label="Dunes" aria-pressed="false"></button>
+        <button class="sw-btn" data-scene="gradient" aria-label="Gradient" aria-pressed="true" style="--sw:radial-gradient(60% 50% at 18% 12%,#33a7e1,transparent 60%),radial-gradient(50% 50% at 88% 18%,#9bbbf9,transparent 60%),radial-gradient(60% 60% at 72% 92%,#34b8c9,transparent 62%),#00283c"></button>
         <button class="sw-btn" data-scene="liquid" aria-label="Liquid" aria-pressed="false" style="--sw:radial-gradient(60% 60% at 28% 30%,#58c4c0,transparent 70%),radial-gradient(60% 60% at 76% 78%,#8a6ee6,transparent 70%),#2a4fa8"></button>
-        <button class="sw-btn" data-scene="gradient" aria-label="Gradient" aria-pressed="false" style="--sw:radial-gradient(60% 50% at 18% 12%,#5ea0ff,transparent 60%),radial-gradient(50% 50% at 88% 18%,#ff9ec2,transparent 60%),radial-gradient(60% 60% at 72% 92%,#46d1c1,transparent 62%),#1d2b52"></button>
+        <button class="sw-btn" data-scene="peak" aria-label="Mountain peak from above" aria-pressed="false"></button>
+        <button class="sw-btn" data-scene="ice" aria-label="Ice" aria-pressed="false"></button>
+        <button class="sw-btn" data-scene="ripples" aria-label="Ripples" aria-pressed="false"></button>
+        <button class="sw-btn" data-scene="forest" aria-label="Forest" aria-pressed="false"></button>
+        <button class="sw-btn" data-scene="desert" aria-label="Desert" aria-pressed="false"></button>
+        <button class="sw-btn" data-scene="mountains" aria-label="Mountains" aria-pressed="false"></button>
+        <button class="sw-btn" data-scene="drops" aria-label="Drops" aria-pressed="false"></button>
       </div>
       <div class="g-field" id="bgField"><div class="g-file" id="bgUp" data-g-file data-max-size="20"><label class="g-file__drop"><span data-icon="upload"></span><strong>Your own image</strong><small>Drop or choose · PNG, JPG, WebP</small><input type="file" id="bgFile" accept="image/*" aria-label="Background image"></label><ul class="g-file__list" hidden></ul></div>
       <small role="alert" id="bgErr">Could not open this image.</small></div></fieldset>
@@ -644,15 +732,15 @@ Glass.animate(el, 'highlight');
         <button class="sw-btn" data-accent="#8E8E93" style="--sw:#8E8E93" aria-label="Graphite" aria-pressed="false"></button>
         <label class="sw-btn sw-custom" aria-label="Custom accent colour"><input type="color" id="accentCustom" value="#0071E3"></label>
       </div></fieldset>
-    <fieldset class="ctl__group"><legend>Liquid colour</legend>
+    <fieldset class="ctl__group"><legend>Background colour</legend>
       <div class="sw-row" id="liquidRow">
-        <button class="sw-btn" data-hue="blue" style="--sw:#3f78e0" aria-label="Blue" aria-pressed="true"></button>
+        <button class="sw-btn" data-color="#33a7e1" style="--sw:#33a7e1" aria-label="Sky blue" aria-pressed="true"></button>
         <button class="sw-btn" data-hue="265" style="--sw:hsl(265 68% 55%)" aria-label="Violet" aria-pressed="false"></button>
         <button class="sw-btn" data-hue="175" style="--sw:hsl(175 68% 45%)" aria-label="Teal" aria-pressed="false"></button>
         <button class="sw-btn" data-hue="12" style="--sw:hsl(12 75% 55%)" aria-label="Coral" aria-pressed="false"></button>
         <button class="sw-btn" data-hue="gold" style="--sw:linear-gradient(135deg,#f2c66d,#b7721e)" aria-label="Gold" aria-pressed="false"></button>
         <button class="sw-btn" data-hue="day" style="--sw:linear-gradient(90deg,#e0788f,#1abdcc,#f06143,#33388c)" aria-label="Day cycle" aria-pressed="false"></button>
-        <label class="sw-btn sw-custom" aria-label="Custom liquid colour"><input type="color" id="liquidCustom" value="#3f78e0"></label>
+        <label class="sw-btn sw-custom" aria-label="Custom background colour"><input type="color" id="liquidCustom" value="#3f78e0"></label>
       </div></fieldset>
     <fieldset class="ctl__group"><legend>Liquid speed</legend>
       <div role="tablist" id="speedTabs"><button>Still</button><button aria-selected="true">Calm</button><button>Mid</button><button>Lively</button></div></fieldset>
@@ -721,7 +809,7 @@ function fmt(h){
     return fmt(c.innerHTML.replace(/ aria-invalid="true"/,'').replace(/ data-g-tip="/g,' title="'));
   });
   document.addEventListener('click', function(e){   // icon pack: click copies the attribute
-    var b=e.target.closest && e.target.closest('.icon-grid button'); if(!b) return;
+    var b=e.target.closest && e.target.closest('#icons [data-grid] button'); if(!b) return;
     var s='data-icon="'+b.getAttribute('data-icon')+'"';
     if(navigator.clipboard) navigator.clipboard.writeText(s).catch(function(){});
     Glass.toast({title:'Copied', text:s, variant:'success', duration:1800});

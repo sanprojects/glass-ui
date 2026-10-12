@@ -1,11 +1,11 @@
 /*!
  * Glass UI — optional liquid WebGL background. Include after glass-ui.js.
- * Adds Glass.liquid(host, opts) and auto-mounts every [data-g-liquid].
+ * Adds Glass.liquid(host, opts) and auto-mounts every [data-g-liquid]; and a WebGL gradient for every [data-g-gradient].
  */
 (function (G) {
   'use strict';
   /* Liquid background (WebGL, very slow, pauses when hidden) ----------
-   * <div class="g-liquid" data-g-liquid data-speed="0.012" data-fps="20"><i></i><i></i><i></i><i></i></div>
+   * <div class="g-liquid" data-g-liquid data-speed="0.012"><i></i><i></i><i></i><i></i></div>
    * Own palette: data-colors="#dark,#mid,#light,#accent" and data-light="#highlight" (see .g-liquid--gold).
    * Renders a small canvas (about 40% size) at a low frame rate. It stops when the tab is hidden,
    * when the element is off screen or display:none, and when the user prefers reduced motion
@@ -22,15 +22,15 @@
     ' vec3 col=mix(c0,c1,smoothstep(.2,.55,h)); col=mix(col,c2,smoothstep(.45,.8,h)*.9); col=mix(col,c3,smoothstep(.2,.0,h)*.6+(1.-uv.y)*.15);\n' +
     ' vec3 hf=normalize(normalize(vec3(-.5,.55,.65))+vec3(0.,0.,1.)); float d=max(dot(n,hf),0.);\n' +
     ' col+=lc*(pow(d,55.)*.42+pow(d,8.)*.12);\n' +
-    ' col*=1.-.7*dot(uv-.5,uv-.5); gl_FragColor=vec4(col,1.); }';
+    ' gl_FragColor=vec4(col,1.); }';
   function hex3(h) { h = h.replace('#', ''); return [parseInt(h.substr(0, 2), 16) / 255, parseInt(h.substr(2, 2), 16) / 255, parseInt(h.substr(4, 2), 16) / 255]; }
 
   function liquid(host, o) {
     if (!host) return null;
     if (host.__liquid) return host.__liquid;
     o = o || {};
-    var speed = +(o.speed || host.getAttribute('data-speed') || 0.012), fps = +(o.fps || host.getAttribute('data-fps') || 20);
-    var attr = host.getAttribute('data-colors'), pal = o.colors || (attr ? attr.split(',').map(function (s) { return s.trim(); }) : ['#14224a', '#3f78e0', '#58c4c0', '#8a6ee6']);
+    var speed = +(o.speed || host.getAttribute('data-speed') || 0.012);
+    var attr = host.getAttribute('data-colors'), pal = o.colors || (attr ? attr.split(',').map(function (s) { return s.trim(); }) : ['#00283c', '#33a7e1', '#9bbbf9', '#34b8c9']);
     var light = o.light || host.getAttribute('data-light') || '#fff8f2'; /* colour of the highlights */
     var cv = document.createElement('canvas'); cv.className = 'g-liquid__canvas'; cv.setAttribute('aria-hidden', 'true');
     var gl = cv.getContext('webgl', { antialias: false, alpha: false, powerPreference: 'low-power' });
@@ -50,60 +50,112 @@
     paint(pal, light);
     /* Day cycle: dawn, noon, sunset, night; [dark, mid, light] per keyframe, smoothstep between them */
     var DAY = [[[.17,.13,.32],[.88,.47,.58],[1,.8,.55]], [[.03,.3,.42],[.1,.74,.8],[.8,.98,.95]], [[.22,.1,.3],[.94,.38,.26],[1,.74,.32]], [[.05,.07,.22],[.2,.22,.55],[.56,.52,.86]]];
-    var day = false, lift = 0, ph = .3;
+    var day = host.hasAttribute('data-day'), lift = +host.getAttribute('data-day') || 0, ph = .3;   /* data-day="0..1": starts in the day cycle (the number lightens it) */
     function paintDay() {
       var x = ph * 4, i0 = Math.floor(x) % 4, i1 = (i0 + 1) % 4, f = x - Math.floor(x); f = f * f * (3 - 2 * f);
       var m = [0, 1, 2].map(function (j) { return DAY[i0][j].map(function (v, n) { v = v + (DAY[i1][j][n] - v) * f; return v + (1 - v) * lift; }); });
       gl.uniform3fv(uC[0], m[0]); gl.uniform3fv(uC[1], m[1]); gl.uniform3fv(uC[2], m[2]);
       gl.uniform3fv(uC[3], m[0].map(function (v, n) { return (v + m[1][n]) / 2; }));
     }
+    if (day) paintDay();
     host.insertBefore(cv, host.firstChild);
 
-    var scrolling = false, scrollT = 0;
-    window.addEventListener('scroll', function () { scrolling = true; clearTimeout(scrollT); scrollT = setTimeout(function () { scrolling = false; }, 160); }, { passive: true });
-    var mq = window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
-    var acc = 3.7, last = 0, timer = 0, raf = 0, running = false, visible = true, W = 0, H = 0;
+    var acc = 3.7, off = null, running = false, visible = true, W = 0, H = 0;
     function size() {
       var w = host.clientWidth || 1, h = host.clientHeight || 1, s = Math.min(.4, 720 / w);
       var nw = Math.max(64, Math.round(w * s)), nh = Math.max(64, Math.round(h * s));
       if (nw !== W || nh !== H) { W = cv.width = nw; H = cv.height = nh; gl.viewport(0, 0, W, H); }
-    }
-    function draw(now) {
-      raf = 0; if (!running) return;
-      var dt = last ? Math.min((now - last) / 1000, .25) : 0; last = now;
-      /* no redraw while the page scrolls: the glass above does not have to re-blur a moving background */
-      if (scrolling) { timer = setTimeout(function () { raf = requestAnimationFrame(draw); }, 1000 / fps); return; }
-      acc += dt * speed; if (day) { ph = (ph + dt * speed / .012 / 70) % 1; paintDay(); }
-      frame();
-      timer = setTimeout(function () { raf = requestAnimationFrame(draw); }, 1000 / fps);
     }
     function frame() {
       gl.uniform2f(uR, W, H); gl.uniform1f(uT, acc);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
     function still() { size(); frame(); }
-    function stop() { running = false; clearTimeout(timer); if (raf) cancelAnimationFrame(raf); raf = 0; last = 0; }
-    function start() {
-      if (running) return; size();
-      if (mq.matches || !speed) { still(); return; }
-      running = true; raf = requestAnimationFrame(draw);
+    /* the shared timer of Glass.scene (one for every animated background, with one speed) calls this */
+    function step(dt) {
+      acc += dt * speed; if (day) { ph = (ph + dt / 70) % 1; paintDay(); }
+      frame(); return true;
     }
-    function sync() { (visible && !document.hidden) ? start() : stop(); }
-    document.addEventListener('visibilitychange', sync);
+    function stop() { running = false; if (off) off(); off = null; }
+    function start() {
+      if (running) return; still();
+      if (!speed) return;
+      running = true; off = G.scene.add(step);
+    }
+    function sync() { visible ? start() : stop(); }
     if (window.IntersectionObserver) new IntersectionObserver(function (e) { visible = e[0].isIntersecting; sync(); }).observe(host);
     var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { size(); if (!running) still(); }, 200); });
-    if (mq.addEventListener) mq.addEventListener('change', function () { stop(); sync(); });
     cv.addEventListener('webglcontextlost', function (e) { e.preventDefault(); stop(); host.classList.remove('is-gl'); });
     host.classList.add('is-gl');
     var api = {
       start: start, stop: stop,
       setColors: function (p, l) { day = false; pal = p; light = l || light; paint(pal, light); if (!running) still(); },
       setLift: function (v) { lift = +v || 0; if (day) { paintDay(); if (!running) still(); } },   /* 0..1 lightens the day cycle (light theme) */
-      setDay: function (on) { day = !!on; if (day) { ph = .3; paintDay(); } else paint(pal, light); stop(); sync(); if (!running) still(); },
-      setSpeed: function (v) { speed = +v || 0; stop(); sync(); }   /* 0 freezes on a still frame */
+      setDay: function (on) { day = !!on; if (day) { ph = .3; paintDay(); } else paint(pal, light); if (!running) still(); }
     };
     host.__liquid = api; sync(); return api;
   }
   G.liquid = liquid;
   G.mount('[data-g-liquid]', function (h) { liquid(h); });
+
+  /* Gradient background (WebGL) ---------------------------------------
+   * <div class="scene" data-scene="gradient" data-g-gradient style="--sc0:#00283c; --sc1:#33a7e1; --sc2:#9bbbf9; --sc3:#34b8c9; --sc4:#74b7f9">
+   * The same four soft blobs as the CSS gradient, drawn by the GPU so the page can scroll and blur over it cheaply. The blobs drift slowly (the shared timer
+   * of Glass.scene, one speed with the liquid). Colours come from --sc0 (ground) and --sc1..--sc4 (blobs); change them any time. It draws only while
+   * data-scene="gradient" (or the attribute is absent). Adds .is-gl to the host so CSS can drop its own gradient; without WebGL the CSS one stays. */
+  var GR_FRAG = 'precision mediump float; uniform vec2 r; uniform vec3 c0,c1,c2,c3,c4; uniform vec4 b1,b2,b3,b4;\n' +
+    'float hash(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }\n' +
+    'float a(vec4 b, vec2 uv){ return 1.-smoothstep(0.,1.,length((uv-b.xy)/b.zw)); }\n' +
+    'void main(){ vec2 uv=vec2(gl_FragCoord.x/r.x,1.-gl_FragCoord.y/r.y);\n' +
+    ' vec3 col=mix(c0,c4,a(b4,uv)); col=mix(col,c3,a(b3,uv)); col=mix(col,c2,a(b2,uv)); col=mix(col,c1,a(b1,uv));\n' +
+    ' col+=(hash(gl_FragCoord.xy)-.5)*2./255.; gl_FragColor=vec4(col,1.); }';
+  var GR_BLOBS = [[18, 12, 60, 50, .6], [88, 18, 50, 50, .6], [72, 92, 60, 60, .62], [10, 85, 40, 40, .6]],   /* centre x y %, radii %, where the fade ends: as in the CSS gradient */
+    GR_T = [40, 50, 56, 45], GR_A = [[38, 30], [-34, 34], [-38, -28], [34, -34]], GR_OFF = [0, 20, 45, 10],   /* drift: half-period s, reach %, phase s */
+    GR_DARK = ['#00283c', '#33a7e1', '#9bbbf9', '#34b8c9', '#74b7f9'], GR_LIGHT = ['#e8f6ff', '#79bfe8', '#d1e0fd', '#89cfda', '#add5fe'];
+  function gradient(host) {
+    if (!host) return null;
+    if (host.__gradient) return host.__gradient;
+    var cv = document.createElement('canvas'); cv.className = 'g-liquid__canvas'; cv.setAttribute('aria-hidden', 'true');
+    var gl = cv.getContext('webgl', { antialias: false, alpha: false, powerPreference: 'low-power' });
+    if (!gl) return null;
+    function sh(type, src) { var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return gl.getShaderParameter(s, gl.COMPILE_STATUS) ? s : null; }
+    var vs = sh(gl.VERTEX_SHADER, 'attribute vec2 a; void main(){ gl_Position=vec4(a,0.,1.); }'), fs = sh(gl.FRAGMENT_SHADER, GR_FRAG);
+    if (!vs || !fs) return null;
+    var pr = gl.createProgram(); gl.attachShader(pr, vs); gl.attachShader(pr, fs); gl.linkProgram(pr);
+    if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) return null;
+    gl.useProgram(pr);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+    var loc = gl.getAttribLocation(pr, 'a'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    var U = function (n) { return gl.getUniformLocation(pr, n); }, uR = U('r'), uC = ['c0', 'c1', 'c2', 'c3', 'c4'].map(U), uB = ['b1', 'b2', 'b3', 'b4'].map(U);
+    var t = 0, W = 0, H = 0, off = null, visible = true, drift = GR_BLOBS.map(function () { return [0, 0]; });
+    function colours() {
+      var d = document.documentElement.getAttribute('data-theme') === 'light' ? GR_LIGHT : GR_DARK;
+      uC.forEach(function (u, i) { var v = host.style.getPropertyValue('--sc' + i).trim(); gl.uniform3fv(u, hex3(/^#[0-9a-f]{6}$/i.test(v) ? v : d[i])); });
+    }
+    function size() {
+      var w = host.clientWidth || 1, h = host.clientHeight || 1, s = Math.min(1, 1280 / w), nw = Math.max(64, Math.round(w * s)), nh = Math.max(64, Math.round(h * s));
+      if (nw !== W || nh !== H) { W = cv.width = nw; H = cv.height = nh; gl.viewport(0, 0, W, H); gl.uniform2f(uR, W, H); }
+    }
+    function frame() {
+      GR_BLOBS.forEach(function (b, i) { gl.uniform4f(uB[i], (b[0] + drift[i][0]) / 100, (b[1] + drift[i][1]) / 100, b[2] / 100 * b[4], b[3] / 100 * b[4]); });
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+    function on() { return host.getAttribute('data-scene') === null || host.getAttribute('data-scene') === 'gradient'; }
+    function ease(s, p) { var k = ((s / p) % 2 + 2) % 2, u = k < 1 ? k : 2 - k; return u * u * (3 - 2 * u); }
+    function pose() { GR_T.forEach(function (p, i) { var e = ease(t + GR_OFF[i], p); drift[i] = [GR_A[i][0] * e, GR_A[i][1] * e]; }); }
+    function still() { cv.style.display = on() ? '' : 'none'; if (!on()) return; size(); colours(); pose(); frame(); }
+    function step(dt) { if (!on() || !visible) return false; t += dt; size(); pose(); frame(); return true; }
+    host.insertBefore(cv, host.firstChild); host.classList.add('is-gl');
+    new MutationObserver(still).observe(host, { attributes: true, attributeFilter: ['style', 'data-scene'] });
+    new MutationObserver(still).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    if (window.IntersectionObserver) new IntersectionObserver(function (e) { visible = e[0].isIntersecting; }).observe(host);
+    var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(still, 200); });
+    cv.addEventListener('webglcontextlost', function (e) { e.preventDefault(); if (off) off(); off = null; host.classList.remove('is-gl'); cv.remove(); delete host.__gradient; });
+    still(); off = G.scene.add(step);
+    host.__gradient = { redraw: still };
+    return host.__gradient;
+  }
+  G.gradient = gradient;
+  G.mount('[data-g-gradient]', function (h) { gradient(h); });
 })(window.Glass);

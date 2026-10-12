@@ -19,11 +19,14 @@ after(async () => { await browser.close(); });
 
 test('the page runs without script errors', () => { assert.deepEqual(errors, []); });
 
-test('dialog opens from a button and closes on Escape', async () => {
-  await page.locator('button[data-g-open="#dlg"]').scrollIntoViewIfNeeded();
-  await page.click('button[data-g-open="#dlg"]');
+test('dialog opens from a button, closes on Escape and on a backdrop click', async () => {
+  const open = 'button[command="show-modal"][commandfor="dlg"]';
+  await page.locator(open).scrollIntoViewIfNeeded();
+  await page.click(open);
   assert.equal(await page.evaluate(() => document.getElementById('dlg').open), true);
   await page.keyboard.press('Escape');
+  assert.equal(await page.evaluate(() => document.getElementById('dlg').open), false);
+  await page.click(open); await page.mouse.click(4, 4);
   assert.equal(await page.evaluate(() => document.getElementById('dlg').open), false);
 });
 
@@ -38,7 +41,7 @@ test('tabs: arrow keys move the selection', async () => {
 test('select: opens as a listbox and picks an option', async () => {
   const trigger = page.locator('#s-role + .g-select, .g-select').first().locator('.g-select__trigger');
   await trigger.scrollIntoViewIfNeeded(); await trigger.click();
-  const opt = page.locator('[role="listbox"] [role="option"]').filter({ hasText: 'Designer' }).first();
+  const opt = page.locator('[role="listbox"]:popover-open [role="option"]').filter({ hasText: 'Designer' }).first();
   await opt.click();
   assert.equal(await page.evaluate(() => document.getElementById('s-role').value), 'Designer');
 });
@@ -55,5 +58,5 @@ test('table: rows select, Clear empties the selection', async () => {
 test('grid: columns are equal and every gap is --g-gap', async () => {
   const r = await page.evaluate(() => { const g = document.querySelector('[data-grid]'), c = getComputedStyle(g);
     return { cols: new Set(c.gridTemplateColumns.split(' ')).size, gap: c.columnGap + ' ' + c.rowGap }; });
-  assert.equal(r.cols, 1); assert.equal(r.gap, '14px 14px');
+  assert.equal(r.cols, 1); assert.equal(r.gap, '16px 16px');
 });

@@ -13,7 +13,7 @@
 :root {
   --g-accent: #0071E3;
   --g-accent-hover: #0A66D6;
-  --g-accent-fg: #fff;
+  --g-accent-fg: #fff;                 /* text on the accent: contrast-color() below picks black or white for any accent */
   --g-danger: #D93A32;
   --g-success: #34D27B;
   --g-success-text: #8ce6b2;
@@ -26,40 +26,63 @@
   --g-text: #fff;
   --g-text-2: rgba(255,255,255,.82);
   --g-text-3: rgba(255,255,255,.70);
+  --g-text-4: rgba(255,255,255,.55);   /* weakest: placeholders */
   --g-text-inverse: #1C1C1E;
 
-  --g-fill: rgba(255,255,255,.10);
-  --g-fill-strong: rgba(255,255,255,.15);
+  --g-fill: rgba(255,255,255,.16);
+  --g-fill-strong: rgba(255,255,255,.22);
+  --g-fill-sticky: rgba(255,255,255,.3);   /* a sticky table header or footer: a little stronger than --g-fill-strong, under a blur */
   --g-fill-tip: rgba(28,28,30,.5);     /* tooltip fallback without JS: dark underlay (a blur inside a button cannot see the page) */
-  --g-fill-hover: rgba(255,255,255,.14);
   --g-fill-selected: rgba(255,255,255,.20);
-  --g-fill-active: rgba(var(--g-ov), .30);   /* the chosen list item / table row: the same glass, more frosted */
+  --g-fill-active: var(--g-fill-recessed);   /* the chosen list item / table row: the same fill as a text field (textarea, input), see-through as far as CSS allows */
   --g-fill-recessed: rgba(0,0,0,.16);
+  --g-fill-work: rgba(10,16,38,.24);   /* the workspace of .g-shell: a navy tint, darker than the panels around it */
   --g-line: rgba(255,255,255,.12);
 
   --g-blur: blur(30px) saturate(180%);
   --g-rim: inset -.5px .5px .5px rgba(255,255,255,.4), inset 0 .5px 6px rgba(255,255,255,.14);
-  --g-shadow: 0 24px 30px rgba(0,0,0,.05);
+  --g-shadow: 0 0 0 0 transparent;   /* panels cast no shadow: the background is far behind them */
   --g-shadow-float: 0 24px 60px rgba(0,0,0,.28);
   --g-recess: inset 0 .5px 1px rgba(0,0,0,.3), inset 0 -.5px 0 rgba(255,255,255,.28);   /* sunken: dark edge on top, light edge below */
   --g-raised: inset 0 .5px 0 rgba(255,255,255,.55), inset 0 -.5px 0 rgba(0,0,0,.22); /* active control (checked, thumb track): light edge on top, darker below */
   /* Fields: focus lifts the glass (lighter fill, soft rim and glow) instead of a hard ring */
   --g-field-focus-bg: rgba(255,255,255,.16);
   --g-field-focus: inset 0 1px 1px rgba(0,0,0,.10), inset 0 0 0 1px rgba(255,255,255,.42);
-  --g-focus: 0 0 0 2px rgba(0,0,0,.35), 0 0 0 4px rgba(255,255,255,.85);
+  --g-focus: 0 0 0 0 transparent;   /* no focus ring; set a real shadow here to bring it back */
 
   --g-radius-pill: 999px;
-  --g-gap: 14px;   /* space between neighbouring controls (buttons, badges, chips, cards in a row); used by your layout */
+  /* Spacing: ONE rhythm. The PARENT sets the space between its children (gap); children carry no outer margin.
+     --g-gap       between neighbouring elements, horizontal and vertical: controls, fields, cards, rows, buttons
+     --g-gap-inner inside one component: label to its field, icon to its text
+     --g-inset     a control's side padding (its text is inset from its box); box edges, not text, line up on the container edge
+     --g-pad       a container's own padding (card, popover, panel) */
+  /* Type scale: seven steps, nothing in between. Use these tokens instead of px values. */
+  --g-fs-caption: 12px;    /* Caption 1: overline, table head */
+  --g-fs-footnote: 13px;   /* Footnote: labels, hints, small buttons, secondary text */
+  --g-fs-subhead: 15px;    /* Subhead: controls, list rows, table cells */
+  --g-fs-body: 17px;       /* Body: running text, large buttons */
+  --g-fs-title3: 20px;     /* Title 3 */
+  --g-fs-title1: 28px;     /* Title 1 */
+  --g-fs-title-lg: 34px;   /* Large Title */
+  /* Icon sizes. Inline icons with no size set follow their text (1.15em). */
+  --g-icon-xs: 12px;   /* small marks: the close x */
+  --g-icon-sm: 16px;   /* tabs, navigation, pager */
+  --g-icon-md: 18px;   /* fields, menus, list rows, table cells, toast */
+  --g-icon-lg: 28px;   /* dialog header */
+  --g-gap: 16px;
+  --g-page-w: 1200px;   /* max width of the page content and the fixed nav on wide screens */
+  --g-gap-inner: 8px;
+  --g-inset: 16px;
   --g-radius-card: 32px; /* every glass panel: card, dialog, popover, select list, menu, toast */
-  --g-radius-lg: 22px;
-  --g-radius-field: 14px;
-  --g-radius-sm: 10px;
+  --g-radius-field: calc(var(--g-h-md) / 3);   /* tracks the control height */
+  --g-radius-sm: 8px;   /* small inner shapes: inline code, menu items, icon tiles */
 
   /* Size scale: one md height shared by button, input, select, tabs; sm and lg are the only other steps */
   --g-h-sm: 32px;
   --g-h-md: 40px;
   --g-h-lg: 48px;
   --g-row-h: var(--g-h-md);   /* table body row: same height as buttons and inputs */
+  --g-list-row-h: var(--g-h-md);   /* list row (.g-list): the height of a control */
   --g-nav-h: 64px;   /* top navigation bar */
   --g-edge-w: .5px; /* gradient hairline on chips and badges */
   --g-progress-h: 8px; /* progress bars and file upload bars */
@@ -67,9 +90,24 @@
 
   --g-font: var(--ui-font, 'Manrope', system-ui, sans-serif); /* load Manrope (400-700) or your own font; without it the system font is used */
   /* Optional: a separate face for h1[data-size="lg"] and h1, e.g. --g-font-display: 'Unbounded', sans-serif; */
-  --g-ease: cubic-bezier(.2,.8,.2,1);
-  --g-dur: .18s;
+  --g-ease: cubic-bezier(.3,.7,.25,1);
+  --g-ease-spring: linear(0, 0.132, 0.41, 0.698, 0.923, 1.061, 1.12, 1.122, 1.094, 1.057, 1.023, 1.0, 0.988, 0.984, 0.986, 0.99, 0.995, 0.999, 1.001, 1.002, 1.002, 1.002, 1.001, 1.0, 1); /* soft spring with a slight overshoot; pair with --g-dur-spring */
+  --g-press: .98;     /* press scale: subtle for a mouse, deeper for touch */
+  --g-dur: .25s;      /* feedback: hover, colour, small moves */
+  --g-ro-delay: .3s;  /* how long a field must stay read-only before it looks read-only: a form that locks its fields for an instant does not flicker */
+  --g-busy-delay: 1s;  /* a field marked aria-busy looks busy only after this long: an answer that comes sooner changes nothing on the page. The kit does not measure the speed, the state is just shown late */
+  --g-dur-md: .35s;  /* appear and disappear: dialog, popover, toast, checkbox, switch, card lift */
+  --g-dur-spring: .6s; /* spring motion: dialog, popover, button release, switch thumb */
+  --g-dur-lg: .6s;    /* a value changing: progress bar */
 }
+@supports (color: contrast-color(red)) { :root { --g-accent-fg: contrast-color(var(--g-accent)); } }
+
+/* Touch: bigger hit areas (44px is the least a fingertip can hit reliably). Desktop keeps 32 / 40 / 48. */
+@media (pointer: coarse) { :root { --g-press: .95; --g-h-sm: 36px; --g-h-md: 44px; --g-h-lg: 52px; } }
+/* Reduced transparency: panels become solid, no blur */
+@media (prefers-reduced-transparency: reduce) { :root { --g-blur: none; --g-fill: #283046; --g-fill-strong: #313a52; --g-fill-selected: #3b4560; --g-fill-tip: #1c1c1e; --g-fill-work: #151b30; } }
+/* More contrast: lighter secondary text, stronger lines and recessed fields */
+@media (prefers-contrast: more) { :root { --g-text-2: rgba(255,255,255,.92); --g-text-3: rgba(255,255,255,.85); --g-text-4: rgba(255,255,255,.75); --g-line: rgba(255,255,255,.4); --g-fill-recessed: rgba(0,0,0,.3); } }
 
 /* Light theme: separate file glass-ui-light.css (loaded after this one). */
 
@@ -82,43 +120,50 @@
  * Every native-element rule below sits in :where(), so it has ZERO specificity: any class of your own wins without !important. */
 /* Tabular figures everywhere: digits share one width, so numbers line up and do not jump when they change */
 .g-root, .g-scene, dialog, [popover], [role="menu"], [role="listbox"], .g-toasts, .g-tooltip { font-variant-numeric: tabular-nums; }
-.g-root, .g-scene { font-family: var(--g-font); color: var(--g-text); -webkit-font-smoothing: antialiased; }
+.g-root, .g-scene { font-family: var(--g-font); font-size: var(--g-fs-body); line-height: 1.3; color: var(--g-text); -webkit-font-smoothing: antialiased; }   /* running text: the .g-prose size, so bare text in a div reads like a paragraph */
 [role="menu"], [role="listbox"], .g-toasts, .g-tooltip { font-family: var(--g-font); color: var(--g-text); }
 .g-root, .g-scene, .g-root *, .g-root *::before, .g-root *::after,
 .g-scene *, .g-scene *::before, .g-scene *::after { box-sizing: border-box; }
 .g-scene { position: relative; background: #1b2a3f center/cover no-repeat; color-scheme: dark; }
 .g-scene--gradient {
   background:
-    radial-gradient(60% 50% at 20% 15%, #5ea0ff 0%, transparent 60%),
-    radial-gradient(50% 50% at 85% 20%, #ff9ec2 0%, transparent 60%),
-    radial-gradient(60% 60% at 70% 90%, #46d1c1 0%, transparent 60%),
-    #1d2b52;
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 0 0 0 0 .04'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0/200px,   /* fine noise: dithers the colour steps so no bands show */
+    radial-gradient(60% 50% at calc(20% + var(--gx1,0%)) calc(15% + var(--gy1,0%)), #33a7e1 0%, color-mix(in srgb, #33a7e1 93%, transparent) 10%, color-mix(in srgb, #33a7e1 74%, transparent) 20%, color-mix(in srgb, #33a7e1 50%, transparent) 30%, color-mix(in srgb, #33a7e1 26%, transparent) 40%, color-mix(in srgb, #33a7e1 7%, transparent) 50%, transparent 60%),
+    radial-gradient(50% 50% at calc(85% + var(--gx2,0%)) calc(20% + var(--gy2,0%)), #9bbbf9 0%, color-mix(in srgb, #9bbbf9 93%, transparent) 10%, color-mix(in srgb, #9bbbf9 74%, transparent) 20%, color-mix(in srgb, #9bbbf9 50%, transparent) 30%, color-mix(in srgb, #9bbbf9 26%, transparent) 40%, color-mix(in srgb, #9bbbf9 7%, transparent) 50%, transparent 60%),
+    radial-gradient(60% 60% at calc(70% + var(--gx3,0%)) calc(90% + var(--gy3,0%)), #34b8c9 0%, color-mix(in srgb, #34b8c9 93%, transparent) 10%, color-mix(in srgb, #34b8c9 74%, transparent) 20%, color-mix(in srgb, #34b8c9 50%, transparent) 30%, color-mix(in srgb, #34b8c9 26%, transparent) 40%, color-mix(in srgb, #34b8c9 7%, transparent) 50%, transparent 60%),
+    #00283c;   /* the blobs fade out smoothly (eased stops), so no ring shows where one ends */
 }
 /* No grey tap flash or accidental text selection on controls */
 .g-root, .g-scene, dialog, .g-toasts { -webkit-tap-highlight-color: transparent; }
-:where(:is(.g-root,[role="listbox"])) :is(button, [role="tab"], [role="menuitem"], [role="option"], summary, nav a, .g-select__trigger, table[data-g-selectable] tr, a:has(> article)), [role="menuitem"], [role="option"] { -webkit-user-select: none; user-select: none; }
+:where(:is(.g-root,[role="listbox"])) :is(button, [role="tab"], [role="menuitem"], [role="option"], summary, nav a, .g-select__trigger, table[data-g-selectable] tr, a:has(> article),
+    label:has(> input:is([type="checkbox"], [type="radio"])), [role="button"], a[role="button"], input:is([type="button"], [type="submit"], [type="reset"])), [role="menuitem"], [role="option"] { -webkit-user-select: none; user-select: none; }   /* checkbox / radio labels and buttons: what you click is not text you select */
 
 /* ---------- Typography: native elements ---------- */
 :where(:is(.g-root,[role="listbox"]) :is(h1, h2, h3, h4, h5, h6, p, ul, ol, dl, dd, figure, pre, blockquote, hr)) { margin: 0; }
-:where(:is(.g-root,[role="listbox"]) h1) { font-family: var(--g-font-display, inherit); font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: var(--g-display-tracking, -.02em); text-wrap: balance; }
-:where(:is(.g-root,[role="listbox"]) h2) { font-size: 28px; line-height: 1.15; font-weight: 650; letter-spacing: -.015em; text-wrap: balance; }
-:where(:is(.g-root,[role="listbox"]) h3) { font-size: 20px; line-height: 1.25; font-weight: 600; letter-spacing: -.005em; }
-:where(:is(.g-root,[role="listbox"]) h4) { font-size: 17px; line-height: 1.3; font-weight: 600; }
-:where(:is(.g-root,[role="listbox"]) h5) { font-size: 15px; line-height: 1.35; font-weight: 600; }
-:where(:is(.g-root,[role="listbox"]) h6) { font-size: 12px; line-height: 1.3; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--g-text-3); }   /* overline */
-:where(:is(.g-root,[role="listbox"]) p) { font-size: 15px; line-height: 1.5; color: var(--g-text-2); }
-:where(:is(.g-root,[role="listbox"]) small) { font-size: 13px; line-height: 1.45; color: var(--g-text-2); }
+:where(:is(.g-root,[role="listbox"]) h1) { font-family: var(--g-font-display, inherit); font-size: var(--g-fs-title-lg); line-height: 1.2; font-weight: 700; letter-spacing: var(--g-display-tracking, 0); text-wrap: balance; }
+:where(:is(.g-root,[role="listbox"]) h2) { font-size: var(--g-fs-title1); line-height: 1.2; font-weight: 600; letter-spacing: 0; text-wrap: balance; }
+:where(:is(.g-root,[role="listbox"]) h3) { font-size: var(--g-fs-title3); line-height: 1.25; font-weight: 600; letter-spacing: -.01em; }
+:where(:is(.g-root,[role="listbox"]) h4) { font-size: var(--g-fs-body); line-height: 1.3; font-weight: 600; }
+:where(:is(.g-root,[role="listbox"]) h5) { font-size: var(--g-fs-subhead); line-height: 1.33; font-weight: 600; }
+:where(:is(.g-root,[role="listbox"]) h6) { font-size: var(--g-fs-caption); line-height: 1.3; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--g-text-3); }   /* overline */
+:where(:is(.g-root,[role="listbox"]) :is(p, dd)) { font-size: inherit; line-height: inherit; color: var(--g-text-2); }
+:where(:is(.g-root,[role="listbox"]) small) { font-size: var(--g-fs-footnote); line-height: 1.38; color: var(--g-text-2); }
 :where(:is(.g-root,[role="listbox"]) strong) { color: var(--g-text); font-weight: 600; }
 :where(:is(.g-root,[role="listbox"]) :is(em, i)) { font-style: italic; }
+/* a visited link keeps the colour of an unvisited one: the browser purple is not in the kit */
+:where(.g-root a:visited) { color: inherit; }
 :where(:is(.g-root,[role="listbox"]) :is(p, small, blockquote, dd, td, li:not(nav li, .g-list > li)) a:not([role], [class^="g-"], [class*=" g-"])) { color: var(--g-text); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: rgba(var(--g-ov),.5); transition: text-decoration-color var(--g-dur); }
-:where(:is(.g-root,[role="listbox"]) :is(p, small, blockquote, dd, td, li:not(nav li, .g-list > li)) a:not([role], [class^="g-"], [class*=" g-"]):hover) { text-decoration-color: currentColor; }
+@media (hover: hover) { :where(:is(.g-root,[role="listbox"]) :is(p, small, blockquote, dd, td, li:not(nav li, .g-list > li)) a:not([role], [class^="g-"], [class*=" g-"]):hover) { text-decoration-color: currentColor; } }
+/* A plain link straight inside an article (a card with a link line) reads like the links in its prose, never the browser's blue/purple */
+:where(:is(.g-root,[role="listbox"]) article > a:not([role], [class^="g-"], [class*=" g-"])) { color: var(--g-text); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: rgba(var(--g-ov),.5); transition: text-decoration-color var(--g-dur); }
+@media (hover: hover) { :where(:is(.g-root,[role="listbox"]) article > a:not([role], [class^="g-"], [class*=" g-"]):hover) { text-decoration-color: currentColor; } }
 :where(:is(.g-root,[role="listbox"]) u) { text-decoration-thickness: 1px; text-underline-offset: 3px; }
 :where(:is(.g-root,[role="listbox"]) :is(s, del)) { text-decoration-thickness: 1px; opacity: .78; }
-:where(:is(.g-root,[role="listbox"]) mark) { padding: 0 .25em; border-radius: 5px; background: rgba(255,214,102,.28); color: var(--g-text); }
+:where(:is(.g-root,[role="listbox"]) mark) { padding: 0 .25em; border-radius: var(--g-radius-sm); background: rgba(255,214,102,.28); color: var(--g-text); }
 :where(:is(.g-root,[role="listbox"]) abbr[title]) { text-decoration: underline dotted; text-decoration-thickness: 1px; text-underline-offset: 3px; cursor: help; }
-:where(:is(.g-root,[role="listbox"]) :is(code, kbd, samp)) { font: .86em ui-monospace, monospace; padding: .12em .45em; border-radius: 6px; background: var(--g-fill-recessed); box-shadow: var(--g-recess); color: var(--g-text); }
+:where(:is(.g-root,[role="listbox"]) :is(code, kbd, samp)) { font: .86em ui-monospace, monospace; padding: .12em .45em; border-radius: var(--g-radius-sm); background: var(--g-fill-recessed); box-shadow: var(--g-recess); color: var(--g-text); }
 :where(:is(.g-root,[role="listbox"]) kbd) { box-shadow: var(--g-rim); background: var(--g-fill); }
-:where(:is(.g-root,[role="listbox"]) pre) { font: 13px/1.5 ui-monospace, monospace; }
+:where(:is(.g-root,[role="listbox"]) pre) { font: var(--g-fs-footnote)/1.5 ui-monospace, monospace; }
 :where(:is(.g-root,[role="listbox"]) pre code) { font: inherit; padding: 0; background: none; box-shadow: none; }
 :where(:is(.g-root,[role="listbox"]) :is(sub, sup)) { font-size: .72em; line-height: 0; }
 :where(:is(.g-root,[role="listbox"]) :is(ul, ol)) { padding-left: 1.4em; }
@@ -127,10 +172,24 @@
 :where(:is(.g-root,[role="listbox"]) hr) { height: 1px; border: 0; background: var(--g-line); }
 :where(:is(.g-root,[role="listbox"]) figure) { min-width: 0; }
 /* Classes: only for what HTML has no element for */
-:where(:is(.g-root,[role="listbox"]) h1[data-size="lg"]) { font-size: clamp(40px, 7vw, 64px); line-height: 1.04; letter-spacing: var(--g-display-tracking, -.03em); }   /* display size */
-:where(:is(.g-root,[role="listbox"]) small[data-muted]) { font-size: 12px; line-height: 1.4; color: var(--g-text-3); }   /* caption */
-:where(:is(.g-root,[role="listbox"]) output) { font-size: 13px; font-variant-numeric: tabular-nums; color: var(--g-text-2); }
-.g-prose { max-width: 65ch; font-size: 17px; line-height: 1.65; color: var(--g-text-2); hyphens: auto; text-wrap: pretty; }
+:where(:is(.g-root,[role="listbox"]) h1[data-size="lg"]) { font-size: clamp(40px, 7vw, 64px); line-height: 1.04; letter-spacing: var(--g-display-tracking, 0); }   /* display size */
+:where(:is(.g-root,[role="listbox"]) small[data-muted]) { font-size: var(--g-fs-caption); line-height: 1.33; color: var(--g-text-3); }   /* caption */
+:where(:is(.g-root,[role="listbox"]) output) { font-size: var(--g-fs-footnote); font-variant-numeric: tabular-nums; color: var(--g-text-2); }
+.g-desc { max-width: 70ch; font-size: var(--g-fs-subhead); line-height: 1.33; color: var(--g-text-2); }   /* a short description under a heading: <p class="g-desc">, smaller than running text */
+/* Empty state, e.g. a search with no results (centred in the free space when its parent is a flex column): <div class="g-empty" data-icon="search"><h4>Title</h4><p>A hint on what to try.</p></div> */
+.g-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--g-gap-inner); padding: var(--g-pad); text-align: center; --g-icon-size: calc(var(--g-icon-lg) * 2); --g-icon-color: var(--g-text-3); }
+.g-empty > :is(h1, h2, h3, h4, h5, h6) { font-size: var(--g-fs-title3); font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--g-text); }
+.g-empty > p { max-width: 40ch; font-size: var(--g-fs-subhead); line-height: 1.33; }
+/* Message in the flow of a page: an icon and a text. Tone with data-tone="warning" | "danger" | "success"; no tone is neutral. <div class="g-alert" data-icon="triangle-alert" data-tone="warning" role="status">Text with <b>emphasis</b>.</div> */
+.g-alert { display: block; position: relative; padding: var(--g-gap-inner) var(--g-inset) var(--g-gap-inner) calc(var(--g-inset) + var(--g-icon-size) + var(--g-gap-inner)); border-radius: var(--g-radius-field); background: var(--g-fill); color: var(--g-text-2); font-size: var(--g-fs-subhead); line-height: 1.33; text-align: start; --g-icon-size: var(--g-icon-md); --g-icon-color: var(--g-text-2); }
+.g-alert:not([data-icon]) { padding-left: var(--g-inset); }   /* no icon, no gutter for it */
+.g-alert::before { position: absolute; left: var(--g-inset); top: calc(var(--g-gap-inner) + (1lh - var(--g-icon-size)) / 2); }
+.g-alert a { color: var(--g-text); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.g-alert b { color: var(--g-text); font-weight: 600; }
+.g-alert[data-tone="warning"] { --g-icon-color: var(--g-warning); }
+.g-alert[data-tone="danger"] { --g-icon-color: var(--g-danger-text); }
+.g-alert[data-tone="success"] { --g-icon-color: var(--g-success-text); }
+.g-prose { max-width: 65ch; font-size: var(--g-fs-body); line-height: 1.65; color: var(--g-text-2); hyphens: auto; text-wrap: pretty; }
 .g-prose > * { margin: 0; } .g-prose > * + * { margin-top: 1em; }
 .g-prose :is(p, li) { font-size: inherit; line-height: inherit; }
 .g-prose li + li { margin-top: .35em; }
@@ -156,20 +215,20 @@
 .g-glass { border-radius: var(--g-radius-card); }
 /* Performance: glass nested inside glass does not need its own blur (its backdrop is already the parent's blurred
  * surface), and every extra blur layer costs GPU time on scroll. Keep one blur layer per stack. */
-.g-glass :is(button, article, blockquote, figure, [role="group"], data, [role="tablist"], .g-toast) { backdrop-filter: none; }
+:is(.g-glass, .g-shell) :is(button, article, blockquote, figure, [role="group"], data, [role="tablist"], .g-toast) { backdrop-filter: none; }
 
 @supports not (backdrop-filter: blur(1px)) {
   .g-glass, :where(:is(.g-root,[role="listbox"]) :is(article, nav, dialog, figure:has(> table), [popover])), .g-toast, [role="menu"], [role="listbox"] { background: rgba(40,48,70,.82); }
 }
 
 /* ---------- Liquid background (CSS blobs as fallback; glass-ui.js upgrades it to a slow WebGL liquid) ---------- */
-.g-liquid { position: absolute; inset: 0; overflow: hidden; background: #16224a; }
+.g-liquid { position: absolute; inset: 0; overflow: hidden; background: #00283c; }
 .g-liquid > i { position: absolute; width: 80vmax; height: 80vmax; border-radius: 50%; will-change: transform; opacity: .9;
   background: radial-gradient(circle at center, var(--c) 0%, transparent 64%); animation: g-drift var(--d) ease-in-out infinite alternate; }
-.g-liquid > i:nth-child(1) { --c: #4a8dff; --d: 70s; left: -25vmax; top: -30vmax; }
-.g-liquid > i:nth-child(2) { --c: #ff8fb8; --d: 85s; right: -30vmax; top: -10vmax; animation-delay: -20s; }
-.g-liquid > i:nth-child(3) { --c: #3fd0c0; --d: 95s; left: 0; bottom: -45vmax; animation-delay: -45s; }
-.g-liquid > i:nth-child(4) { --c: #8b6cf0; --d: 78s; right: -20vmax; bottom: -35vmax; animation-delay: -10s; }
+.g-liquid > i:nth-child(1) { --c: #33a7e1; --d: 70s; left: -25vmax; top: -30vmax; }
+.g-liquid > i:nth-child(2) { --c: #9bbbf9; --d: 85s; right: -30vmax; top: -10vmax; animation-delay: -20s; }
+.g-liquid > i:nth-child(3) { --c: #34b8c9; --d: 95s; left: 0; bottom: -45vmax; animation-delay: -45s; }
+.g-liquid > i:nth-child(4) { --c: #74b7f9; --d: 78s; right: -20vmax; bottom: -35vmax; animation-delay: -10s; }
 /* WebGL canvas replaces the blobs when available */
 .g-liquid__canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .g-liquid.is-gl > i { display: none; }
@@ -178,38 +237,44 @@
 
 
 /* ---------- Button: <button>, <a data-variant="…">, <input type="button|submit|reset"> ----------
- * Variants: data-variant="primary | light | danger | outline | recessed"   Size: data-size="sm | lg"   data-icon="name" (icon before the text; an empty button is a square icon button)   data-block (full width)
+ * Variants: data-variant="primary | light | danger | outline | recessed | plain"   Size: data-size="sm | lg"   data-icon="name" (icon before the text; an empty button is a square icon button)   data-block (full width)
  * Loading: aria-busy="true"   Disabled: disabled / aria-disabled="true"
  * A button that carries a g- class (chip, input-end ...) or a role (tab, menuitem ...) is a different component and is not styled here. */
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))) {
   --h: var(--g-h-md);
-  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  height: var(--h); padding: 0 16px; border: 0; border-radius: var(--g-radius-pill);
-  font: 500 15px/1 var(--g-font); letter-spacing: -.005em; white-space: nowrap; text-decoration: none; cursor: pointer;
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: var(--g-gap-inner);
+  height: var(--h); padding: 0 var(--g-inset); border: 0; border-radius: var(--g-radius-pill);
+  font: 500 var(--g-fs-subhead)/1 var(--g-font); letter-spacing: -.005em; white-space: nowrap; text-decoration: none; cursor: pointer;
   color: var(--g-text); background: var(--g-fill);
   backdrop-filter: var(--g-blur);
   box-shadow: var(--g-rim);
-  transition: transform var(--g-dur) var(--g-ease), background var(--g-dur), box-shadow var(--g-dur), opacity var(--g-dur);
+  transition: transform var(--g-dur-spring) var(--g-ease-spring), background var(--g-dur), box-shadow var(--g-dur), opacity var(--g-dur);
   -webkit-tap-highlight-color: transparent;
   will-change: transform; /* keeps the button on its own layer, so the hover scale does not re-snap the icon by ~1px when the transition ends */
 }
-:where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon])):hover) { transform: scale(1.02); background: var(--g-fill-hover); }
-:where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon])):active) { transform: scale(.97); }
-:where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-size="sm"]) { --h: var(--g-h-sm); padding: 0 12px; font-size: 14px; }
-:where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-size="lg"]) { --h: var(--g-h-lg); padding: 0 24px; font-size: 16px; }
+@media (hover: hover) { :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon])):hover) { background: var(--g-fill-strong); } }
+:where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon])):active) { transform: scale(var(--g-press)); transition-timing-function: var(--g-ease); }
+:where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-size="sm"]) { --h: var(--g-h-sm); padding: 0 var(--g-inset); font-size: var(--g-fs-footnote); }
+:where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-size="lg"]) { --h: var(--g-h-lg); padding: 0 var(--g-pad); font-size: var(--g-fs-body); }
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-block]) { display: flex; width: 100%; }
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-icon]:empty) { width: var(--h); padding: 0; }
 /* Primary = the one main action of a view, in the accent colour */
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="primary"]) { background: var(--g-accent); color: var(--g-accent-fg); box-shadow: var(--g-rim); }
-:where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="primary"]:hover) { background: var(--g-accent-hover); }
+@media (hover: hover) { :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="primary"]:hover) { background: var(--g-accent-hover); } }
 /* Light = neutral emphasis: a white pill for secondary highlights, or when the accent would clash */
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="light"]) { background: var(--g-ink); color: var(--g-ink-fg); box-shadow: none; }
-:where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="light"]:hover) { background: var(--g-ink); }
+@media (hover: hover) { :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="light"]:hover) { background: var(--g-ink); } }
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="danger"]) { background: var(--g-danger); color: #fff; }
-:where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="danger"]:hover) { background: var(--g-danger); }
+@media (hover: hover) { :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="danger"]:hover) { background: var(--g-danger); } }
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="outline"]) { background: transparent; backdrop-filter: none; } /* the standard glass button rim, just without the fill */
-:where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="outline"]:hover) { background: rgba(var(--g-ov),.12); }
+@media (hover: hover) { :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="outline"]:hover) { background: rgba(var(--g-ov),.12); } }
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="recessed"]) { background: var(--g-fill-recessed); box-shadow: var(--g-recess); }
+/* Plain = no pad at all, just the icon (or text) in the secondary colour: a close cross on a row, a speaker, a link icon. Not for a main action. */
+:where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="plain"]) { --h: var(--g-icon-md); padding: 0; border-radius: var(--g-radius-sm, 4px); background: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; color: var(--g-text-3); --g-icon-size: var(--g-icon-md); }
+:where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="plain"])::before { background-color: currentColor; }
+:where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="plain"])::after { display: none; }
+@media (hover: hover) { :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="plain"]:hover) { background: none; color: var(--g-text); } }
+:where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="plain"]:active) { transform: none; opacity: .6; }
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon])):disabled), :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[aria-disabled="true"]) { opacity: .38; pointer-events: none; }
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-icon])::before, :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-icon-end])::after { margin-inline: -2px; }
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon])) svg) { width: 1.15em; height: 1.15em; flex: none; margin: 0 -2px; }
@@ -221,12 +286,73 @@
  * .g-field = label + control + hint stacked. A control that fails validation carries aria-invalid="true" (red);
  * aria-invalid="false" marks a checked, valid one (green). */
 :where(:is(.g-root,[role="listbox"]) fieldset) { margin: 0; padding: 0; border: 0; min-width: 0; }
-:where(:is(.g-root,[role="listbox"]) fieldset > legend) { margin-bottom: 8px; }
-:where(:is(.g-root,[role="listbox"]) :is(label, legend):not([class^="g-"], [class*=" g-"])) { padding: 0; font-size: 14px; font-weight: 500; color: var(--g-text); letter-spacing: 0; }
-:is(.g-field, .g-root fieldset) { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-:is(.g-field, .g-root fieldset) > small { color: var(--g-text-3); font-size: 13px; }
+:where(:is(.g-root,[role="listbox"]) :is(label, legend):not([class^="g-"], [class*=" g-"])) { padding: 0; font-size: var(--g-fs-footnote); font-weight: 500; color: var(--g-text); letter-spacing: 0; }
+:is(.g-field) { display: flex; flex-direction: column; gap: var(--g-gap-inner); min-width: 0; }
+/* Forms are a grid: the fields sit in columns of equal width, never narrower than an input (--g-grid-min, 200px), as many as fit, one gap (--g-gap) between
+   them. A field is three rows (label, control, hint) shared with its neighbours through subgrid, so the controls of one line stand on one line whatever the
+   labels. The container owns every space: the label-to-control gap is the field's own, the rest is the grid's. A field without a hint lets its control take
+   the hint row too, so the line is as tall as its tallest field and the next line is one gap below. Anything else in a form (heading, button, note) is a row of its own;
+   checkboxes and radios are cells like fields. The same layout is any container that holds fields (a tool panel, a card, a details body) and any [data-grid]. */
+:is(.g-root,[role="listbox"]) :is(form:not(.g-shell), fieldset, :has(> .g-field):not(details, dialog:not([open]))) { display: grid; grid-template-columns: repeat(auto-fit, minmax(max(min(100%, var(--g-grid-min, 200px)), calc((100% - (var(--g-cols, 12) - 1) * var(--g-gap)) / var(--g-cols, 12))), 1fr)); align-items: start; align-content: start; gap: var(--g-gap); min-width: 0; }
+:where(:is(.g-root,[role="listbox"]) :is(form:not(.g-shell), fieldset, :has(> .g-field):not(details, dialog:not([open]))) > :not(.g-field, label:has(> input:is([type="checkbox"], [type="radio"])))) { grid-column: 1 / -1; }
+:where(:is(.g-root,[role="listbox"]) [data-grid]:has(> :is(.g-field, label))) { --g-grid-min: 200px; align-items: start; align-content: start; }
+/* A fold whose body is fields: the body (::details-content) is the grid, the summary stays above it. The body's own padding-top is the gap under the summary (the children carry none). */
+:is(.g-root,[role="listbox"]) details:has(> .g-field)::details-content { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--g-grid-min, 200px)), 1fr)); align-items: start; gap: var(--g-gap); padding-top: var(--g-gap-inner); }
+:is(.g-root,[role="listbox"]) details:has(> .g-field) > :not(summary) { padding: 0; }
+:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > .g-field { grid-row: span 3; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: subgrid; row-gap: var(--g-gap-inner); min-width: 0; }
+:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > .g-field > label { grid-row: 1; }
+:where(:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > .g-field[data-wide]) { grid-column: 1 / -1; }   /* opt-in: this field takes the whole row of the grid, the next ones start a new row */
+:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > .g-field > :not(label, small) { grid-row: 2 / 4; align-self: start; }
+:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > .g-field:is(:has(> small:not([role="alert"])), :has([aria-invalid="true"])) > :not(label, small) { grid-row: 2; }
+:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > .g-field > small { grid-row: 3; }
+/* a lone field is the whole row: one text area or one search box is not left in a third of the width */
+:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > .g-field:not(:has(~ .g-field), .g-field ~ .g-field) { grid-column: 1 / -1; }
+/* A field without a <label> (a button, a link-button, any control that needs no caption) is aligned with the controls beside it: like every field its control stands in the rows 2-3
+   of the line, and the empty first row is the one the captions of its neighbours fill. <div class="g-field"><button>Go</button></div>
+   Where nothing stands beside it (a grid narrower than a few columns) that empty row would be a gap for nothing, so there it is a row of its own, as wide as the form. */
+:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > .g-field:not(:has(> label)) > :is(button, [role="button"], input:is([type="submit"], [type="button"])) { box-sizing: border-box; width: 100%; height: var(--g-h-md); justify-content: center; overflow: hidden; white-space: nowrap; }
+:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > .g-field:not(:has(> label)) > :is(button, [role="button"], a[data-icon]):empty[data-icon] { width: var(--g-h-md); justify-self: start; }   /* an icon-only button in a field without a caption is the round button of the row, not a bar across the cell */
+/* A container where no field has a caption has no caption row to share: its fields are plain cells (nothing empty above the controls) */
+:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)):not(:has(> .g-field > label)) > .g-field { grid-row: auto; display: flex; flex-direction: column; }
+:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)):not(:has(> .g-field > label)) > .g-field > * { align-self: stretch; }
+@container (max-width: 40rem) { :is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > .g-field:not(:has(> label)) { grid-column: 1 / -1; grid-row: auto; display: flex; flex-direction: column; } }
+/* A checkbox or radio next to fields is one of the line: its three rows are the fields' rows and the box sits at the controls' height, not at the labels' */
+:is(.g-root,[role="listbox"]) :has(> .g-field) > label:has(> input:is([type="checkbox"], [type="radio"])) { grid-row: span 3; display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: subgrid; gap: var(--g-gap-inner); align-items: center; align-content: start; }
+:is(.g-root,[role="listbox"]) :has(> .g-field) > label:has(> input:is([type="checkbox"], [type="radio"])) > * { grid-row: 2 / 4; }
+:is(.g-root,[role="listbox"]) :has(> .g-field) > label:has(> input:is([type="checkbox"], [type="radio"])) > input { translate: none; }   /* centred by the grid: the optical shift of a lone box is not needed */
+/* A row of fields without captions (a search field, a round button, a switch): the checkbox or switch stands in the row of the controls, the first one, not under them */
+:is(.g-root,[role="listbox"]) :has(> .g-field):not(:has(> .g-field > label)) > label:has(> input:is([type="checkbox"], [type="radio"])) { grid-row: auto; grid-template-rows: none; align-content: center; min-height: var(--g-h-md); }
+:is(.g-root,[role="listbox"]) :has(> .g-field):not(:has(> .g-field > label)) > label:has(> input:is([type="checkbox"], [type="radio"])) > * { grid-row: auto; }
+/* A checkbox or radio in a form grid keeps its text on one line: too long, it ends with an ellipsis (the full text is the label's title), never wraps under the box */
+:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > label:has(> input:is([type="checkbox"], [type="radio"])) { min-width: 0; max-width: 100%; }
+:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > label:has(> input:is([type="checkbox"], [type="radio"])) > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:is(.g-root,[role="listbox"]) :has(> .g-field) > label:has(> input:is([type="checkbox"], [type="radio"])):is([title], [data-hint]):not([data-no-hint])::before { grid-row: 2 / 4; grid-column: 1 / -1; align-self: center; justify-self: end; top: auto; bottom: auto; right: 0; margin-right: -26px; transform: none; }   /* the grid area ends before the label's 26px right padding, the badge stands in that padding; it stands at the controls' height, centred in the same rows */
+/* Inline form: data-inline on a form, fieldset or div in the kit puts its fields in one row on a wide screen (640px and up).
+   Each field is a row of three (label, control, hint) and the rows are shared through subgrid, so the controls line up
+   even when the labels differ in length. A button or other non-field child sits on the control row. Narrower screens keep the stacked form. */
+@media (min-width: 640px) {
+  :is(.g-root) :is(form, fieldset, div)[data-inline] { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); grid-template-rows: auto auto auto; align-items: start; gap: var(--g-gap-inner) var(--g-gap); }
+  :is(.g-root) [data-inline] > .g-field { grid-row: span 3; display: grid; grid-template-rows: subgrid; row-gap: var(--g-gap-inner); min-width: 0; }
+  :is(.g-root) [data-inline] > :not(.g-field) { grid-row: 2; align-self: end; min-width: 0; }
+  :is(.g-root) [data-inline] > .g-field > label { grid-row: 1; }
+  :is(.g-root) [data-inline] > .g-field > :not(label, small) { grid-row: 2; }
+  :is(.g-root) [data-inline] > .g-field > small { grid-row: 3; }
+}
+/* A narrow panel (a tool sidebar) stacks them: the aside is a size container, and inside one under 20rem the fields
+   go one under another instead of sharing the row, so a control never gets squeezed to a few characters. */
+:is(.g-root) :is(aside, .g-panel) { container-type: inline-size; }
+@container (max-width: 20rem) {
+  :is(.g-root) :is(form, fieldset, div)[data-inline] { display: flex; flex-direction: column; gap: var(--g-gap); }
+  :is(.g-root) [data-inline] > .g-field { display: flex; flex-direction: column; gap: var(--g-gap-inner); }
+  :is(.g-root) [data-inline] > .g-field { width: 100%; }   /* every field as wide as the panel, so the select lines up with the input above */
+  :is(.g-root) [data-inline] > .g-field > :not(label, small) { width: 100%; }
+}
+:where(:is(.g-root,[role="listbox"]) fieldset > legend) { margin-bottom: var(--g-gap-inner); }   /* a rendered legend sits outside the fieldset's flow, so it cannot take part in the gap: same label-to-control space as .g-field */
+:is(.g-field, .g-root fieldset) > small { color: var(--g-text-3); font-size: var(--g-fs-footnote); }
 /* The error message is <small role="alert">: hidden until the field holds an aria-invalid="true" control, which also hides the hint */
 :is(.g-field, .g-root fieldset) > small[role="alert"] { color: var(--g-danger-text, #ff9d96); display: none; }
+/* A required field is marked in its label with an asterisk (turn off: data-g-no-mark on the field or the form). The "Fill in the field" message comes from the script, after the field is left empty. */
+.g-field:not([data-g-no-mark], [data-g-no-mark] *):has(:is(input, textarea, select)[required]:not([type="checkbox"], [type="radio"])) > label::after { content: " *"; color: var(--g-text-3); }
 :is(.g-field, .g-root fieldset):has([aria-invalid="true"]) > small[role="alert"] { display: block; }
 :is(.g-field, .g-root fieldset):has([aria-invalid="true"]) > small:not([role="alert"]) { display: none; }
 :is(.g-field, .g-root fieldset):has([aria-invalid="false"]) > small:not([role="alert"]) { color: var(--g-success-text); }
@@ -237,35 +363,55 @@
 :is(.g-field, .g-root fieldset) :is(input, textarea, select):disabled, :is(.g-field, .g-root fieldset) .g-select:has(> select:disabled) .g-select__trigger { opacity: 1; }
 
 :where(:is(.g-root,[role="listbox"]) :is(input:not([type="checkbox"],[type="radio"],[type="range"],[type="file"],[type="color"],[type="hidden"],[type="button"],[type="submit"],[type="reset"],[type="image"]),textarea,select)), .g-select__trigger {
-  width: 100%; min-height: var(--g-h-md); padding: 0 14px; border: 0; border-radius: var(--g-radius-field);
-  font: 400 15px/1.3 var(--g-font); color: var(--g-text); text-align: left;
+  width: 100%; min-height: var(--g-h-md); padding: 0 var(--g-inset); border: 0; border-radius: var(--g-radius-field);
+  font: 400 var(--g-fs-subhead)/1.3 var(--g-font); color: var(--g-text); text-align: left;
   background: var(--g-fill-recessed); box-shadow: var(--g-recess);
   transition: box-shadow var(--g-dur), background var(--g-dur);
 }
-:where(:is(.g-root,[role="listbox"]) :is(input:not([type="checkbox"],[type="radio"],[type="range"],[type="file"],[type="color"],[type="hidden"],[type="button"],[type="submit"],[type="reset"],[type="image"]),textarea,select))::placeholder { color: var(--g-text-3); }
+:where(:is(.g-root,[role="listbox"]) :is(input:not([type="checkbox"],[type="radio"],[type="range"],[type="file"],[type="color"],[type="hidden"],[type="button"],[type="submit"],[type="reset"],[type="image"]),textarea,select))::placeholder { color: var(--g-text-4); }
+/* Native <audio controls> looks like an input: recessed field, the browser's own panel made transparent. */
+:where(.g-root) audio { height: var(--g-h-md); border-radius: var(--g-radius-field); background: var(--g-fill-recessed); box-shadow: var(--g-recess); vertical-align: middle; }
+:where(.g-root) audio::-webkit-media-controls-enclosure { border-radius: inherit; background: transparent; }
+:where(.g-root) audio::-webkit-media-controls-panel { background: transparent; }
 :where(:is(.g-root,[role="listbox"]) :is(input:not([type="checkbox"],[type="radio"],[type="range"],[type="file"],[type="color"],[type="hidden"],[type="button"],[type="submit"],[type="reset"],[type="image"]),textarea,select):focus), .g-select__trigger:focus-visible, .g-select.is-open .g-select__trigger {
   outline: none; background: var(--g-field-focus-bg); box-shadow: var(--g-field-focus);
 }
 :where(:is(.g-root,[role="listbox"]) :is(input:not([type="checkbox"],[type="radio"],[type="range"],[type="file"],[type="color"],[type="hidden"],[type="button"],[type="submit"],[type="reset"],[type="image"]),textarea,select):disabled), .g-select:has(> select:disabled) .g-select__trigger { opacity: .4; cursor: not-allowed; }
-:where(:is(.g-root,[role="listbox"]) :is(input:not([type="checkbox"],[type="radio"],[type="range"],[type="file"],[type="color"],[type="hidden"],[type="button"],[type="submit"],[type="reset"],[type="image"]),textarea,select)[readonly]) { background: rgba(var(--g-ov),.06); box-shadow: inset 0 0 0 1px rgba(var(--g-ov),.22); }
+:where(:is(.g-root,[role="listbox"]) :is(input:not([type="checkbox"],[type="radio"],[type="range"],[type="file"],[type="color"],[type="hidden"],[type="button"],[type="submit"],[type="reset"],[type="image"]),textarea,select)[readonly]) { background: rgba(var(--g-ov),.06); box-shadow: inset 0 0 0 1px rgba(var(--g-ov),.22); transition-delay: var(--g-ro-delay); }
 :where(:is(.g-root,[role="listbox"]) input[type="password"]:not(:placeholder-shown)) { letter-spacing: .22em; }
 /* Textarea starts as one standard input line and grows as you type (field-sizing). Cap it with data-max-rows. */
-:where(:is(.g-root,[role="listbox"]) textarea) { display: block; padding: 10px 14px; line-height: 20px; min-height: var(--g-h-md); resize: none; overflow-y: auto; field-sizing: content; }
-:where(:is(.g-root,[role="listbox"]) textarea[data-max-rows]) { max-height: calc(attr(data-max-rows type(<number>)) * 20px + 20px); }
+:where(:is(.g-root,[role="listbox"]) textarea) { display: block; padding: calc((var(--g-h-md) - 20px) / 2) var(--g-inset); line-height: 20px; min-height: var(--g-h-md); resize: none; overflow-y: auto; field-sizing: content; }
+:where(:is(.g-root,[role="listbox"]) textarea[data-max-rows]) { max-height: calc(attr(data-max-rows type(<number>)) * 20px + var(--g-h-md) - 20px); }
 /* Native select (also the fallback without JS; glass-ui.js replaces it with the glass dropdown when it has data-g-select) */
 :where(:is(.g-root,[role="listbox"]) select) { appearance: none; padding-right: 40px; background-repeat: no-repeat; background-position: right 14px center; background-size: 18px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-opacity='.77' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); }
-:where(:is(.g-root,[role="listbox"]) select[multiple]) { padding: 6px; background-image: none; }
+:where(:is(.g-root,[role="listbox"]) select[multiple], select[size]:not([size="1"])) { padding: var(--g-gap-inner); background-image: none; }
+/* A list box (select[multiple] or size > 1): no chevron, the rows are the kit's menu rows, the picked one has the selected fill instead of the system highlight */
+.g-root select:is([multiple], [size]:not([size="1"])) { overflow-y: auto; }
+.g-root select:is([multiple], [size]:not([size="1"])) option { padding: var(--g-gap-inner) var(--g-inset); border-radius: var(--g-radius-field); }
+.g-root select:is([multiple], [size]:not([size="1"])) option:checked { color: inherit; background: var(--g-fill-selected) linear-gradient(var(--g-fill-selected), var(--g-fill-selected)); }
+/* A multi-select that glass-ui.js has not built yet (markup added after the page loaded is mounted in idle time or when touched) is drawn as a closed field of the final height,
+   not as an open list of its options: the field does not jump when the dropdown appears */
+.g-root :not(.g-select) > select[data-g-select]:is([multiple], [size]:not([size="1"])) { box-sizing: border-box; height: var(--g-h-md); overflow: hidden; padding-block: 0; }
+/* A select that will get a start icon (data-icon) already leaves room for it, so the text does not move when glass-ui.js builds the dropdown */
+:where(:is(.g-root,[role="listbox"]) select[data-g-select][data-icon]) { padding-left: calc(var(--g-inset) + var(--g-icon-md) + var(--g-gap-inner)); }
 .g-input-wrap { position: relative; display: flex; align-items: center; width: 100%; }
-.g-input-wrap > span[data-icon]:not(.g-input-end) { position: absolute; left: 14px; --g-icon-size: 18px; color: var(--g-text-3); pointer-events: none; }
+/* an input is never narrower than 200px, so it stays usable; in a container narrower than that it takes the whole width */
+.g-input-wrap, .g-select { min-width: 200px; }
+.g-input-wrap > span[data-icon]:not(.g-input-end) { position: absolute; left: var(--g-inset); --g-icon-size: var(--g-icon-md); color: var(--g-text-3); pointer-events: none; }
 .g-input-wrap > :is(input, select) { padding-left: 40px; }
 /* Trailing slot: a status icon (svg) or a button such as the password eye */
-.g-input-end, .g-input-start { position: absolute; right: 6px; width: 28px; height: 28px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--g-text-2); cursor: pointer; transition: background var(--g-dur); }
-span.g-input-end { right: 14px; width: 18px; height: 18px; --g-icon-size: 18px; pointer-events: none; cursor: default; }
-button.g-input-end:hover, .g-input-start:hover { background: var(--g-fill-hover); }
+.g-input-end, .g-input-start { position: absolute; right: 6px; width: 28px; height: 28px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--g-text-2); cursor: pointer; transition: background var(--g-dur), opacity var(--g-dur); }
+span.g-input-end { right: var(--g-inset); width: var(--g-icon-md); height: var(--g-icon-md); --g-icon-size: var(--g-icon-md); pointer-events: none; cursor: default; }
+@media (hover: hover) { button.g-input-end:hover, .g-input-start:hover { background: var(--g-fill-strong); } }
 .g-input-start { right: auto; left: 6px; }
 .g-input-end:disabled, .g-input-start:disabled { opacity: .35; pointer-events: none; }
-.g-input-start, .g-input-end { --g-icon-size: 18px; }
+.g-input-start, .g-input-end { --g-icon-size: var(--g-icon-md); }
+/* Pinned to the first row, not to the box: a field taller than one row (an error or a hint inside the wrap, a textarea) must not move the controls */
+.g-input-wrap > :is(button.g-input-end, .g-input-start) { top: calc((var(--g-h-md) - 28px) / 2); }
+/* a field with a hint badge (the ? at the right edge): the clear cross stands to the left of it, they never overlap */
+.g-field[title]:not([data-no-hint]) > .g-input-wrap > button.g-input-end, .g-field[data-hint] > .g-input-wrap > button.g-input-end, .g-input-wrap[data-hint] > button.g-input-end { right: calc(var(--g-inset) + 18px + var(--g-gap-inner) / 2); }
+.g-input-wrap > :is(span.g-input-end, span[data-icon]:not(.g-input-end)) { top: calc((var(--g-h-md) - var(--g-icon-md)) / 2); }
 .g-input-wrap:has(.g-input-end) > :is(input, select) { padding-right: 40px; }
 .g-input-wrap:has(> textarea) { align-items: flex-start; }
 .g-input-wrap > textarea { flex: 1; min-width: 0; }
@@ -279,91 +425,100 @@ button.g-input-end:hover, .g-input-start:hover { background: var(--g-fill-hover)
 .g-color__swatch:focus-within { box-shadow: inset 0 0 0 1px rgba(var(--g-ov),.5), var(--g-focus); }
 .g-color__swatch input { position: absolute; inset: -8px; width: calc(100% + 16px); height: calc(100% + 16px); opacity: 0; cursor: pointer; border: 0; padding: 0; }
 .g-input-wrap.g-color > input:not([type="color"]) { padding-left: 40px; text-transform: uppercase; letter-spacing: .04em; font-variant-numeric: tabular-nums; }
-:is(.g-field, .g-root fieldset):has([aria-invalid="true"]) .g-input-end { color: var(--g-danger-text); }
-:is(.g-field, .g-root fieldset):has([aria-invalid="false"]) .g-input-end { color: var(--g-success-text); }
+:is(.g-field, .g-root fieldset):has([aria-invalid="true"]) .g-input-end:not([data-g-clear-input]) { color: var(--g-danger-text); }
+:is(.g-field, .g-root fieldset):has([aria-invalid="false"]) .g-input-end:not([data-g-clear-input]) { color: var(--g-success-text); }
 :is(.g-field, .g-root fieldset):has([aria-invalid]) .g-input-wrap > span[data-icon]:not(.g-input-end) { color: var(--g-text-2); }
 
 /* ---------- File upload (data-g-file) ----------
  * Built only from existing recipes: the dropzone is a recessed field, the icon a glass icon button, rows are glass like
  * a small button, the bar is a <progress>, the remove button matches .g-input-end. The real <input type="file"> covers the whole
  * dropzone, so click, keyboard and native drag-and-drop all work. */
-.g-file { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-.g-file__drop { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px; text-align: center; cursor: pointer;
+.g-file { display: flex; flex-direction: column; gap: var(--g-gap); min-width: 0; }
+.g-file__drop { position: relative; display: flex; flex-direction: column; align-items: center; gap: var(--g-gap-inner); padding: var(--g-inset); text-align: center; cursor: pointer;
   border-radius: var(--g-radius-field); background: var(--g-fill-recessed); box-shadow: var(--g-recess);
   transition: box-shadow var(--g-dur), background var(--g-dur); }
 .g-file__drop input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 0; }
 .g-file__drop.is-drag { background: var(--g-field-focus-bg); }
 .g-file__drop:has(input:focus-visible) { background: var(--g-field-focus-bg); box-shadow: var(--g-field-focus); } /* keyboard only */
 .g-file__drop input:focus { outline: none; }
-.g-file__drop > [data-icon] { width: var(--g-h-md); height: var(--g-h-md); display: grid; place-items: center; border-radius: 50%; margin-bottom: 4px; color: var(--g-text); background: var(--g-fill); box-shadow: var(--g-rim); }
-.g-file__drop > [data-icon] { --g-icon-size: 20px; }
-.g-file__drop > strong { font-size: 17px; font-weight: 600; color: var(--g-text); }
+.g-file__drop > [data-icon] { width: var(--g-h-md); height: var(--g-h-md); display: grid; place-items: center; border-radius: 50%; color: var(--g-text); background: var(--g-fill); box-shadow: var(--g-rim); }
+.g-file__drop > [data-icon] { --g-icon-size: var(--g-icon-md); }
+.g-file__drop > strong { font-size: var(--g-fs-body); font-weight: 600; color: var(--g-text); }
 .g-file__drop > strong u { text-decoration: none; border-bottom: 1.5px solid rgba(var(--g-ov),.55); }
-.g-file__drop > small { font-size: 13px; color: var(--g-text-3); }
-.g-file__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.g-file__item { position: relative; display: flex; align-items: center; gap: 12px; min-height: var(--g-h-md); padding: 8px 8px 8px 14px; border-radius: var(--g-radius-field); background: var(--g-fill-strong); } /* chip fill and edge, input radius */
-.g-file__item { --g-icon-size: 20px; --g-icon-color: var(--g-text-2); }
-.g-file__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
-.g-file__row { display: flex; align-items: baseline; gap: 12px; }
-.g-file__item .g-file__fname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 400; }
-.g-file__size { font-size: 13px; color: var(--g-text-3); font-variant-numeric: tabular-nums; flex: none; }
+.g-file__drop > small { font-size: var(--g-fs-footnote); color: var(--g-text-3); }
+.g-file__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--g-gap); }
+.g-file__list[hidden] { display: none; }   /* an empty list must not cost a gap below the drop zone */
+.g-file__item { position: relative; display: flex; align-items: center; gap: var(--g-gap-inner); min-height: var(--g-h-md); padding: 8px 8px 8px var(--g-inset); border-radius: var(--g-radius-field); background: var(--g-fill-strong); } /* chip fill and edge, input radius */
+.g-file__item { --g-icon-size: var(--g-icon-md); --g-icon-color: var(--g-text-2); }
+.g-file__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--g-gap-inner); }
+.g-file__row { display: flex; align-items: baseline; gap: var(--g-gap-inner); }
+.g-file__item .g-file__fname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--g-fs-subhead); font-weight: 400; }
+.g-file__size { font-size: var(--g-fs-footnote); color: var(--g-text-3); font-variant-numeric: tabular-nums; flex: none; }
 .g-file__bar { display: none; }   /* the bar is a <progress>, see below */
 .g-file__item.has-progress .g-file__bar { display: block; }
 .g-file__remove { all: unset; box-sizing: border-box; flex: none; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; cursor: pointer; color: var(--g-text); background: var(--g-fill-strong); transition: background var(--g-dur); }
-.g-file__remove:hover { background: var(--g-fill-selected); }
-.g-file__remove { --g-icon-size: 20px; }
+@media (hover: hover) { .g-file__remove:hover { background: var(--g-fill-selected); } }
+.g-file__remove { --g-icon-size: var(--g-icon-md); }
 .g-file__item.is-error { box-shadow: 0 0 0 2px var(--g-danger); }
 .g-file__item.is-error::after { display: none; }
 .g-file__item.is-error .g-file__size { color: var(--g-danger-text); }
 /* Compact: the height of an input, a small button and the file name */
-.g-file--field .g-file__drop { flex-direction: row; gap: 12px; min-height: var(--g-h-md); padding: 0 6px; text-align: left; align-items: center; }
-.g-file--field .g-file__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; color: var(--g-text-3); }
+.g-file--field .g-file__drop { flex-direction: row; gap: var(--g-gap-inner); min-height: var(--g-h-md); padding: 0 var(--g-gap-inner); text-align: left; align-items: center; }
+.g-file--field .g-file__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--g-fs-subhead); color: var(--g-text-3); }
 .g-file--field .g-file__name.has-file { color: var(--g-text); }
 
 
 /* ---------- Select / combobox (enhanced by glass-ui.js from <select data-g-select>) ---------- */
 .g-select { position: relative; min-width: 0; }
 .g-select > select { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
-.g-select__trigger { display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; }
-.g-select__value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.g-select__value.is-placeholder { color: var(--g-text-3); }
-.g-select__trigger { --g-icon-size: 18px; --g-icon-color: var(--g-text-2); }
-[role="listbox"] { max-height: 280px; }
-.g-select__search { width: 100%; margin: 0 0 6px; min-height: var(--g-h-md); font-size: 16px; }
-.g-select__empty { padding: 14px; font-size: 14px; color: var(--g-text-3); }
+/* The dropdown is built by glass-ui.js a moment after the first paint: its icon fades in instead of popping */
+.g-select__trigger::before { animation: g-fade var(--g-dur-md) ease backwards; }
+.g-select__trigger { display: flex; align-items: center; justify-content: space-between; gap: var(--g-gap-inner); cursor: pointer; }
+.g-select__value { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.g-select__value.is-placeholder { color: var(--g-text-4); }
+.g-select__trigger { --g-icon-size: var(--g-icon-md); --g-icon-color: var(--g-text-2); }
+.g-select__search { width: 100%; margin: 0 0 var(--g-gap-inner); min-height: var(--g-h-md); font-size: var(--g-fs-subhead); }
+.g-select__empty { padding: var(--g-gap); font-size: var(--g-fs-footnote); color: var(--g-text-3); }
 
 /* ---------- Menu: the dropdown overlay (also the list of a select and the "More" of a nav) ----------
  * <button data-g-menu="#m">Actions</button>
  * <div role="menu" id="m"><button>Edit <kbd>F2</kbd></button> <a href="#">Share</a> <hr> <button data-variant="danger">Delete</button></div>
- * Moved to <body> (or the enclosing <dialog>) and placed by glass-ui.js, so its blur sees the real page behind it.
+ * A native popover (top layer, so its blur sees the real page behind it) placed under the trigger with CSS anchor positioning; glass-ui.js sets the anchor.
  * A select list is the same panel: role="listbox" with role="option" items. */
 [role="menu"], [role="listbox"] {
-  position: fixed; z-index: 1000; left: 0; top: 0; box-sizing: border-box; overflow: auto; padding: 6px; border-radius: var(--g-radius-field);
+  position: fixed; inset: auto; margin: var(--g-gap-inner) 0; box-sizing: border-box; overflow: auto; padding: var(--g-gap-inner); border: 0; border-radius: var(--g-radius-field);
   background: linear-gradient(var(--g-fill-strong), var(--g-fill-strong)), rgba(0,0,0,.2);
-  opacity: 0; transform: translateY(-6px) scale(.98); transform-origin: top; pointer-events: none; visibility: hidden;
-  transition: opacity var(--g-dur), transform var(--g-dur) var(--g-ease), visibility 0s linear var(--g-dur);
+  position-area: block-end span-inline-end; position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;   /* below the trigger, flips above it when there is no room */
+  opacity: 0; transform: translateY(-6px) scale(.98); pointer-events: none;
+  transition: opacity var(--g-dur), transform var(--g-dur) var(--g-ease), overlay var(--g-dur) allow-discrete, display var(--g-dur) allow-discrete;
 }
-[role="menu"] { min-width: 220px; max-width: calc(100vw - 32px); max-height: min(60vh, 420px); }
-[role="menu"].is-open, [role="listbox"].is-open { opacity: 1; transform: none; pointer-events: auto; visibility: visible; transition-delay: 0s; }
-[role="menu"].is-up, [role="listbox"].is-up { transform-origin: bottom; }
+[role="menu"]:not([popover]), [role="listbox"]:not([popover]) { display: none; }   /* before glass-ui.js has made it a popover */
+[role="menu"] { min-width: 220px; max-width: calc(100vw - 32px); max-height: min(420px, 45vh); }
+[role="listbox"] { width: anchor-size(width); max-height: min(280px, 45vh); }
+[role="menu"]:popover-open, [role="listbox"]:popover-open { opacity: 1; transform: none; pointer-events: auto; }
+@starting-style { [role="menu"]:popover-open, [role="listbox"]:popover-open { opacity: 0; transform: translateY(-6px) scale(.98); } }
 [role="menu"] > :is(button, a, [role="menuitem"]), [role="option"] {
-  display: flex; align-items: center; gap: 10px; box-sizing: border-box; width: 100%; min-height: var(--g-h-md); padding: 0 14px; border: 0; background: none;
-  border-radius: calc(var(--g-radius-field) - 6px); font-family: var(--g-font); font-size: 16px; font-weight: 500; line-height: inherit; text-align: left; text-decoration: none; cursor: pointer; color: var(--g-text);
+  display: flex; align-items: center; gap: var(--g-gap-inner); box-sizing: border-box; width: 100%; min-height: var(--g-h-md); padding: 0 var(--g-inset); border: 0; background: none;
+  border-radius: var(--g-radius-sm); font-family: var(--g-font); font-size: var(--g-fs-subhead); font-weight: 500; line-height: inherit; text-align: left; text-decoration: none; cursor: pointer; color: var(--g-text);
 }
-[role="menu"] > :is(button, a, [role="menuitem"]):hover, [role="option"]:hover, [role="option"].is-active { background: var(--g-fill-hover); }
+[role="option"].is-active { background: var(--g-fill-strong); }
+[role="option"][hidden] { display: none; }   /* filtered out by the search field */
+[role="option"] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }   /* an option never wraps: what does not fit ends with an ellipsis (its text shows as a tooltip) */
+@media (hover: hover) { [role="menu"] > :is(button, a, [role="menuitem"]):hover, [role="option"]:hover { background: var(--g-fill-strong); } }
 [role="menu"] > [aria-current="true"] { background: var(--g-fill-selected); }
-[role="menu"] > :is(button, a, [role="menuitem"]) { --g-icon-size: 18px; --g-icon-color: var(--g-text-2); }
+[role="menu"] > :is(button, a, [role="menuitem"]) { --g-icon-size: var(--g-icon-md); --g-icon-color: var(--g-text-2); }
 [role="menu"] > [data-variant="danger"] { color: var(--g-danger-text); --g-icon-color: var(--g-danger-text); }
-[role="menu"] kbd { margin-left: auto; padding: 0; background: none; box-shadow: none; font: 400 14px var(--g-font); color: var(--g-text-3); }
-[role="menu"] > :is(hr, [role="separator"]) { height: 1px; margin: 6px 8px; border: 0; background: var(--g-line); }
+[role="menu"] kbd { margin-left: auto; padding: 0; background: none; box-shadow: none; font: 400 var(--g-fs-footnote) var(--g-font); color: var(--g-text-3); }
+[role="menu"] > :is(hr, [role="separator"]) { height: 1px; margin: var(--g-gap-inner); border: 0; background: var(--g-line); }
 [role="menu"] > [aria-selected="true"]::after, [role="option"][aria-selected="true"]::after { content: ""; width: 16px; height: 16px; flex: none; margin-left: auto; background: currentColor;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/contain no-repeat; }
 [role="menu"] > :is([aria-disabled="true"], :disabled), [role="option"][aria-disabled="true"] { opacity: .38; pointer-events: none; }
 
 /* ---------- Checkbox / radio / switch: <input type="checkbox">, <input type="radio">, <input type="checkbox" role="switch"> ---------- */
-:where(:is(.g-root,[role="listbox"]) label:has(> input:is([type="checkbox"], [type="radio"]))) { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 400; cursor: pointer; line-height: 1.3; color: var(--g-text); }
+:where(:is(.g-root,[role="listbox"]) label:has(> input:is([type="checkbox"], [type="radio"]))) { display: inline-flex; align-items: baseline; gap: var(--g-gap); font-size: var(--g-fs-subhead); font-weight: 400; cursor: pointer; line-height: 1.3; color: var(--g-text); }
+:where(:is(.g-root,[role="listbox"]) label:has(> input:is([type="checkbox"], [type="radio"])) > input:is([type="checkbox"], [type="radio"])) { font: inherit; translate: 0 calc(50% - .5cap); }   /* the box sits on the text baseline, then moves down by half of itself minus half a capital: its centre is the centre of the capitals, in any font; on the first line when the text wraps */
 :where(:is(.g-root,[role="listbox"]) label:has(> input:is([type="checkbox"], [type="radio"]):disabled)) { opacity: .4; cursor: not-allowed; }
-:where(:is(.g-root,[role="listbox"]) input:is([type="checkbox"], [type="radio"])) { appearance: none; margin: 0; flex: none; cursor: inherit; transition: background .25s var(--g-ease), box-shadow .25s var(--g-ease); }
+:where(:is(.g-root,[role="listbox"]) input:is([type="checkbox"], [type="radio"])) { appearance: none; margin: 0; flex: none; cursor: inherit; transition: background var(--g-dur-md) var(--g-ease), box-shadow var(--g-dur-md) var(--g-ease); }
 :where(:is(.g-root,[role="listbox"]) input:is([type="checkbox"]:not([role="switch"]), [type="radio"])) { width: 20px; height: 20px; background: var(--g-fill-recessed); box-shadow: var(--g-recess); position: relative; }
 :where(:is(.g-root,[role="listbox"]) input[type="checkbox"]:not([role="switch"])) { border-radius: 6px; }
 :where(:is(.g-root,[role="listbox"]) input[type="radio"]) { border-radius: 50%; }
@@ -372,14 +527,16 @@ button.g-input-end:hover, .g-input-start:hover { background: var(--g-fill-hover)
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12.5l4 4 8-9'/%3E%3C/svg%3E") center/78% no-repeat; }
 :where(:is(.g-root,[role="listbox"]) input[type="checkbox"]:not([role="switch"]):indeterminate)::after { mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.2' stroke-linecap='round'%3E%3Cpath d='M6 12h12'/%3E%3C/svg%3E"); }
 :where(:is(.g-root,[role="listbox"]) input[type="radio"]:checked)::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: var(--g-accent-fg); }
-:where(:is(.g-root,[role="listbox"]) input[role="switch"]) { --sw-dur: .32s; --sw-ease: var(--g-ease); width: 44px; height: 26px; border-radius: var(--g-radius-pill); position: relative; background: var(--g-fill-recessed); box-shadow: var(--g-recess); transition: none; }
+:where(:is(.g-root,[role="listbox"]) input[role="switch"]) { --sw-dur: var(--g-dur-spring); --sw-ease: var(--g-ease-spring); --sw-h: 36px; --sw-w: 62px; --sw-pad: 4px; width: var(--sw-w); height: var(--sw-h); border-radius: var(--g-radius-pill); position: relative; background: var(--g-fill-recessed); box-shadow: var(--g-recess); transition: none; }
 /* Accent layer fades in while the knob travels: same duration and easing, so they move as one */
 :where(:is(.g-root,[role="listbox"]) input[role="switch"])::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--g-accent); box-shadow: var(--g-raised); opacity: 0; transition: opacity var(--sw-dur) var(--sw-ease); }
-:where(:is(.g-root,[role="listbox"]) input[role="switch"])::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform var(--sw-dur) var(--sw-ease), width .2s var(--sw-ease); }
+:where(:is(.g-root,[role="listbox"]) input[role="switch"])::after { content: ""; position: absolute; top: var(--sw-pad); left: var(--sw-pad); width: calc(var(--sw-h) - 2 * var(--sw-pad)); height: calc(var(--sw-h) - 2 * var(--sw-pad)); border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform var(--sw-dur) var(--sw-ease), width var(--g-dur) var(--sw-ease); }
 :where(:is(.g-root,[role="listbox"]) input[role="switch"]:checked)::before { opacity: 1; }
-:where(:is(.g-root,[role="listbox"]) input[role="switch"]:checked)::after { transform: translateX(18px); }
-:where(:is(.g-root,[role="listbox"]) label:active > input[role="switch"])::after { width: 24px; }
-:where(:is(.g-root,[role="listbox"]) label:active > input[role="switch"]:checked)::after { transform: translateX(14px); }
+:where(:is(.g-root,[role="listbox"]) input[role="switch"]:checked)::after { transform: translateX(calc(var(--sw-w) - var(--sw-h))); }
+:where(:is(.g-root,[role="listbox"]) label:active > input[role="switch"])::after { width: calc(var(--sw-h) - 2 * var(--sw-pad) + 4px); }
+:where(:is(.g-root,[role="listbox"]) label:active > input[role="switch"]:checked)::after { transform: translateX(calc(var(--sw-w) - var(--sw-h) - 4px)); }
+:where(:is(.g-root,[role="listbox"]) label:has(> input[role="switch"])) { align-items: center; }   /* the 36px switch is centred on the row; the baseline + translate trick above is for the 20px box and pushed it ~9px below the label, where a fold (::details-content, paint containment) clipped it */
+:where(:is(.g-root,[role="listbox"]) label:has(> input[role="switch"]) > input[role="switch"]) { translate: none; }
 
 /* ---------- Slider: <input type="range"> ---------- */
 :where(:is(.g-root,[role="listbox"]) input[type="range"]) { --p: 50%; appearance: none; width: 100%; height: 24px; background: transparent; cursor: pointer; margin: 0; }
@@ -400,82 +557,120 @@ button.g-input-end:hover, .g-input-start:hover { background: var(--g-fill-hover)
  *   <span data-icon="check"></span>   a standalone icon
  * Drawn by ::before / ::after as a mask in currentColor: no inline svg, no aria-hidden, one size and one alignment everywhere.
  * Tune with --g-icon-size and --g-icon-color on the element or any container. */
-:where([data-icon], [data-icon-end]) { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+:where([data-icon], [data-icon-end]) { display: inline-flex; align-items: center; gap: var(--g-gap-inner); }
+:where([data-icon]:empty, [data-icon-end]:empty) { justify-content: center; }   /* only an icon-only element centres its glyph; a row, a link or a heading with text starts at the left (buttons and tabs centre theirs themselves) */
 :where([data-icon])::before { content: ""; flex: none; width: var(--g-icon-size, 1.15em); height: var(--g-icon-size, 1.15em); background: var(--g-icon-color, currentColor);
   -webkit-mask: var(--g-is, linear-gradient(#0000, #0000)) center / contain no-repeat; mask: var(--g-is, linear-gradient(#0000, #0000)) center / contain no-repeat; transition: transform var(--g-dur) var(--g-ease); }
 :where([data-icon-end])::after { content: ""; flex: none; width: var(--g-icon-size, 1.15em); height: var(--g-icon-size, 1.15em); background: var(--g-icon-color, currentColor);
   -webkit-mask: var(--g-ie, linear-gradient(#0000, #0000)) center / contain no-repeat; mask: var(--g-ie, linear-gradient(#0000, #0000)) center / contain no-repeat; transition: transform var(--g-dur) var(--g-ease); }
 [aria-expanded="true"][data-icon="chevron-down"]::before, [aria-expanded="true"][data-icon-end="chevron-down"]::after { transform: rotate(180deg); }
 [data-g-password][aria-pressed="true"] { --g-is: var(--g-i-eye-off); }
+.g-input-end[hidden] { display: none; }
+.g-input-wrap:has([data-g-clear-input]) > input::-webkit-search-cancel-button { display: none; }
+/* a field that cannot be edited (readonly, disabled) has no clear cross: it fades out after --g-ro-delay and comes back when the field becomes writable */
+.g-input-wrap > input:read-only ~ [data-g-clear-input] { opacity: 0; pointer-events: none; transition: opacity var(--g-dur) var(--g-ro-delay); }
+/* Busy field: <input aria-busy="true"> (with readonly while the request runs; both are removed when it ends). After --g-busy-delay the field looks
+   read-only, its cross is replaced by a spinner. Nothing shows before that, so a quick request does not flash. */
+/* Animations, not transitions: a field created already busy (a form re-rendered by ajax) has no earlier state to transition from, but an animation with a
+   delay and fill-mode "backwards" holds its first keyframe (the normal look) until the delay is over, whatever the first state was. */
+.g-input-wrap > input[aria-busy="true"] { animation: g-busy-look var(--g-dur) var(--g-busy-delay) backwards; }
+.g-input-wrap > input[aria-busy="true"] ~ [data-g-clear-input] { animation: g-busy-cross var(--g-dur) var(--g-busy-delay) backwards; }
+@keyframes g-busy-look { from { background: var(--g-fill-recessed); box-shadow: var(--g-recess); } }
+@keyframes g-busy-cross { from { opacity: 1; } }
+.g-input-wrap:has(> input[aria-busy="true"])::after { content: ""; position: absolute; right: 11px; top: calc((var(--g-h-md) - 18px) / 2); width: 18px; height: 18px; box-sizing: border-box; border: 2px solid var(--g-line); border-top-color: var(--g-accent); border-radius: 50%; pointer-events: none; animation: g-spin .8s linear infinite, g-fade var(--g-dur) var(--g-busy-delay) backwards; }
+@media (prefers-reduced-motion: reduce) { .g-input-wrap:has(> input[aria-busy="true"])::after { animation: g-fade var(--g-dur) var(--g-busy-delay) backwards; border-top-color: var(--g-line); } }
 
 /* ---------- Tabs / segmented control: role="tablist" > role="tab", panels with role="tabpanel" ----------
  * Underline style: data-variant="underline" on the tablist. Selected tab: aria-selected="true". */
-:where(:is(.g-root,[role="listbox"]) [role="tablist"]) { display: inline-flex; gap: 4px; padding: 5px; border-radius: var(--g-radius-pill); max-width: 100%; overflow-x: auto; scrollbar-width: none;
+:where(:is(.g-root,[role="listbox"]) [role="tablist"]) { display: inline-flex; gap: 4px; padding: 4px; border-radius: var(--g-radius-pill); max-width: 100%; overflow-x: auto; scrollbar-width: none;
   background: var(--g-fill-recessed); box-shadow: var(--g-recess); }
-:where(:is(.g-root,[role="listbox"]) [role="tablist"] > :is(button, [role="tab"])) { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: calc(var(--g-h-md) - 10px); padding: 0 16px; border: 0; border-radius: var(--g-radius-pill); background: transparent; color: var(--g-text-2); font: 500 14px/1 var(--g-font); cursor: pointer; white-space: nowrap; transition: background var(--g-dur), color var(--g-dur), box-shadow var(--g-dur); }
-:where(:is(.g-root,[role="listbox"]) [role="tablist"] > :is(button, [role="tab"]):hover) { color: var(--g-text); }
-:where(:is(.g-root,[role="listbox"]) [role="tablist"] > :is(button, [role="tab"]), :is(.g-root,[role="listbox"]) nav a) { --g-icon-size: 16px; }
-:where(:is(.g-root,[role="listbox"]) [role="tablist"][data-variant="underline"]) { display: flex; width: 100%; background: none; box-shadow: none; padding: 0; gap: 24px; border-radius: 0; border-bottom: 1px solid var(--g-line); }
+:where(:is(.g-root,[role="listbox"]) [role="tablist"] > :is(button, [role="tab"])) { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: var(--g-gap-inner); height: calc(var(--g-h-md) - 8px); padding: 0 var(--g-inset); border: 0; border-radius: var(--g-radius-pill); background: transparent; color: var(--g-text-2); font: 400 var(--g-fs-subhead)/1 var(--g-font); cursor: pointer; white-space: nowrap; transition: background var(--g-dur), color var(--g-dur), box-shadow var(--g-dur); }
+@media (hover: hover) { :where(:is(.g-root,[role="listbox"]) [role="tablist"] > :is(button, [role="tab"]):hover) { color: var(--g-text); } }
+:where(:is(.g-root,[role="listbox"]) [role="tablist"] > :is(button, [role="tab"]), :is(.g-root,[role="listbox"]) nav a) { --g-icon-size: var(--g-icon-sm); }
+:where(:is(.g-root,[role="listbox"]) [role="tablist"][data-variant="underline"]) { display: flex; width: 100%; background: none; box-shadow: none; padding: 0; gap: var(--g-gap); border-radius: 0; border-bottom: 1px solid var(--g-line); }
 :where(:is(.g-root,[role="listbox"]) [role="tablist"][data-variant="underline"] > *) { height: var(--g-h-md); padding: 0 2px; border-radius: 0; box-shadow: none; background: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
 :where(:is(.g-root,[role="listbox"]) [role="tablist"][data-variant="underline"] > [aria-selected="true"], :is(.g-root,[role="listbox"]) [role="tablist"][data-variant="underline"]:not(:has([aria-selected="true"])) > :first-child) { background: none; color: var(--g-text); border-bottom-color: var(--g-ink); box-shadow: none; }
-:where(:is(.g-root,[role="listbox"]) [role="tabpanel"]) { padding-top: 16px; font-size: 15px; line-height: 1.5; color: var(--g-text-2); }
+:where(:is(.g-root,[role="listbox"]) [role="tabpanel"]) { padding-top: var(--g-gap); font-size: var(--g-fs-subhead); line-height: 1.33; color: var(--g-text-2); }
 [role="tabpanel"][hidden], [role="tablist"]:not([data-g-ready]) ~ [role="tabpanel"]:not([role="tablist"] + *) { display: none; }
+/* a panel rises in when its tab is chosen: @starting-style (the one that is hidden again leaves at once, so the layout never holds two) */
+[role="tabpanel"] { transition: opacity var(--g-dur-md) var(--g-ease), transform var(--g-dur-md) var(--g-ease); }
+@starting-style { [role="tabpanel"] { opacity: 0; transform: translateY(6px); } }
 
 /* ---------- Navigation bar: <nav> ----------
  * <nav><a href="/">Brand</a> <ul><li><a href="/" aria-current="page">Home</a></li></ul> <div>…buttons…</div></nav>
  * Pinned: data-position="sticky" or "fixed" (give the page about 92px top padding for fixed). A pager is <nav data-g-pager>, not a bar. */
-:where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager])) { position: relative; display: flex; align-items: center; gap: 12px; min-height: var(--g-nav-h); padding: 10px 12px 10px 24px; border-radius: var(--g-radius-pill); }
+:where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager])) { position: relative; display: flex; align-items: center; gap: var(--g-gap); min-height: var(--g-nav-h); padding: 10px 12px 10px 24px; border-radius: var(--g-radius-pill); }
 :where(:is(.g-root,[role="listbox"]) nav[data-position="sticky"]) { position: sticky; top: 12px; z-index: 50; }
-:where(:is(.g-root,[role="listbox"]) nav[data-position="fixed"]) { position: fixed; z-index: 50; top: calc(12px + env(safe-area-inset-top, 0px)); left: 16px; right: 16px; max-width: 1088px; margin-inline: auto; }
-:where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > a) { display: flex; align-items: center; gap: 8px; flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; font-weight: 700; font-size: 17px; letter-spacing: -.01em; color: var(--g-text); text-decoration: none; margin-right: auto; }   /* on the narrowest bars the name is clipped before anything overlaps */
+:where(:is(.g-root,[role="listbox"]) nav[data-position="fixed"]) { position: fixed; z-index: 50; top: calc(12px + env(safe-area-inset-top, 0px)); left: 16px; right: 16px; max-width: var(--g-page-w); margin-inline: auto; }
+:where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > a) { display: flex; align-items: center; gap: var(--g-gap-inner); flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; font-weight: 700; font-size: var(--g-fs-body); letter-spacing: -.01em; color: var(--g-text); text-decoration: none; margin-right: auto; }   /* on the narrowest bars the name is clipped before anything overlaps */
 /* Logo dot for the brand link: <nav><a href="/"><span class="g-brand-dot"></span>Name</a>…</nav> */
 .g-brand-dot { width: 22px; height: 22px; border-radius: 50%; background: conic-gradient(from 200deg, #fff, var(--g-accent), #9be7ff, #fff); box-shadow: inset 0 0 0 1px rgba(255,255,255,.5); }
 
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > a > *) { flex: none; }   /* the logo keeps its size while the name is clipped */
-:where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > ul) { display: flex; flex: 1 1 0; min-width: 46px; justify-content: flex-end; gap: 2px; list-style: none; margin: 0; padding: 0; }
+:where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > ul) { display: flex; flex: 1 1 0; min-width: 46px; flex-wrap: wrap; height: var(--g-h-md); overflow: clip; justify-content: flex-end; gap: 2px; list-style: none; margin: 0; padding: 0; }
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > ul > li) { flex: none; color: inherit; }
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > ul > li[hidden]) { display: none; }
-:where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > div) { display: flex; align-items: center; gap: 8px; flex: none; }
-:where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > ul > li > a), .g-nav__morebtn { white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; height: calc(var(--g-nav-h) - 24px); padding: 0 16px; border-radius: var(--g-radius-pill); color: var(--g-text-2); font-weight: 500; font-size: 14px; text-decoration: none; transition: background var(--g-dur), color var(--g-dur); }
-:where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > ul > li > a:hover) { background: var(--g-fill-hover); color: var(--g-text); }
+:where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > div) { display: flex; align-items: center; gap: var(--g-gap); flex: none; }
+:where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > ul > li > a), .g-nav__morebtn { white-space: nowrap; display: inline-flex; align-items: center; gap: var(--g-gap-inner); height: var(--g-h-md); padding: 0 var(--g-inset); border-radius: var(--g-radius-pill); color: var(--g-text-2); font-weight: 500; font-size: var(--g-fs-subhead); text-decoration: none; transition: background var(--g-dur), color var(--g-dur); }
+@media (hover: hover) { :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > ul > li > a:hover) { background: var(--g-fill-strong); color: var(--g-text); } }
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > ul > li > a[aria-current="page"]) { background: var(--g-fill-selected); color: var(--g-text); }
 /* Auto navigation (data-g-nav-auto on the <ul>): links that do not fit move into a "More" menu (built by glass-ui.js) */
-.g-nav__morebtn { border: 0; background: none; font: inherit; font-weight: 600; font-size: 14.5px; cursor: pointer; gap: 8px; }
-.g-nav__morebtn:hover { background: var(--g-fill-hover); color: var(--g-text); }
-.g-nav__morebtn { --g-icon-size: 14px; }
-.g-nav__morebtn[data-compact] { padding-inline: 12px; } .g-nav__morebtn[data-compact] > span { display: none; }
+.g-nav__morebtn { border: 0; background: none; font: inherit; font-weight: 600; font-size: var(--g-fs-subhead); cursor: pointer; gap: var(--g-gap-inner); }
+@media (hover: hover) { .g-nav__morebtn:hover { background: var(--g-fill-strong); color: var(--g-text); } }
+.g-nav__morebtn { --g-icon-size: var(--g-icon-sm); }
+.g-nav__morebtn[data-compact] { padding-inline: var(--g-inset); } .g-nav__morebtn[data-compact] > span { display: none; }
 .g-nav__morebtn[aria-current="true"] { background: var(--g-fill-selected); color: var(--g-text); }
 @media (max-width: 720px) { :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager])) { padding-left: 18px; } }
+/* Bar with a search field: <nav><a>Home</a><a>Title</a><form class="g-input-wrap">…</form><ul>…</ul><div>…</div></nav>
+ * A grid: home | title | field | links (only with a <ul>) | buttons. The field is the main cell (80px at least, --g-nav-field-max at most, 300px by default); the rest of the width is free space before the buttons; the title is clipped first,
+ * home and buttons keep their size. Each cell has its own column, so a cell that is hidden does not shift the others. */
+:where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]):has(> .g-input-wrap)) { display: grid; grid-template-columns: auto minmax(0, max-content) minmax(80px, var(--g-nav-field-max, 300px)) minmax(max-content, 1fr); }
+:where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]):has(> .g-input-wrap):has(> ul)) { grid-template-columns: auto minmax(0, max-content) minmax(80px, var(--g-nav-field-max, 300px)) minmax(0, 1fr) auto; }   /* the links column exists only when there are links: an empty track would still cost a gap */
+:where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > .g-input-wrap) { grid-column: 3; min-width: 0; width: auto; }
+:where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]):has(> .g-input-wrap) > a:first-of-type) { grid-column: 1; margin-right: 0; }
+:where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]):has(> .g-input-wrap) > a:nth-of-type(2)) { grid-column: 2; margin-right: 0; text-overflow: ellipsis; }
+:where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]):has(> .g-input-wrap) > ul) { grid-column: 4; flex: none; }
+:where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]):has(> .g-input-wrap) > div) { grid-column: -2; justify-content: flex-end; }
 
 /* ---------- Card: <article> ----------
  * <article><figure style="background-image:…"></figure><h3>Title</h3><p>Text</p><footer><button>Open</button></footer></article>
  * A whole-card link: <a href><article>…</article></a>. Long-form text goes in a <div class="g-prose"> instead. */
-:where(:is(.g-root,[role="listbox"]) article:not(.g-prose)) { display: flex; flex-direction: column; gap: 12px; padding: var(--g-pad); overflow: hidden; border-radius: var(--g-radius-card); min-width: 0; }
-:where(:is(.g-root,[role="listbox"]) article:not(.g-prose) > figure:first-child) { aspect-ratio: 16/10; margin: calc(-1 * var(--g-pad)) calc(-1 * var(--g-pad)) 4px; background: center/cover no-repeat rgba(255,255,255,.08); }
+:where(:is(.g-root,[role="listbox"]) article:not(.g-prose)) { display: flex; flex-direction: column; gap: var(--g-gap); padding: var(--g-pad); overflow: hidden; border-radius: var(--g-radius-card); min-width: 0; }
+:where(:is(.g-root,[role="listbox"]) article:not(.g-prose) > figure:first-child) { aspect-ratio: 16/10; margin: calc(-1 * var(--g-pad)) calc(-1 * var(--g-pad)) 0; background: center/cover no-repeat rgba(255,255,255,.08); }
 :where(:is(.g-root,[role="listbox"]) article:not(.g-prose) > figure:first-child > :is(img, picture, video)) { display: block; width: 100%; height: 100%; object-fit: cover; }
-:where(:is(.g-root,[role="listbox"]) article:not(.g-prose) :is(h2, h3, h4)) { font-size: 20px; font-weight: 650; letter-spacing: -.01em; color: var(--g-text); }
-:where(:is(.g-root,[role="listbox"]) article:not(.g-prose) > footer) { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+:where(:is(.g-root,[role="listbox"]) article:not(.g-prose) :is(h2, h3, h4)) { font-size: var(--g-fs-title3); font-weight: 600; letter-spacing: -.01em; color: var(--g-text); }
+:where(:is(.g-root,[role="listbox"]) article:not(.g-prose) > footer) { display: flex; gap: var(--g-gap); flex-wrap: wrap; }
 :where(:is(.g-root,[role="listbox"]) article:not(.g-prose) > data) { align-self: flex-start; }
+/* Stat tile: <article data-stat><b>14 679</b><small data-muted>Days</small></article> - a number and its caption, in a [data-grid] with --g-grid-min set (about 11rem). */
+:where(:is(.g-root,[role="listbox"]) article[data-stat]) { gap: var(--g-gap-inner); padding: var(--g-pad); }
+:where(:is(.g-root,[role="listbox"]) article[data-stat] > b) { font-size: var(--g-fs-title3); line-height: 1.1; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 :where(:is(.g-root,[role="listbox"]) a:has(> article)) { display: block; color: inherit; text-decoration: none; border-radius: var(--g-radius-card); min-width: 0; }
 
 /* ---------- Grid: <div data-grid> ----------
  * Throw any content in: the children line up in even columns, every gap is --g-gap. Fine-tune by hand where needed.
  *   <div data-grid> <article>…</article> <article>…</article> <p>…</p> </div>
  * data-grid        as many columns as fit, each at least --g-grid-min (200px) and sharing the width equally
- * data-grid="2…6"  at most that many columns, fewer when narrow
- * On a child: data-span="2|3|full" widens it (only when the grid is wide enough; keep it within the column count), data-rows="2|3" makes it taller. */
-:where([data-grid]) { --g-cols: 12; display: grid; grid-template-columns: repeat(auto-fit, minmax(max(var(--g-grid-min, 200px), calc((100% - (var(--g-cols) - 1) * var(--g-gap)) / var(--g-cols))), 1fr));
+ * data-grid="1…6"  at most that many columns, fewer when narrow (1 = a single column)
+ * On a child: data-span="2|3|full" widens it (only when the grid is wide enough; keep it within the column count), data-rows="2|3" makes it taller.
+ * The grid decides the layout only. The size of a cell comes from the cell itself (see Tile) and --g-grid-min (200px) sets the narrowest column. */
+:where([data-grid]) { --g-cols: 12; display: grid; grid-template-columns: repeat(auto-fit, minmax(max(var(--g-grid-min, var(--g-h-sm)), calc((100% - (var(--g-cols) - 1) * var(--g-gap)) / var(--g-cols))), 1fr));
   grid-auto-columns: auto; gap: var(--g-gap); container-type: inline-size; }
-:where([data-grid="2"]) { --g-cols: 2; } :where([data-grid="3"]) { --g-cols: 3; } :where([data-grid="4"]) { --g-cols: 4; } :where([data-grid="5"]) { --g-cols: 5; } :where([data-grid="6"]) { --g-cols: 6; }
+:where([data-grid="1"]) { --g-cols: 1; } :where([data-grid="2"]) { --g-cols: 2; } :where([data-grid="3"]) { --g-cols: 3; } :where([data-grid="4"]) { --g-cols: 4; } :where([data-grid="5"]) { --g-cols: 5; } :where([data-grid="6"]) { --g-cols: 6; }
 :where([data-grid] > *) { min-width: 0; }
+/* A grid with round icon buttons in it is a toolbar: the buttons keep their own size (a column of the grid is never narrower than 200px, which is right for a field and wrong for a 40px button),
+   the other cells share what is left, at 200px at least, and wrap when they do not fit. Checkboxes keep their own width as well. A grid of fields (.g-field) stays a grid. */
+:is(.g-root,[role="listbox"]) [data-grid]:has(> :is(button, a[role="button"])[data-icon]:empty):not(:has(> .g-field)) { display: flex; flex-wrap: wrap; align-items: center; }
+:is(.g-root,[role="listbox"]) [data-grid]:has(> :is(button, a[role="button"])[data-icon]:empty):not(:has(> .g-field)) > * { flex: 1 1 var(--g-grid-min, 200px); min-width: 0; }
+:is(.g-root,[role="listbox"]) [data-grid]:has(> :is(button, a[role="button"])[data-icon]:empty):not(:has(> .g-field)) > :is(:is(button, a[role="button"])[data-icon]:empty, label:has(> input:is([type="checkbox"], [type="radio"]))) { flex: none; }
+
 :where([data-grid] > [data-span="full"]) { grid-column: 1 / -1; }
 :where([data-grid] > [data-rows="2"]) { grid-row: span 2; } :where([data-grid] > [data-rows="3"]) { grid-row: span 3; }
 @container (min-width: 440px) { :where([data-grid] > [data-span="2"]) { grid-column: span 2; } }
 @container (min-width: 640px) { :where([data-grid] > [data-span="3"]) { grid-column: span 3; } }
-:where(:is(.g-root,[role="listbox"]) a:has(> article) > article) { height: 100%; cursor: pointer; transition: transform .25s var(--g-ease), background var(--g-dur); }
-:where(:is(.g-root,[role="listbox"]) a:has(> article):hover > article) { transform: translateY(-3px); background: var(--g-fill-hover); }
+:where(:is(.g-root,[role="listbox"]) a:has(> article) > article) { height: 100%; cursor: pointer; transition: transform var(--g-dur-md) var(--g-ease), background var(--g-dur); }
+@media (hover: hover) { :where(:is(.g-root,[role="listbox"]) a:has(> article):hover > article) { transform: translateY(-3px); background: var(--g-fill-strong); } }
 /* ---------- Badge / chip ---------- */
-:where(:is(.g-root,[role="listbox"]) data) { position: relative; display: inline-flex; white-space: nowrap; flex: none; align-items: center; gap: 8px; height: 28px; padding: 0 12px; border-radius: var(--g-radius-pill); font-size: 14px; font-weight: 400; font-variant-numeric: tabular-nums; color: var(--g-text); background: var(--g-fill-strong); }
+:where(:is(.g-root,[role="listbox"]) data) { position: relative; display: inline-flex; white-space: nowrap; flex: none; align-items: center; gap: var(--g-gap-inner); height: 28px; padding: 0 var(--g-inset); border-radius: var(--g-radius-pill); font-size: var(--g-fs-footnote); font-weight: 400; font-variant-numeric: tabular-nums; color: var(--g-text); background: var(--g-fill-strong); }
 :where(:is(.g-root,[role="listbox"]) data[data-variant="accent"]) { background: var(--g-accent); color: var(--g-accent-fg); --edge: rgba(255,255,255,.35); }
 :where(:is(.g-root,[role="listbox"]) data[data-variant="success"]) { background: rgba(52,210,123,.22); color: var(--g-success-text); --edge: rgba(52,210,123,.4); }
 :where(:is(.g-root,[role="listbox"]) data[data-variant="warning"]) { background: rgba(255,179,64,.22); color: #ffd699; --edge: rgba(255,179,64,.4); }
@@ -489,7 +684,7 @@ button.g-input-end:hover, .g-input-start:hover { background: var(--g-fill-hover)
 /* ---------- Progress: <progress value="64" max="100"> (no value = indeterminate), data-variant="accent" ---------- */
 :where(:is(.g-root,[role="listbox"]) progress) { appearance: none; display: block; width: 100%; height: var(--g-progress-h); border: 0; border-radius: var(--g-radius-pill); overflow: hidden; background: var(--g-fill-recessed); box-shadow: var(--g-recess); color: var(--g-ink); }
 :where(:is(.g-root,[role="listbox"]) progress)::-webkit-progress-bar { background: transparent; }
-:where(:is(.g-root,[role="listbox"]) progress)::-webkit-progress-value { border-radius: var(--g-radius-pill); background: var(--g-ink); transition: width .5s var(--g-ease); }
+:where(:is(.g-root,[role="listbox"]) progress)::-webkit-progress-value { border-radius: var(--g-radius-pill); background: var(--g-ink); transition: width var(--g-dur-lg) var(--g-ease); }
 :where(:is(.g-root,[role="listbox"]) progress)::-moz-progress-bar { border-radius: var(--g-radius-pill); background: var(--g-ink); }
 :where(:is(.g-root,[role="listbox"]) progress[data-variant="accent"])::-webkit-progress-value { background: var(--g-accent); }
 :where(:is(.g-root,[role="listbox"]) progress[data-variant="accent"])::-moz-progress-bar { background: var(--g-accent); }
@@ -499,78 +694,120 @@ button.g-input-end:hover, .g-input-start:hover { background: var(--g-fill-hover)
 /* Ring and spinner: role="progressbar". With aria-valuenow it is a ring (JS mirrors the value into --value); without it, an indefinite spinner. */
 :where(:is(.g-root,[role="listbox"]) [role="progressbar"]:not(progress)) { --size: 24px; position: relative; display: inline-grid; place-items: center; flex: none; width: var(--size); height: var(--size); border-radius: 50%; }
 :where(:is(.g-root,[role="listbox"]) [role="progressbar"]:not(progress, [aria-valuenow])) { border: 3px solid rgba(var(--g-ov),.25); border-top-color: var(--g-ink); animation: g-spin .8s linear infinite; }
-:where(:is(.g-root,[role="listbox"]) [role="progressbar"][aria-valuenow]) { --value: attr(aria-valuenow type(<number>), 0); --size: 64px; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--g-text); }
+:where(:is(.g-root,[role="listbox"]) [role="progressbar"][aria-valuenow]) { --value: attr(aria-valuenow type(<number>), 0); --size: 64px; font-size: var(--g-fs-footnote); font-weight: 700; font-variant-numeric: tabular-nums; color: var(--g-text); }
 :where(:is(.g-root,[role="listbox"]) [role="progressbar"][aria-valuenow])::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(var(--g-accent) calc(var(--value) * 1%), rgba(0,0,0,.16) 0); mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 calc(100% - 7px)); }
 
 /* ---------- Table: <figure><table><thead/><tbody/><tfoot/></table></figure> ----------
  * Right-aligned cell: align="right". Muted cell: data-muted. Two-line rows: <table data-rows="two-line">. Sortable header: <th aria-sort="none"><button>Name</button></th>. */
-:where(:is(.g-root,[role="listbox"]) figure:has(> table)) { overflow-x: auto; border-radius: var(--g-radius-card); }
-:where(:is(.g-root,[role="listbox"]) table) { width: 100%; min-width: 520px; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
-:where(:is(.g-root,[role="listbox"]) th) { height: var(--g-h-md); padding: 0 24px; text-align: left; font-size: 12.5px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--g-text-3); white-space: nowrap; }
-:where(:is(.g-root,[role="listbox"]) td) { height: var(--g-row-h); padding: 0 24px; border-top: 1px solid var(--g-line); color: var(--g-text); }
+:where(:is(.g-root,[role="listbox"]) figure:has(> table)) { overflow: auto; min-height: 0; border-radius: var(--g-radius-card); }   /* what does not fit scrolls in the figure, both ways (in a column with a set height it shrinks to it) */
+:where(:is(.g-root,[role="listbox"]) table) { width: 100%; min-width: 520px; border-collapse: collapse; font-size: var(--g-fs-subhead); font-variant-numeric: tabular-nums; }
+:where(:is(.g-root,[role="listbox"]) th) { height: var(--g-h-md); padding: 0 var(--g-gap); text-align: left; font-size: var(--g-fs-caption); line-height: 1.33; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--g-text-3); white-space: nowrap; }
+/* Sticky header and footer: in the workspace of a tools panel (where a table scrolls inside its figure) and on any table marked data-sticky; data-no-sticky turns it off.
+ * They are plain glass, a little stronger than a panel (--g-fill-sticky), with a blur: the rows that scroll under them show through, blurred. The blur sits on the thead / tfoot itself: it does not work on cells. */
+:where(:is(.g-root,[role="listbox"]) :is(.g-shell--tools > main table, table[data-sticky]):not([data-no-sticky], [data-scroll-body]) > :is(thead, tfoot)) { position: sticky; z-index: 2; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
+:where(:is(.g-root,[role="listbox"]) :is(.g-shell--tools > main table, table[data-sticky]):not([data-no-sticky], [data-scroll-body]) > thead) { top: 0; }
+:where(:is(.g-root,[role="listbox"]) :is(.g-shell--tools > main table, table[data-sticky]):not([data-no-sticky], [data-scroll-body]) > :is(thead, tfoot) > tr > :is(th, td)) { background: var(--g-fill-sticky); }
+:where(:is(.g-root,[role="listbox"]) :is(.g-shell--tools > main table, table[data-sticky]):not([data-no-sticky], [data-scroll-body]) > tfoot) { bottom: 0; }
+/* Scrolling body: <table data-scroll-body> fills the height of its figure; the header and the footer stay where they are, only the rows scroll between them.
+ * The rows are grids, so the columns of the header, the body and the footer line up without a table layout: they are of equal width, or as --g-cols says
+ * (a grid-template-columns list: style="--g-cols: 3rem 1fr 8rem"). The width of a column no longer follows its content. */
+:where(:is(.g-root,[role="listbox"]) figure:has(> table[data-scroll-body])) { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; overflow: hidden; }
+:where(:is(.g-root,[role="listbox"]) table[data-scroll-body]) { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; min-width: 0; }
+:where(:is(.g-root,[role="listbox"]) table[data-scroll-body] > :is(thead, tfoot)) { display: block; flex: none; overflow-y: hidden; scrollbar-gutter: stable; }
+:where(:is(.g-root,[role="listbox"]) table[data-scroll-body] > tbody) { display: block; flex: 1 1 0; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; }
+:where(:is(.g-root,[role="listbox"]) table[data-scroll-body] tr) { display: grid; grid-template-columns: var(--g-cols, none); grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); align-items: center; }
+:is(.g-root,[role="listbox"]) table[data-scroll-body] :is(th, td) { max-width: none; min-width: 0; padding-inline: var(--g-gap); overflow: hidden; text-overflow: ellipsis; }   /* one padding for the header, the body and the footer: the columns line up and the text is not pressed to the edge */
+:where(:is(.g-root,[role="listbox"]) table[data-scroll-body] td) { align-self: center; align-content: center; }   /* the rows are grids: vertical-align does not apply, so the content is centred in its cell like in a table */
+:is(.g-root,[role="listbox"]) table[data-scroll-body] :is(th, td)[colspan] { grid-column: 1 / -1; }   /* a cell with colspan (a footer line, a spacer row) takes the whole grid row */
+:is(.g-root,[role="listbox"]) table[data-scroll-body] th { height: auto; min-height: var(--g-h-md); padding-block: var(--g-gap-inner); white-space: nowrap; line-height: 1.25; align-self: end; }   /* a column name stays on one line (a long one ends with an ellipsis): shorten it or widen the column */
+:where(:is(.g-root,[role="listbox"]) td) { line-height: 1.33; height: var(--g-row-h); padding: 0 var(--g-gap); border-top: 1px solid var(--g-line); color: var(--g-text); }
+:where(:is(.g-root,[role="listbox"]) td:not([data-wrap], [data-wrap] td)) { max-width: var(--g-cell-max, 28ch); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }   /* a cell never wraps: what does not fit is cut with an ellipsis (its text shows as a tooltip); data-wrap on the cell or the table lets it wrap */
 :where(:is(.g-root,[role="listbox"]) td[data-muted]) { color: var(--g-text-2); }
 :where(:is(.g-root,[role="listbox"]) :is(th, td)[align="right"]) { text-align: right; }
 :where(:is(.g-root,[role="listbox"]) table[data-rows="two-line"] td) { height: 56px; }
 /* Sortable header (a button inside th, aria-sort set by glass-ui.js) */
-:where(:is(.g-root,[role="listbox"]) td[data-icon]) { display: table-cell; --g-icon-size: 20px; --g-icon-color: var(--g-text-3); }   /* <td data-icon="name">: a leading icon in the cell */
-:where(:is(.g-root,[role="listbox"]) td[data-icon])::before { display: inline-block; vertical-align: middle; margin-right: 12px; }
-:where(:is(.g-root,[role="listbox"]) th > button) { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; border-radius: 8px; margin: 0 -6px; padding: 4px 6px; transition: color var(--g-dur); }
-:where(:is(.g-root,[role="listbox"]) th > button:hover), :where(:is(.g-root,[role="listbox"]) th[aria-sort="ascending"] > button), :where(:is(.g-root,[role="listbox"]) th[aria-sort="descending"] > button) { color: var(--g-text); }
+:where(:is(.g-root,[role="listbox"]) td[data-icon]) { display: table-cell; --g-icon-size: var(--g-icon-md); --g-icon-color: var(--g-text-3); }   /* <td data-icon="name">: a leading icon in the cell */
+:where(:is(.g-root,[role="listbox"]) td[data-icon])::before { display: inline-block; vertical-align: middle; margin-right: var(--g-gap-inner); }
+:where(:is(.g-root,[role="listbox"]) th > button) { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: var(--g-gap-inner); cursor: pointer; border-radius: var(--g-radius-sm); padding: 4px 0; transition: color var(--g-dur); }
+:where(:is(.g-root,[role="listbox"]) th[aria-sort="ascending"] > button), :where(:is(.g-root,[role="listbox"]) th[aria-sort="descending"] > button) { color: var(--g-text); }
+@media (hover: hover) { :where(:is(.g-root,[role="listbox"]) th > button:hover) { color: var(--g-text); } }
 :where(:is(.g-root,[role="listbox"]) th > button)::after { content: ""; width: 14px; height: 14px; flex: none; background: currentColor; -webkit-mask: var(--g-i-chevron-down, linear-gradient(#0000, #0000)) center / contain no-repeat; mask: var(--g-i-chevron-down, linear-gradient(#0000, #0000)) center / contain no-repeat; opacity: 0; transition: opacity var(--g-dur), transform var(--g-dur) var(--g-ease); } /* icon only on the sorted column; space is kept so the header does not shift */
 :where(:is(.g-root,[role="listbox"]) th[aria-sort="ascending"] > button)::after, :where(:is(.g-root,[role="listbox"]) th[aria-sort="descending"] > button)::after { opacity: 1; }
 :where(:is(.g-root,[role="listbox"]) th[aria-sort="ascending"] > button)::after { transform: rotate(180deg); }
 :where(:is(.g-root,[role="listbox"]) tbody tr) { transition: background var(--g-dur); }
-:where(:is(.g-root,[role="listbox"]) tbody tr:hover) { background: rgba(var(--g-ov),.08); }
+@media (hover: hover) { :where(:is(.g-root,[role="listbox"]) tbody tr:hover) { background: rgba(var(--g-ov),.08); } }
 :where(:is(.g-root,[role="listbox"]) table[data-g-selectable] tbody tr) { cursor: pointer; }
 :where(:is(.g-root,[role="listbox"]) tbody tr[aria-selected="true"]) { background: var(--g-fill-active); } /* clearly stronger than hover */
 /* Table footer: <tfoot><tr><td colspan="N"><span>selection status</span><nav data-g-pager></nav></td></tr></tfoot>: the first child on the left, the last on the right */
-:where(:is(.g-root,[role="listbox"]) tfoot td) { height: auto; padding: 0; font-size: 14px; font-weight: 400; color: var(--g-text-3); }
-:where(:is(.g-root,[role="listbox"]) tfoot td > *) { display: inline-flex; align-items: center; gap: 8px; min-height: var(--g-h-lg); padding-inline: 24px; transition: opacity var(--g-dur); }
+:where(:is(.g-root,[role="listbox"]) tfoot td) { height: auto; padding: 0; font-size: var(--g-fs-footnote); font-weight: 400; color: var(--g-text-3); }
+:where(:is(.g-root,[role="listbox"]) tfoot td > *) { display: inline-flex; align-items: center; gap: var(--g-gap-inner); min-height: var(--g-h-lg); padding-inline: var(--g-gap); transition: opacity var(--g-dur); }
 :where(:is(.g-root,[role="listbox"]) tfoot td > :first-child) { float: left; }
 :where(:is(.g-root,[role="listbox"]) tfoot td > :last-child:not(:first-child)) { float: right; }
-:where(:is(.g-root,[role="listbox"]) tfoot output) { display: grid; place-items: center; min-width: 24px; height: 24px; padding: 0 6px; border-radius: var(--g-radius-pill); background: var(--g-accent); color: var(--g-accent-fg); font-size: 13px; font-weight: 600; box-shadow: var(--g-raised); transition: opacity var(--g-dur); }   /* selected count */
+:where(:is(.g-root,[role="listbox"]) tfoot output) { display: grid; place-items: center; min-width: 24px; height: 24px; padding: 0 var(--g-gap-inner); border-radius: var(--g-radius-pill); background: var(--g-accent); color: var(--g-accent-fg); font-size: var(--g-fs-footnote); font-weight: 600; box-shadow: var(--g-raised); transition: opacity var(--g-dur); }   /* selected count */
 :where(:is(.g-root,[role="listbox"]) tfoot td > :has(button:disabled) output) { opacity: .55; }
 
 /* ---------- List (numbered with counts, or bulleted) + "Show more" ----------
  * <ol class="g-list" data-g-more="6"> <li><span>Name</span><data>93 131</data></li> … </ol>
- * With data-g-more="N", glass-ui.js shows N items and adds a "Show K more" button when there are more. */
-.g-list { list-style: none; margin: 0; padding: 0; min-width: 0; max-width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 32px; row-gap: 0; counter-reset: g-n; }
-.g-list > li { counter-increment: g-n; display: flex; align-items: center; gap: 12px; height: var(--g-row-h); padding: 0 8px 0 14px; border-radius: var(--g-radius-field); font-size: 15px; color: var(--g-text); transition: background var(--g-dur); }
+ * With data-g-more="N", glass-ui.js shows N items and adds a "Show K more" button when there are more.
+ * Like the forms, a list is an adaptive grid: as many columns as fit at --g-col-min (200px), all of one width (1fr) and the same in every list of a page (a short list leaves cells empty, it does not stretch), one column when only one fits; --g-gap between the columns,
+ * every row --g-row-h or taller, the same height across the list (the grid stretches it), a long text is cut with an ellipsis, never wrapped. data-g-fit sizes the minimum column to the longest text (measured), style="--g-chars: 9" to a text of
+ * 9 characters, instead of 200px (a list of short words gets narrow columns and more of them); the numbering, padding and gap are added to it. */
+.g-list { list-style: none; margin: 0; padding: 0; min-width: 0; max-width: 100%; display: grid; --g-col-min: var(--g-col-w, 200px); grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--g-col-min)), 1fr)); justify-content: stretch; grid-auto-rows: 1fr; column-gap: var(--g-gap); row-gap: 0; counter-reset: g-n; font-size: var(--g-fs-subhead); }
+.g-list { --g-col-w: calc(var(--g-text-w, calc(var(--g-chars) * 1.1ch)) + 2.4ch + var(--g-inset) + 2 * var(--g-gap-inner)); }   /* --g-text-w (px, data-g-fit measures it) or --g-chars (a count you know); undefined without both: the 200px default applies */
+.g-list > li { counter-increment: g-n; display: flex; align-items: center; gap: var(--g-gap-inner); min-height: var(--g-list-row-h); padding: 0 var(--g-gap-inner) 0 var(--g-inset); border-radius: var(--g-radius-field); font-size: var(--g-fs-subhead); color: var(--g-text); transition: background var(--g-dur); }
 .g-list > li[hidden] { display: none; }
 .g-list > li > :is(span, a) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.g-list > li > a { color: inherit; text-decoration: none; }
+.g-list > li:has(a) { position: relative; }
+.g-list > li a::after { content: ""; position: absolute; inset: 0; }   /* a linked row looks like a plain one and the whole row is the target: no link colour or underline, the link stretches over the row */
 .g-list > li data { flex: none; }
+/* A switch row: <li><label><span>Name</span><input type="checkbox" role="switch"></label></li>. The name on the left, the switch at the right end; the label is the whole row, so a click anywhere on it toggles.
+   Put it in <ul class="g-list" data-plain style="--g-chars: 26"> for the hairline between rows; a box around it of 28rem keeps it one column, without the box the list makes columns like any other. */
+.g-list > li > label:has(> input[role="switch"]) { flex: 1; min-width: 0; align-self: stretch; display: flex; align-items: center; justify-content: space-between; gap: var(--g-gap-inner); cursor: pointer; }
+.g-list > li > label:has(> input[role="switch"]) > input { translate: none; flex: none; }
+ul.g-list.g-list > li:has(> label > input[role="switch"])::before, ol.g-list.g-list > li:has(> label > input[role="switch"])::before { content: none; }   /* a switch row has no number or bullet */
 ol.g-list > li::before { content: counter(g-n) "."; flex: none; min-width: 2.4ch; text-align: right; color: var(--g-text-3); font-variant-numeric: tabular-nums; }
-.g-list:not(ul:not(:has(> li[data-icon]))) > li:hover { background: var(--g-fill-hover); cursor: pointer; }
-.g-list > li.is-active { background: var(--g-fill-active); backdrop-filter: blur(12px); }
-ul.g-list:not(:has(> li[data-icon])) { display: block; column-count: 2; column-gap: 32px; }
-ul.g-list:not(:has(> li[data-icon])) > li { break-inside: avoid; gap: 12px; }
+@media (hover: hover) { .g-list > li:hover { background: var(--g-fill-strong); cursor: pointer; } }
+.g-list > li.is-active { background: var(--g-fill-active); box-shadow: var(--g-recess); }   /* a text field's sunken look: same fill, same dark top edge and light lower edge */
 ul.g-list:not(:has(> li[data-icon])) > li::before { content: ""; flex: none; width: 6px; height: 6px; margin: 0 9px; border-radius: 50%; background: var(--g-text-3); }
-.g-more { margin-top: 12px; }
 /* ---------- Expandable text: clamp to N lines with an inline "more" / "less" pill (data-g-clamp) ---------- */
-.g-clamp { display: flex; align-items: flex-end; gap: 16px; }
-.g-clamp__text { flex: 1; min-width: 0; max-height: calc(var(--lines, 3) * 1.5em); overflow: hidden; font-size: 17px; line-height: 1.5; color: var(--g-text); }
+.g-clamp { display: flex; align-items: flex-end; gap: var(--g-gap); }
+.g-clamp__text { transition: max-height var(--g-dur-md) ease; flex: 1; min-width: 0; max-height: calc(var(--lines, 3) * 1.5em); overflow: hidden; font-size: var(--g-fs-body); line-height: 1.5; color: var(--g-text); }
 .g-clamp.is-open .g-clamp__text { max-height: none; }
 .g-clamp__text > * { margin: 0; font: inherit; }   /* every block has the same line height, so the clip lands exactly on a line boundary */
-.g-clamp__btn { position: relative; flex: none; height: 30px; margin-bottom: -2px; padding: 0 12px; border: 0; border-radius: var(--g-radius-pill); font: 600 15px/1 var(--g-font); color: var(--g-text); cursor: pointer; background: var(--g-fill-strong); transition: background var(--g-dur); }
+.g-clamp__btn { position: relative; flex: none; height: 30px; margin-bottom: -2px; padding: 0 var(--g-inset); border: 0; border-radius: var(--g-radius-pill); font: 600 var(--g-fs-subhead)/1 var(--g-font); color: var(--g-text); cursor: pointer; background: var(--g-fill-strong); transition: background var(--g-dur); }
 .g-clamp__btn[hidden] { display: none; }
-.g-clamp__btn:hover { background: var(--g-fill-selected); }
-@media (max-width: 640px) { .g-list { grid-template-columns: minmax(0, 1fr); } ul.g-list:not(:has(> li[data-icon])) { column-count: 1; } }
+@media (hover: hover) { .g-clamp__btn:hover { background: var(--g-fill-selected); } }
 
 .g-list > li[data-level="1"] { padding-left: 38px; }
-.g-list > li { --g-icon-size: 18px; --g-icon-color: var(--g-text-3); }
+.g-list > li { --g-icon-size: var(--g-icon-md); --g-icon-color: var(--g-text-3); }
 .g-list > li.is-active { --g-icon-color: var(--g-text); }
+/* Plain rows (data-plain): no frame, no fill, no hover; a hairline between the rows, like a place card. Works on any .g-list. */
+/* lines only between the rows: each row carries its bottom line and overlaps the next by 1px, so the last row's line falls outside the list and is clipped */
+.g-list[data-plain] { overflow: hidden; }
+.g-list[data-plain] > li { border-bottom: 1px solid rgba(var(--g-ov), .35); border-radius: 0; margin-bottom: -1px; }
 
 
-/* ---------- Dialog: native <dialog>, opened with showModal() or <button data-g-open="#id"> ----------
- * <dialog><span data-icon="triangle-alert"></span><h3>Title</h3><p>Text</p><footer><button data-g-close>OK</button></footer></dialog>   Wide: data-size="wide" */
-:where(:is(.g-root,[role="listbox"]) dialog) { padding: var(--g-pad); width: min(420px, calc(100vw - 32px)); border: 0; border-radius: var(--g-radius-card); color: var(--g-text); font-family: var(--g-font); }
+
+
+/* ---------- Dialog: native <dialog>, opened with showModal() or <button command="show-modal" commandfor="id"> ----------
+ * <dialog><span data-icon="triangle-alert"></span><h3>Title</h3><p>Text</p><footer><button command="close" commandfor="id">OK</button></footer></dialog>   Wide: data-size="wide" */
+:where(:is(.g-root,[role="listbox"]) dialog) { padding: var(--g-pad); width: min(420px, calc(100vw - 32px)); border: 0; border-radius: var(--g-radius-card); color: var(--g-text-2); font-family: var(--g-font); font-size: var(--g-fs-body); line-height: 1.3; }
+:where(:is(.g-root,[role="listbox"]) dialog :is(h1, h2, h3, h4, h5)) { color: var(--g-text); }
+:where(:is(.g-root,[role="listbox"]) dialog[open]) { display: flex; }
+:where(:is(.g-root,[role="listbox"]) dialog) { flex-direction: column; gap: var(--g-gap); } /* not only while [open], so the layout stays the same during the exit fade */
 :where(:is(.g-root,[role="listbox"]) dialog)::backdrop { background: rgba(10,14,30,.38); backdrop-filter: blur(6px); }
-:where(:is(.g-root,[role="listbox"]) dialog[open]) { animation: g-pop .28s var(--g-ease); }
-:where(:is(.g-root,[role="listbox"]) dialog[open])::backdrop { animation: g-fade .28s ease; }
-dialog > [data-icon]:first-child { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 16px; --g-icon-size: 28px; background: var(--g-accent); color: var(--g-accent-fg); }
-:where(:is(.g-root,[role="listbox"]) dialog > :is(h2, h3)) { margin: 0 0 8px; font-size: 22px; font-weight: 700; letter-spacing: -.01em; text-align: center; }
-:where(:is(.g-root,[role="listbox"]) dialog > p) { margin: 0 0 24px; text-align: center; }
-:where(:is(.g-root,[role="listbox"]) dialog > footer) { display: flex; flex-direction: column; gap: 12px; }
+:where(:is(.g-root,[role="listbox"]) dialog[open]) { animation: g-pop var(--g-dur-spring) var(--g-ease-spring); }
+:where(:is(.g-root,[role="listbox"]) dialog[open])::backdrop { animation: g-fade var(--g-dur-md) ease; }
+/* exit: a quick fade only (no transform, so the content never deforms); display / overlay allow-discrete keep the dialog rendered until it ends */
+:where(:is(.g-root,[role="listbox"]) dialog) { transition: opacity var(--g-dur) ease-in, overlay var(--g-dur) allow-discrete, display var(--g-dur) allow-discrete; }
+:where(:is(.g-root,[role="listbox"]) dialog:not([open])) { opacity: 0; }
+:where(:is(.g-root,[role="listbox"]) dialog)::backdrop { transition: opacity var(--g-dur) ease-in, overlay var(--g-dur) allow-discrete, display var(--g-dur) allow-discrete; }
+:where(:is(.g-root,[role="listbox"]) dialog:not([open]))::backdrop { opacity: 0; }
+dialog > [data-icon]:first-child { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; align-self: center; --g-icon-size: var(--g-icon-lg); background: var(--g-accent); color: var(--g-accent-fg); }
+:where(:is(.g-root,[role="listbox"]) dialog > :is(h2, h3)) { font-size: var(--g-fs-title3); font-weight: 700; letter-spacing: -.01em; text-align: center; }
+:where(:is(.g-root,[role="listbox"]) dialog > p) { text-align: center; }
+:where(:is(.g-root,[role="listbox"]) dialog > footer) { display: flex; flex-direction: column; gap: var(--g-gap); }
 :where(:is(.g-root,[role="listbox"]) dialog[data-size="wide"]) { width: min(560px, calc(100vw - 32px)); }
 :where(:is(.g-root,[role="listbox"]) dialog[data-size="wide"] > :is(h2, h3, p)) { text-align: left; }
 :where(:is(.g-root,[role="listbox"]) dialog[data-size="wide"] > footer) { flex-direction: row; justify-content: flex-end; }
@@ -580,88 +817,141 @@ dialog > [data-icon]:first-child { display: grid; place-items: center; width: 56
  * <aside popover id="panel">…</aside>
  * Top layer, closes on an outside click and on Esc. Position it yourself (fixed or absolute, with top / right / bottom / left). */
 :where(:is(.g-root,[role="listbox"]) [popover]) { inset: auto; margin: 0; padding: var(--g-pad); border: 0; border-radius: var(--g-radius-card); color: var(--g-text); font-family: var(--g-font); }
-:where(:is(.g-root,[role="listbox"]) [popover]:not(:popover-open)) { display: none !important; }
-:where(:is(.g-root,[role="listbox"]) [popover]:popover-open) { animation: g-pop .25s var(--g-ease); }
+:where(:is(.g-root,[role="listbox"]) [popover]:not([role="menu"], [role="listbox"], .g-tooltip):not(:popover-open)) { display: none !important; }
+:where(:is(.g-root,[role="listbox"]) [popover]:not([role="menu"], [role="listbox"], .g-tooltip):popover-open) { animation: g-pop var(--g-dur-spring) var(--g-ease-spring); }
+:where(:is(.g-root,[role="listbox"]) [popover]) { transition: opacity var(--g-dur) ease-in, overlay var(--g-dur) allow-discrete, display var(--g-dur) allow-discrete; }
+:where(:is(.g-root,[role="listbox"]) [popover]:not(:popover-open)) { opacity: 0; }
 
 /* ---------- Tooltip: any element with a title attribute inside .g-root (glass-ui.js turns it into a glass tooltip) ----------
  * The tooltip is a real element in <body> (a blur inside a button cannot see the page), same glass as the dialog and popover, no arrow.
- * data-tip-position="bottom" puts it below. data-hint adds a "?" marker to show that the element has a tooltip. */
-[data-hint] { position: relative; }
+ * data-tip-position="bottom" puts it below. Every element with a title gets a "?" marker (data-hint, added by glass-ui.js) to show that it has a tooltip, except icon-only
+ * controls, navigation, tabs, menus, summaries, abbreviations, inline text and form controls; data-no-hint opts any element out, data-hint opts one in. */
+:where(:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> input:is([type="checkbox"], [type="radio"]))[title]:not([data-no-hint])))) { position: relative; }   /* low specificity: a fixed / sticky / absolute element keeps its own position */
+/* The marker is drawn by CSS for the elements that will get data-hint (a field with a title, a checkbox or radio label with a title), so it and the room it takes are there from the first paint; glass-ui.js adds data-hint to the rest. */
 /* Hint marker: a "?" icon in a circle (same style as the other icons, no fill) sits INSIDE the element, top-right (panels, textareas);
    in inputs and buttons it is a trailing icon, centred vertically, to the left of any other end icon. */
-[data-hint]::before { content: ""; position: absolute; z-index: 1; top: 10px; right: 10px; width: 18px; height: 18px; background: var(--g-text-2); cursor: help; transition: background var(--g-dur);
+:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> input:is([type="checkbox"], [type="radio"]))[title]:not([data-no-hint])))::before { content: ""; position: absolute; z-index: 1; top: 10px; right: 10px; width: 18px; height: 18px; background: var(--g-text-3); cursor: help; transition: background var(--g-dur);
   --g-q: var(--g-i-circle-help, linear-gradient(#0000, #0000));
   mask: var(--g-q) center / contain no-repeat; }
-[data-hint]:hover::before, [data-hint]:focus-within::before { background: var(--g-text); }
-.g-input-wrap[data-hint]::before, button[data-hint]::before { top: 50%; right: 14px; transform: translateY(-50%); }
-.g-input-wrap[data-hint]:has(.g-input-end)::before { right: 40px; }
-.g-input-wrap[data-hint] > input { padding-right: 40px; }
-.g-input-wrap[data-hint]:has(.g-input-end) > input { padding-right: 68px; }
-button[data-hint] { padding-right: 40px; }
-.g-tooltip { position: fixed; z-index: 1100; left: 0; top: 0; max-width: min(280px, 80vw); padding: 8px 12px; border-radius: var(--g-radius-field); text-align: center;
-  font: 500 13px/1.35 var(--g-font); font-variant-numeric: tabular-nums; color: var(--g-text); pointer-events: none;
-  opacity: 0; visibility: hidden; transform: translateY(4px) scale(.98); transition: opacity var(--g-dur), transform var(--g-dur) var(--g-ease), visibility 0s linear var(--g-dur); }
-.g-tooltip.is-open { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> input:is([type="checkbox"], [type="radio"]))[title]:not([data-no-hint]))):focus-within::before { background: var(--g-text-2); }
+@media (hover: hover) { :is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> input:is([type="checkbox"], [type="radio"]))[title]:not([data-no-hint]))):hover::before { background: var(--g-text-2); } }
+.g-input-wrap:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> input:is([type="checkbox"], [type="radio"]))[title]:not([data-no-hint])))::before, button:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> input:is([type="checkbox"], [type="radio"]))[title]:not([data-no-hint])))::before { top: 50%; right: var(--g-inset); transform: translateY(-50%); }
+/* A field (caption above the control): the marker sits INSIDE the control, at its end. The field becomes a grid so the marker can take the control's row as its
+   containing block (an absolutely positioned child with a grid area is placed against that area): row 2 under a caption, row 1 without one. */
+.g-field:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> input:is([type="checkbox"], [type="radio"]))[title]:not([data-no-hint]))) { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; }
+.g-field:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> input:is([type="checkbox"], [type="radio"]))[title]:not([data-no-hint])))::before { grid-row: 1; grid-column: 1; top: 50%; right: var(--g-inset); transform: translateY(-50%); }
+.g-field:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> input:is([type="checkbox"], [type="radio"]))[title]:not([data-no-hint]))):has(> :first-child:not(input, select, textarea, .g-input-wrap, .g-select))::before { grid-row: 2; }
+.g-field:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> input:is([type="checkbox"], [type="radio"]))[title]:not([data-no-hint]))) > :is(input, select, textarea), .g-field:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> input:is([type="checkbox"], [type="radio"]))[title]:not([data-no-hint]))) > .g-input-wrap > :is(input, select) { padding-right: 40px; }
+label:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> input:is([type="checkbox"], [type="radio"]))[title]:not([data-no-hint]))):not(.g-field)::before { top: 50%; right: 0; transform: translateY(-50%); }
+label:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> input:is([type="checkbox"], [type="radio"]))[title]:not([data-no-hint]))):not(.g-field) { padding-right: 26px; }
+.g-input-wrap:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> input:is([type="checkbox"], [type="radio"]))[title]:not([data-no-hint]))):has(.g-input-end)::before { right: 40px; }
+.g-input-wrap:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> input:is([type="checkbox"], [type="radio"]))[title]:not([data-no-hint]))) > input { padding-right: 40px; }
+.g-input-wrap:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> input:is([type="checkbox"], [type="radio"]))[title]:not([data-no-hint]))):has(.g-input-end) > input { padding-right: 68px; }
+button:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> input:is([type="checkbox"], [type="radio"]))[title]:not([data-no-hint]))) { padding-right: 40px; }
+.g-tooltip { position: fixed; inset: auto; margin: var(--g-gap-inner); border: 0; max-width: min(280px, 80vw); padding: var(--g-gap-inner) var(--g-inset); border-radius: var(--g-radius-field); text-align: center;
+  font: 500 var(--g-fs-footnote)/1.35 var(--g-font); font-variant-numeric: tabular-nums; color: var(--g-text); pointer-events: none; overflow: visible;
+  position-anchor: --g-tip; position-area: block-start span-all; justify-self: anchor-center; position-try-fallbacks: flip-block;   /* above the element, centred on it; below when there is no room */
+  opacity: 0; transform: translateY(4px) scale(.98); transition: opacity var(--g-dur), transform var(--g-dur) var(--g-ease), overlay var(--g-dur) allow-discrete, display var(--g-dur) allow-discrete; }
+.g-tooltip[data-pos="bottom"] { position-area: block-end span-all; }
+.g-tooltip:popover-open { opacity: 1; transform: none; }
+@starting-style { .g-tooltip:popover-open { opacity: 0; transform: translateY(4px) scale(.98); } }
 
 /* ---------- Group: a glass plate of rows (checkboxes, radios, switches) split by hairlines ---------- */
 /* <div role="group"><label><input type="checkbox"> Gym</label> … </div>   One column: data-columns="1" */
-.g-root [role="group"] { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 48px; padding: 4px var(--g-pad); border-radius: var(--g-radius-card); min-width: 0; }
-.g-root [role="group"] > label { display: flex; height: calc(var(--g-row-h) + 4px); }
+.g-root [role="group"] { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--g-gap); padding: 4px var(--g-pad); border-radius: var(--g-radius-card); min-width: 0; }
+.g-root [role="group"] > label { display: flex; align-items: center; height: calc(var(--g-row-h) + 4px); }   /* the row is taller than its content: centre the box and text in it (not baseline, which pins them to the top) */
+.g-root [role="group"] > label > input:is([type="checkbox"], [type="radio"]) { translate: none; }
 .g-root [role="group"] > label:nth-child(n+3) { border-top: 1px solid var(--g-line); }
 .g-root [role="group"][data-columns="1"] { grid-template-columns: minmax(0, 1fr); }
 .g-root [role="group"][data-columns="1"] > label:nth-child(n+2) { border-top: 1px solid var(--g-line); }
 @media (max-width: 640px) { .g-root [role="group"] { grid-template-columns: minmax(0, 1fr); } .g-root [role="group"] > label:nth-child(2) { border-top: 1px solid var(--g-line); } }
 
 /* ---------- Blockquote: <blockquote><p>Text</p><cite>Author</cite></blockquote> ---------- */
-:where(:is(.g-root,[role="listbox"]) blockquote) { position: relative; padding: 20px var(--g-pad) 20px 76px; border-radius: var(--g-radius-card); min-width: 0; }
+:where(:is(.g-root,[role="listbox"]) blockquote) { position: relative; display: flex; flex-direction: column; gap: var(--g-gap-inner); padding: 20px var(--g-pad) 20px 76px; border-radius: var(--g-radius-card); min-width: 0; }
 :where(:is(.g-root,[role="listbox"]) blockquote)::before { content: "\201D"; position: absolute; left: 24px; top: 12px; font: italic 900 52px/1 var(--g-font); color: var(--g-text-3); opacity: .7; }
-:where(:is(.g-root,[role="listbox"]) blockquote p) { font-size: 20px; line-height: 1.4; color: var(--g-text); }
-:where(:is(.g-root,[role="listbox"]) blockquote cite) { display: block; margin-top: 10px; font-size: 15px; font-style: normal; color: var(--g-text-3); }
+:where(:is(.g-root,[role="listbox"]) blockquote p) { font-size: var(--g-fs-title3); line-height: 1.4; color: var(--g-text); }
+:where(:is(.g-root,[role="listbox"]) blockquote cite) { display: block; font-size: var(--g-fs-subhead); font-style: normal; color: var(--g-text-3); }
 :where(:is(.g-root,[role="listbox"]) blockquote cite)::before { content: "\2014\00a0"; }
 
-/* ---------- Details / accordion: <details><summary>Question</summary>Answer</details> (repeat; name="x" makes them exclusive) ---------- */
-:where(:is(.g-root,[role="listbox"]) details) { border-bottom: 1px solid var(--g-line); padding: 4px 0; }
-:where(:is(.g-root,[role="listbox"]) details:last-of-type) { border-bottom: 0; }
-:where(:is(.g-root,[role="listbox"]) details > summary) { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: var(--g-h-lg); padding: 0 14px; border-radius: var(--g-radius-field); list-style: none; cursor: pointer;
-  font-size: 16px; font-weight: 500; color: var(--g-text); transition: background var(--g-dur); -webkit-user-select: none; user-select: none; }
+/* ---------- Details / accordion: <details><summary>Title<small>short value</small></summary>Content</details> (repeat; name="x" makes them exclusive) ----------
+   A disclosure row: the title, an optional short value (<small>) on the right, and a chevron that turns down when open. The whole row is the target and lights
+   up on hover (the plate reaches into the container padding, so give the container at least --g-inset). Rows that follow each other share their dividers.
+   Native element: keyboard, name="x", no script. */
+:where(:is(.g-root,[role="listbox"]) details) { margin: 0; padding: 0; border: 0; border-top: 1px solid var(--g-line); }
+:where(:is(.g-root,[role="listbox"]) details > summary) { position: relative; isolation: isolate; display: flex; align-items: center; justify-content: space-between; gap: var(--g-gap-inner); min-height: var(--g-h-lg); padding: 0; border-radius: var(--g-radius-field); list-style: none; cursor: pointer;
+  font-size: var(--g-fs-subhead); font-weight: 500; color: var(--g-text); -webkit-user-select: none; user-select: none; }   /* no box of its own: the title lines up with the labels and fields around it */
 :where(:is(.g-root,[role="listbox"]) details > summary)::-webkit-details-marker { display: none; }
-:where(:is(.g-root,[role="listbox"]) details > summary)::after { content: ""; flex: none; width: 18px; height: 18px; background: currentColor; transition: transform var(--g-dur) var(--g-ease);
+:where(:is(.g-root,[role="listbox"]) details > summary)::before { content: ""; position: absolute; z-index: -1; inset: 4px calc(var(--g-inset) * -1); border-radius: var(--g-radius-field); background: transparent; transition: background var(--g-dur); }
+@media (hover: hover) { :where(:is(.g-root,[role="listbox"]) details > summary:hover)::before { background: var(--g-fill-strong); } }
+:where(:is(.g-root,[role="listbox"]) details > summary > small) { margin-left: auto; font-size: var(--g-fs-footnote); font-weight: 400; color: var(--g-text-3); }
+:where(:is(.g-root,[role="listbox"]) details > summary)::after { content: ""; flex: none; width: 18px; height: 18px; background: currentColor; color: var(--g-text-3); transform: rotate(-90deg); transition: transform var(--g-dur) var(--g-ease);
   -webkit-mask: var(--g-i-chevron-down, linear-gradient(#0000, #0000)) center / contain no-repeat; mask: var(--g-i-chevron-down, linear-gradient(#0000, #0000)) center / contain no-repeat; }
-:where(:is(.g-root,[role="listbox"]) details[open] > summary)::after { transform: rotate(180deg); }
-:where(:is(.g-root,[role="listbox"]) details > :not(summary)) { padding: 4px 14px 16px; font-size: 15px; line-height: 1.5; color: var(--g-text-2); }
+:where(:is(.g-root,[role="listbox"]) details > summary:not(:has(> small)))::after { margin-left: auto; }
+:where(:is(.g-root,[role="listbox"]) details[open] > summary)::after { transform: none; }
+/* opening and closing slide the content: ::details-content + interpolate-size (without them the content just appears) */
+:root { interpolate-size: allow-keywords; }
+:where(:is(.g-root,[role="listbox"]) details)::details-content { block-size: 0; overflow: clip; contain: layout paint; opacity: 0; transition: block-size var(--g-dur-md) var(--g-ease), opacity var(--g-dur-md) var(--g-ease), content-visibility var(--g-dur-md) allow-discrete; }
+:where(:is(.g-root,[role="listbox"]) details[open])::details-content { block-size: auto; opacity: 1; }
+:where(:is(.g-root,[role="listbox"]) details > :not(summary)) { padding: var(--g-gap-inner) 0 0; font-size: inherit; line-height: inherit; color: inherit; }
+:where(:is(.g-root,[role="listbox"]) details[open]:has(+ details) > :not(summary)) { padding-bottom: var(--g-gap); }   /* only before the next fold; the container pads the last one itself (a trailing <script>, <style> or any other sibling must not add space) */
+:where(:is(.g-root,[role="listbox"]) details:last-of-type:not([open]) > summary) { margin-bottom: calc((var(--g-h-lg) - 1lh) / -2); }   /* the last closed fold: the row is taller than its text; the empty half is taken back so the gap under the text equals the container padding */
+/* <details data-g-narrow>: a fold on narrow screens only (up to 900px). Without "open" it starts closed there, no script, so a reload never shows it open for a moment;
+   on wider screens the summary is hidden and the content is always shown. */
+@media (min-width: 901px) {
+  :where(:is(.g-root,[role="listbox"]) details[data-g-narrow]) { border-top: 0; }
+  :where(:is(.g-root,[role="listbox"]) details[data-g-narrow] > summary) { display: none; }
+  :where(:is(.g-root,[role="listbox"]) details[data-g-narrow])::details-content { block-size: auto; opacity: 1; content-visibility: visible; transition: none; }
+  :where(:is(.g-root,[role="listbox"]) details[data-g-narrow] > :not(summary)) { padding-top: 0; }
+}
+
+/* Text without a box: its box is the glyphs (cap height to baseline), so the visible gap around a heading, paragraph or label is exactly the gap token. */
+:where(:is(.g-root,[role="listbox"]) :is(article:not(.g-prose), fieldset, form, hgroup, blockquote, dialog, .g-stack) > :is(h1, h2, h3, h4, h5, h6, p, legend, figcaption, cite)), :where(.g-field > :is(label, small), .g-toast__main > p) { text-box: trim-both cap alphabetic; }   /* only where the parent supplies the gap: in plain running text the leading is the spacing */
 
 /* Pager: <nav data-g-pager data-total="24" data-size="4" data-page="1" aria-label="Pagination"></nav>. Range text + prev / pages / next, built by glass-ui.js */
-[data-g-pager] { display: flex; align-items: center; gap: 16px; margin-left: auto; font-size: 14px; color: var(--g-text-3); }
+[data-g-pager] { display: flex; align-items: center; gap: var(--g-gap); margin-left: auto; font-size: var(--g-fs-footnote); color: var(--g-text-3); }
 .g-pager__pages { display: flex; align-items: center; gap: 2px; }
-.g-pager__btn { display: grid; place-items: center; min-width: var(--g-h-sm); height: var(--g-h-sm); padding: 0 8px; border: 0; border-radius: var(--g-radius-pill); background: none; color: var(--g-text-2); font: 500 14px/1 var(--g-font); font-variant-numeric: tabular-nums; cursor: pointer; transition: background var(--g-dur), color var(--g-dur); }
-.g-pager__btn:hover { background: var(--g-fill-hover); color: var(--g-text); }
+.g-pager__btn { display: grid; place-items: center; min-width: var(--g-h-sm); height: var(--g-h-sm); padding: 0 8px; border: 0; border-radius: var(--g-radius-pill); background: none; color: var(--g-text-2); font: 500 var(--g-fs-footnote)/1 var(--g-font); font-variant-numeric: tabular-nums; cursor: pointer; transition: background var(--g-dur), color var(--g-dur); }
+@media (hover: hover) { .g-pager__btn:hover { background: var(--g-fill-strong); color: var(--g-text); } }
 /* Selected state of tab, chip and page button: one white pill */
 [role="tablist"] > [aria-selected="true"]:not([data-variant="underline"] > *), [role="tablist"]:not([data-variant="underline"], :has([aria-selected="true"])) > :first-child, .g-pager__btn[aria-current="page"] { background: rgba(255,255,255,.92); color: var(--g-text-inverse); box-shadow: 0 1px 3px rgba(0,0,0,.14); }
+/* Tab indicator: ONE pill (or underline) slides from the old tab to the new one. The chosen tab is its anchor (--g-dur-md). Without anchor positioning the chosen tab keeps its own fill. */
+@supports (anchor-name: --g-tab) {
+  [role="tablist"] { position: relative; isolation: isolate; anchor-scope: --g-tab; }
+  [role="tablist"] > [aria-selected="true"]:not([data-variant="underline"] > *), [role="tablist"]:not([data-variant="underline"], :has([aria-selected="true"])) > :first-child { background: none; box-shadow: none; }
+  [role="tablist"][data-variant="underline"] > * { border-bottom-color: transparent !important; }
+  [role="tablist"] > * { transition: color var(--g-dur-md) var(--g-ease); }   /* the letters change colour in step with the sliding pill */
+  [role="tablist"] > [aria-selected="true"], [role="tablist"]:not(:has([aria-selected="true"])) > :first-child { anchor-name: --g-tab; }
+  [role="tablist"]::after { content: ""; position: absolute; z-index: -1; pointer-events: none; position-anchor: --g-tab; left: anchor(left); right: anchor(right); top: anchor(top); bottom: anchor(bottom);
+    border-radius: var(--g-radius-pill); background: rgba(255,255,255,.92); box-shadow: 0 1px 3px rgba(0,0,0,.14); transition: left var(--g-dur-md) var(--g-ease), right var(--g-dur-md) var(--g-ease); }
+  [role="tablist"][data-variant="underline"]::after { top: calc(anchor(bottom) - 2px); bottom: auto; height: 2px; border-radius: 0; background: var(--g-ink); box-shadow: none; }
+}
+@media (prefers-reduced-motion: reduce) { [role="tablist"]::after { transition-duration: .001ms; } }
 .g-pager__btn:disabled { opacity: .35; pointer-events: none; }
-.g-pager__btn { --g-icon-size: 16px; }
+.g-pager__btn { --g-icon-size: var(--g-icon-sm); }
 
 /* ---------- Toast ---------- */
-.g-toasts { position: fixed; z-index: 100; top: 16px; right: 16px; display: flex; flex-direction: column; gap: 12px; width: min(380px, calc(100vw - 32px)); pointer-events: none; }
+.g-toasts { position: fixed; z-index: 100; top: 16px; right: 16px; display: flex; flex-direction: column; gap: var(--g-gap); width: min(380px, calc(100vw - 32px)); pointer-events: none; }
 .g-toasts--bottom { top: auto; bottom: 16px; flex-direction: column-reverse; }
-.g-toast { display: flex; align-items: flex-start; gap: 12px; padding: 16px; border-radius: var(--g-radius-card); pointer-events: auto; color: var(--g-text); animation: g-toast-in .35s var(--g-ease); }
-.g-toast.is-leaving { opacity: 0; transform: translateY(-8px) scale(.97); transition: opacity .22s, transform .22s; }
-.g-toast__icon { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--g-accent); color: var(--g-accent-fg); }
+.g-toast { display: flex; align-items: center; gap: var(--g-gap); padding: var(--g-gap); border-radius: var(--g-radius-card); pointer-events: auto; color: var(--g-text); transition: opacity var(--g-dur-md), transform var(--g-dur-md) var(--g-ease), display var(--g-dur-md) allow-discrete; }
+@starting-style { .g-toast { opacity: 0; transform: translateY(-14px) scale(.96); } }   /* enter */
+.g-toast[hidden] { display: none; opacity: 0; transform: translateY(-8px) scale(.97); }   /* leave: JS sets hidden, then removes the toast when the transition ends */
+.g-toast__icon { flex: none; width: var(--g-h-md); height: var(--g-h-md); border-radius: var(--g-radius-sm); display: grid; place-items: center; background: var(--g-accent); color: var(--g-accent-fg); }
 .g-toast--success .g-toast__icon { background: var(--g-success); color: #0d2a1b; }
 .g-toast--warning .g-toast__icon { background: var(--g-warning); color: #33220a; }
 .g-toast--danger .g-toast__icon { background: var(--g-danger); color: #fff; }
-.g-toast__icon { --g-icon-size: 22px; }
-.g-toast__main { flex: 1; min-width: 0; }
-.g-toast__title { font-size: 15px; font-weight: 650; margin: 0 0 2px; }
-.g-toast__text { font-size: 14px; line-height: 1.4; color: var(--g-text-2); margin: 0; }
-.g-toast__close { --g-icon-size: 12px; all: unset; flex: none; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; cursor: pointer; color: var(--g-text-3); }
-.g-toast__close:hover { background: rgba(var(--g-ov),.16); color: var(--g-text); }
+.g-toast__icon { --g-icon-size: var(--g-icon-md); }
+.g-toast__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--g-gap-inner); }
+.g-toast__title { font-size: var(--g-fs-subhead); font-weight: 600; margin: 0; }   /* margin 0: toasts live outside .g-root, so reset the browser's paragraph margin */
+.g-toast__main > :empty { display: none; }
+.g-toast__text { font-size: var(--g-fs-footnote); line-height: 1.38; color: var(--g-text-2); margin: 0; }
+.g-toast__close { --g-icon-size: var(--g-icon-md); all: unset; flex: none; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; cursor: pointer; color: var(--g-text-2); transition: background var(--g-dur); }   /* the same cross as the one in a field (.g-input-end) */
+@media (hover: hover) { .g-toast__close:hover { background: var(--g-fill-strong); } }
 
 /* ---------- Keyframes + motion ---------- */
 @keyframes g-spin { to { transform: rotate(360deg); } }
 @keyframes g-indet { 0% { background-position: -61% 0; } 100% { background-position: 161% 0; } }
 @keyframes g-pop { from { opacity: 0; transform: scale(.94) translateY(8px); } }
 @keyframes g-fade { from { opacity: 0; } }
-@keyframes g-toast-in { from { opacity: 0; transform: translateY(-14px) scale(.96); } }
 @media (prefers-reduced-motion: reduce) {
   .g-root *, .g-scene *, dialog, [popover], .g-toast { animation-duration: .001ms !important; transition-duration: .001ms !important; }
   .g-root button:hover, .g-root a:has(> article):hover > article { transform: none; }
@@ -670,7 +960,7 @@ button[data-hint] { padding-right: 40px; }
 
 /* ---------- Motion: add a class to any element. Plays once by default; add g-anim--loop to repeat. ----------
  * <div class="g-card g-anim-appear">…</div>
- * Effects: g-anim-appear, g-anim-shimmer, g-anim-ripple, g-anim-pulse, g-anim-highlight, g-anim-rotate, g-anim-zoom
+ * Effects: g-anim-appear, g-anim-shimmer, g-anim-ripple, g-anim-pulse, g-anim-highlight, g-anim-rotate, g-anim-zoom, g-anim-scroll (plays on scrolling into view)
  * Tune per element: --g-anim-delay (stagger lists), --g-anim-dur (default 1.5s), --g-anim-ease (default: ease-out). Replay from JS: Glass.animate(el, 'highlight').
  * shimmer, ripple and highlight draw on ::after (not for elements that already use ::after, e.g. chips). */
 @property --g-r { syntax: '<percentage>'; inherits: false; initial-value: 0%; }
@@ -692,9 +982,18 @@ button[data-hint] { padding-right: 40px; }
 .g-anim-zoom { animation: g-a-zoom-fall var(--g-anim-dur, 1.5s) var(--g-anim-ease) var(--g-anim-delay, 0s) backwards, g-a-zoom-fade var(--g-anim-dur, 1.5s) ease-out var(--g-anim-delay, 0s) backwards; }
 /* Keep animated panels on their own layer so the glass blur is not rebuilt (a one-frame flicker) when an animation starts or ends */
 .g-anim-appear, .g-anim-zoom, .g-anim-rotate > * { will-change: opacity, transform; }
+/* Scroll: the element materialises as it enters the viewport; the browser drives it from the scroll position on the compositor (no JS, no scroll listener) */
+@supports (animation-timeline: view()) { .g-anim-scroll { animation: g-a-scroll linear both; animation-timeline: view(); animation-range: entry 0% entry min(30%, 300px); } }
+/* Menu items (popup menus and the nav "More"; the select lists do not) slide in like the list rows, one after another, 35ms apart (the first 10 set the pace) */
+[role="menu"]:popover-open > * { animation: g-slide-in var(--g-dur-md) var(--g-ease) backwards; animation-delay: calc((min(sibling-index(), 10) - 1) * 35ms); will-change: transform, opacity; }   /* stay on their own layer after the animation too: dropping the layer at the end re-snaps the text by a pixel against the icon */
+/* .g-list rows added after load slide in from the left, one after another, 35ms apart (glass-ui.js marks them with data-g-new; the first 10 of a batch set the pace) */
+.g-list > li[data-g-new] { animation: g-slide-in var(--g-dur-md) var(--g-ease) backwards; animation-delay: calc(min(var(--g-i, 0), 9) * 35ms); }
+.g-anim-shimmer::after, .g-anim-ripple::after, .g-anim-highlight::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; }
 .g-anim-shimmer::after, .g-anim-ripple::after, .g-anim-highlight::after { will-change: opacity; }
 .g-anim--loop, .g-anim--loop::after, .g-anim-rotate.g-anim--loop > * { animation-iteration-count: infinite !important; }
 @keyframes g-a-appear { from { opacity: 0; transform: translateY(16px); } }
+@keyframes g-a-scroll { from { opacity: 0; transform: translateY(40px) scale(.96); } }
+@keyframes g-slide-in { from { opacity: 0; transform: translateX(-24px); } }
 @keyframes g-a-shimmer { from { background-position: -150% 0; opacity: 1; } to { background-position: 250% 0; opacity: 1; } }
 @keyframes g-a-ripple { from { --g-r: 0%; } to { --g-r: 150%; } }
 @keyframes g-a-ripple-fade { from { opacity: .9; } to { opacity: 0; } }
@@ -715,20 +1014,22 @@ button[data-hint] { padding-right: 40px; }
  * </div>   In a panel: .g-shell__head (tabs + button), .g-shell__row (title + action), .g-list for trees. */
 .g-shell { --g-shell-side: 280px; display: grid; grid-template-columns: var(--g-shell-side) minmax(0, 1fr) var(--g-shell-side); min-height: 560px; min-width: 0; overflow: hidden; border-radius: var(--g-radius-card); }
 .g-glass .g-shell { backdrop-filter: none; }
-.g-shell > aside { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 12px; overflow: auto; background: var(--g-fill); }
+.g-shell > aside { display: flex; flex-direction: column; gap: var(--g-gap); min-width: 0; padding: var(--g-pad); overflow: auto; background: var(--g-fill); }
 .g-shell > aside:last-child { background: var(--g-fill-strong); }
-.g-shell > main { display: grid; place-items: center; min-width: 0; padding: var(--g-pad); overflow: auto; }
-.g-shell__head { display: flex; align-items: center; gap: 8px; padding-bottom: 8px; }
+.g-shell > main { display: grid; place-items: center; min-width: 0; padding: var(--g-pad); overflow: auto; background: var(--g-fill-work); }   /* the workspace sits deeper than the side panels, whatever is behind the shell */
+.g-shell__head { display: flex; align-items: center; gap: var(--g-gap); }
 .g-shell__head [role="tablist"] { flex: 1; }
 .g-shell__head [role="tablist"] > * { flex: 1; }
-.g-shell__row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: var(--g-h-lg); padding: 0 0 0 14px; border-top: 1px solid var(--g-line); font-size: 15px; font-weight: 500; }
-.g-shell__row--first { border-top: 0; }
-.g-shell__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 8px 0 12px; }
-.g-shell__fields .g-input-wrap { width: auto; }
-.g-shell__k { position: absolute; left: 14px; color: var(--g-text-3); font-size: 14px; pointer-events: none; }
+.g-shell__row { display: flex; align-items: center; justify-content: space-between; gap: var(--g-gap-inner); min-height: var(--g-h-lg); padding: 0; border-top: 1px solid var(--g-line); font-size: var(--g-fs-subhead); font-weight: 500; }   /* the title lines up with the container edge, like labels and boxes around it */
+.g-shell__row--first { border-top: 0; min-height: 0; }
+.g-shell__group { display: flex; flex-direction: column; }   /* rows that share dividers are one joined group: no gap between them */
+.g-shell__fields { --g-grid-min: 0px; }
+.g-shell__fields .g-input-wrap { width: 100%; min-width: 0; }
+.g-shell__fields input { min-width: 0; width: 100%; }
+.g-shell__k { position: absolute; left: var(--g-inset); color: var(--g-text-3); font-size: var(--g-fs-footnote); pointer-events: none; }
 .g-input-wrap:has(.g-shell__k) > input { padding-left: 34px; }
-.g-shell .g-list { grid-template-columns: minmax(0, 1fr); }
-@media (max-width: 900px) { .g-shell { grid-template-columns: minmax(0, 1fr); } }
+.g-shell .g-list:has(> li[data-icon]) { grid-template-columns: minmax(0, 1fr); }   /* a tree in a panel is one column; a plain list keeps its fixed-width columns */
+@media (max-width: 900px) { .g-shell { grid-template-columns: minmax(0, 1fr); min-height: 0; } }
 
 /* Keyboard focus ring: one place. A focused control lifts the ring above its own state styles. */
 :where(:is(.g-root,[role="listbox"]) :is(button, a:is([data-variant], [data-size], [data-icon]), summary, nav a, [role="tab"], .g-nav__morebtn, a:has(> article) > article, th > button, input:is([type="checkbox"], [type="radio"]),
@@ -736,7 +1037,7 @@ button[data-hint] { padding-right: 40px; }
 :where(:is(.g-root,[role="listbox"]) :is(p, small, li, td, blockquote, dd) a:not([role], [class^="g-"], [class*=" g-"])):focus-visible, [role="menu"] > :focus-visible, [role="option"]:focus-visible { outline: none; box-shadow: var(--g-focus); }
 :where(:is(.g-root,[role="listbox"]) a:has(> article):focus-visible) { outline: none; }
 :where(:is(.g-root,[role="listbox"]) a:has(> article):focus-visible > article) { box-shadow: var(--g-focus); }
-:where(:is(.g-root,[role="listbox"]) :is(p, small, li, td, blockquote, dd) a:not([role], [class^="g-"], [class*=" g-"])):focus-visible { border-radius: 4px; }
+:where(:is(.g-root,[role="listbox"]) :is(p, small, li, td, blockquote, dd) a:not([role], [class^="g-"], [class*=" g-"])):focus-visible { border-radius: var(--g-radius-sm); }
 
 /* Controls reset `font` with a shorthand, which also resets numeric figures: put tabular digits back (keep this at the end of the file) */
 :where(:is(.g-root,[role="listbox"]) :is(button, input, textarea, select, [role="tab"], label)), .g-root data, .g-pager__btn, .g-clamp__btn, .g-select__trigger, .g-select__search, [role="menu"] > *, [role="option"] { font-variant-numeric: tabular-nums; }
@@ -749,12 +1050,71 @@ button[data-hint] { padding-right: 40px; }
 :where(:is(.g-root,[role="listbox"]) input[type="date"]:not(:focus):invalid)::-webkit-datetime-edit, :where(:is(.g-root,[role="listbox"]) input[type="date"][value=""]:not(:focus))::-webkit-datetime-edit { color: var(--g-text-3); }
 
 /* Subtitle under a heading: <hgroup><h1>…</h1><p>…</p></hgroup> */
-:where(:is(.g-root,[role="listbox"]) hgroup > p) { font-size: 19px; line-height: 1.5; color: var(--g-text-2); }
-:where(:is(.g-root,[role="listbox"]) hgroup) { display: flex; flex-direction: column; gap: 8px; }
+:where(:is(.g-root,[role="listbox"]) hgroup > p) { font-size: var(--g-fs-title3); line-height: 1.25; color: var(--g-text-2); }
+:where(:is(.g-root,[role="listbox"]) hgroup) { display: flex; flex-direction: column; gap: var(--g-gap-inner); }
 /* Removable button: <button data-size="sm" data-g-remove>Berlin</button> draws a × and removes itself on click */
 :where(:is(.g-root,[role="listbox"]) button[data-g-remove])::after { content: ""; flex: none; width: 14px; height: 14px; margin-right: -2px; background: currentColor; opacity: .7;
   -webkit-mask: var(--g-i-x, linear-gradient(#0000, #0000)) center / contain no-repeat; mask: var(--g-i-x, linear-gradient(#0000, #0000)) center / contain no-repeat; }
 :where(:is(.g-root,[role="listbox"]) button[data-g-remove]) { padding-inline-end: 10px; }
-:where(:is(.g-root,[role="listbox"]) button[data-g-remove]:hover)::after { opacity: 1; }
+@media (hover: hover) { :where(:is(.g-root,[role="listbox"]) button[data-g-remove]:hover)::after { opacity: 1; } }
 /* Toggle button: <button aria-pressed="true"> gets the same white pill as a selected tab */
 :where(:is(.g-root,[role="listbox"]) button[aria-pressed="true"]:not([class^="g-"], [class*=" g-"], [data-variant])) { background: rgba(255,255,255,.92); color: var(--g-text-inverse); box-shadow: 0 1px 3px rgba(0,0,0,.14); }
+
+@view-transition { navigation: auto; }
+
+/* the gap between the panel's children is the panel's gap: a child that brings its own margin (a site-level class) would add to it */
+.g-shell > aside > * { margin: 0; }
+
+/* a note right of an input, before its end controls (the clear cross, an icon): the note follows them, and the input makes room for it */
+.g-input-wrap:has(> .g-input-note) { position: relative; --g-note-right: var(--g-inset); }
+.g-input-wrap:has(> .g-input-end:not([hidden])) { --g-note-right: 40px; }
+.g-input-wrap:has(> .g-input-end:not([hidden]) ~ .g-input-end:not([hidden])) { --g-note-right: 74px; }
+.g-input-note { position: absolute; top: 50%; right: var(--g-note-right); transform: translateY(-50%); font-size: var(--g-fs-footnote); color: var(--g-text-3); white-space: nowrap; font-variant-numeric: tabular-nums; pointer-events: none; }
+.g-input-note:empty { display: none; }
+.g-input-wrap:has(> .g-input-note:not(:empty)) > input { padding-right: calc(var(--g-note-right) + 100px); }
+
+/* ---------- Tile: <article data-tile> with icon, title, count. A square card, the same article as any other: put it in any grid or on its own.
+ * Icon centred over the title, count in the top-right corner. --g-tile-max caps the size (250px). Make it a link by wrapping it in <a>. */
+:where(.g-root article[data-tile]) { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--g-gap-inner); position: relative; width: 100%; max-width: var(--g-tile-max, 250px); aspect-ratio: 1 / 1; justify-self: center; min-width: 0; box-sizing: border-box; text-align: center; container-type: inline-size; transition: transform var(--g-dur-md) var(--g-ease); }
+:where(.g-root article[data-tile] > [data-icon]) { --g-icon-size: 40cqw; }
+:where(.g-root article[data-tile] > img) { width: 40cqw; height: auto; }
+:where(.g-root article[data-tile] > h4) { font-size: var(--g-fs-body); font-weight: 400; overflow-wrap: break-word; hyphens: auto; text-align: center; }
+:where(.g-root article[data-tile] > data) { position: absolute; top: var(--g-inset); right: var(--g-inset); bottom: auto; margin: 0; }
+@media (hover: hover) { :where(.g-root a:has(> article[data-tile]):hover > article[data-tile]) { transform: translateY(-3px); } }
+
+/* ---------- Stack: the children one under another with one gap. <div class="g-stack">…</div> */
+.g-stack { display: flex; flex-direction: column; gap: var(--g-gap); min-width: 0; }
+
+/* ---------- Cluster: a row that wraps, centred on the line: chips, a key, a few buttons. <div class="g-cluster">…</div>
+ * data-align="center | end | between" places the row; the gap is --g-gap across and --g-gap-inner between lines. */
+.g-cluster { display: flex; flex-wrap: wrap; align-items: center; gap: var(--g-gap-inner) var(--g-gap); min-width: 0; }
+.g-cluster[data-align="center"] { justify-content: center; }
+.g-cluster[data-align="end"] { justify-content: flex-end; }
+.g-cluster[data-align="between"] { justify-content: space-between; }
+
+/* ---------- Tools layout: <div class="g-shell g-shell--tools"><aside>…</aside><main>…</main></div>
+ * A toolbar on the left, the workspace on the right; they touch (the workspace is the darker one) and each scrolls on its own.
+ * Under 900px they stack. The panels pad and space their blocks with --g-gap; give the shell a height (or flex: 1 in a column). */
+/* The panel is 300px, or --g-shell-min when a page needs more (a row of fixed cells: set --g-shell-min on the shell to their width plus the panel's padding). */
+.g-shell--tools { --g-shell-side: max(300px, var(--g-shell-min, 0px)); grid-template-columns: var(--g-shell-side) minmax(0, 1fr); gap: 0; flex: 1 1 0; min-height: 0; }
+.g-shell--tools > aside, .g-shell--tools > main { min-height: 0; overflow: auto; overscroll-behavior: contain; }
+.g-shell.g-shell--tools > aside { gap: var(--g-gap); }
+.g-shell--tools:not(:has(> aside)) { grid-template-columns: minmax(0, 1fr); }   /* a workspace alone (a table on the whole width): no empty column for the panel */
+.g-shell--tools > main { display: flex; flex-direction: column; gap: var(--g-gap); place-items: initial; align-content: normal; }
+.g-shell--tools > main > article { flex: none; }   /* a card is clipped (overflow: hidden), so in a column it would shrink to its padding and cut its own text; the workspace scrolls instead */
+.g-shell--tools > aside:last-child { background: var(--g-fill); }
+/* .g-shell--stack: the panel is always on top on the whole width (what the narrow screen does), whatever the width */
+.g-shell--tools.g-shell--stack { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+.g-shell--tools.g-shell--stack > aside { max-height: 45dvh; }
+@media (max-width: 900px) { .g-shell--tools { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); } .g-shell--tools > aside { max-height: 45dvh; } }
+
+/* ---------- Ruler: a section index inside a scrolling box (data-g-ruler; Glass.ruler) ----------
+   A hairline per section with its name under it, as tall as the section's share of the scroll height; the section in view is lit; a click jumps there. The browser's own scroll bar stays as it is.
+   It stays at the right edge of the box, left of the scroll bar; it floats over the content and takes no room. To keep the content clear of it, give the box padding-inline-end: calc(var(--g-ruler-w) + 2 * var(--g-gap)). No fill, no panel. The box is a block or a flex container (the ruler is a 0 x 0 sticky item). */
+[data-g-ruler] { --g-ruler-w: 96px; }
+.g-ruler { position: sticky; top: 0; z-index: 2; flex: none; align-self: flex-start; width: 0; height: 0; margin: 0; padding: 0; pointer-events: none; }
+.g-ruler--page { position: fixed; top: var(--g-ruler-top, 0); right: var(--g-gap); z-index: 5; width: var(--g-ruler-w); height: var(--g-ruler-h, 0); align-self: auto; }   /* the ruler of the page itself: at the right edge of the window, under the bar */
+.g-ruler--page .g-ruler__track { top: 0; left: 0; margin-right: var(--g-gap); }
+.g-ruler__track { position: absolute; top: 0; margin-right: var(--g-gap); left: var(--g-ruler-x, 0); width: var(--g-ruler-w); height: var(--g-ruler-h, 0); cursor: pointer; user-select: none; pointer-events: auto; }
+.g-ruler .g-ruler__seg { text-decoration: none; position: absolute; left: 0; right: 0; box-sizing: border-box; padding-top: 2px; border-top: var(--g-edge-w) solid var(--g-line); font-size: var(--g-fs-caption); line-height: 1; color: var(--g-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color var(--g-dur), border-color var(--g-dur); }
+.g-ruler .g-ruler__seg:hover, .g-ruler .g-ruler__seg[aria-current] { color: var(--g-text); border-top-color: var(--g-text); }
