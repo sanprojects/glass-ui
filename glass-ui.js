@@ -16,6 +16,7 @@
  *   <div class="g-input-wrap g-color" data-g-color>    -> colour field: swatch (native picker) + hex text input
  *   <div class="g-file" data-g-file>   -> file upload: dropzone with a file list (add class g-file--field for a compact one-row version; data-max-size="10" in MB; `multiple` on the input accumulates files across picks, data-max-files caps the count)
  *   Glass.fileProgress('#uploader', fileOrIndex, 0..100)  -> show per-file upload progress (bar turns green at 100)
+ *   Glass.morph('#result', html)       -> swaps the content of a box for new content and animates the difference: rows that are gone fade out while new ones slide in and the rest glides, a changed text lights up, a changed number turns its digits like an odometer (returns a Promise; see below)
  *   <button data-g-menu="#m" data-g-align="end"> + <div role="menu" id="m"> -> dropdown menu: buttons or links, <hr>; arrow keys, Esc, outside click
  *   <div role="tablist"><button>…</button>…</div> <div role="tabpanel">…</div>…  -> tabs / segmented control; roles, ids, aria-controls and hidden are filled in
  *   <button command="show-modal" commandfor="dlg"> -> opens <dialog id="dlg" closedby="any"> (closedby="any": a click on the backdrop closes it)
@@ -866,7 +867,7 @@
     }))).observe(document.documentElement, { childList: true, subtree: true });
   }
   function start() {
-    fitLate(); newRows();
+    fitLate(); newRows(); busyForms();
     hints(document);   // the "?" markers take room in their elements: add them before the first paint, so nothing shifts when they would appear later
     ['pointerover', 'pointerdown', 'keydown', 'focusin', 'click'].forEach(t => { document.addEventListener(t, lazy, true); });
     requestAnimationFrame(() => {
@@ -1052,6 +1053,449 @@
   }
   on('click', '.g-ruler__seg', (e, n) => { const q = n.closest('.g-ruler'), b = q.parentNode === document.body ? (document.scrollingElement || document.documentElement) : q.parentNode, r = mem(b, 'ruler'); if (r) { e.preventDefault(); r.go(+n.getAttribute('data-i'), e.clientY - n.getBoundingClientRect().top); } });
 
+  /* ---------- Morph: Glass.morph(target, next, opts) ----------
+   * Replaces the content of `target` with `next` (an element or an HTML string) and animates the difference, for ANY elements at any depth:
+   *   - all at once, nothing waits: an element that is gone fades out where it stood (.g-morph-ghost, out of the flow) while the new ones
+   *     slide in (.g-morph-enter, one after another), the rest glides to its new place and the box takes its new height; all end together;
+   *   - an element that is in both trees stays the same node, it is patched in place (attributes, text): nothing replays on it, focus, scroll,
+   *     what the user typed and animations that run survive;
+   *   - an element that is in both trees but stands in another place (a list that was sorted again) glides there from where it stood (opts.move);
+   *   - in a text that changed the new words light up (.g-morph-word); a change that adds no word is highlighted (g-anim-highlight / .g-morph-flash);
+   *   - a number that became another number (6 -> 13, 63% -> 71%) turns its changed digits like the reels of an odometer: units first, up when it grew,
+   *     down when it fell (.g-reel).
+   * Returns a Promise: true when the DOM is patched, false when a newer call for the same target superseded this one.
+   * How an old element is paired with a new one (siblings of one parent): 1) by key: opts.key(el), data-key or id (only when it is unique among
+   * the siblings; the same id on every row is ignored), otherwise by tag + text (a list row is its word), and with no text by tag + src / href / name /
+   * type / data-icon; what is still the same (two of a kind) is told apart by the order among them; 2) the rest, of one tag: containers
+   * (with child elements) in order, they are walked into; a single leaf for a single leaf is the same element with another text.
+   * Only what is on the screen is animated: an element outside the viewport is patched without an animation and takes no part in the stagger.
+   * Hidden tab: patched at once. Reduced motion: patched at once, what is new fades in and new words only tint.
+   * opts: key(el) -> string | null; leave / enter / flash / reel / move / height: false switches a part off.
+   * Timing: --g-morph-leave, --g-morph-enter, --g-morph-stagger, --g-morph-reel, --g-morph-reel-stagger, --g-morph-move (CSS, on :root or on the target). */
+  /* Busy box: Glass.busy(box, true) while its new content is on the way; Glass.busy(box, false), or Glass.morph into the box, when it is there.
+   * After --g-busy-box-delay a thin line runs along its top edge (the old content stays as it is); an empty box shows a few placeholder lines instead.
+   * An answer that comes sooner changes nothing on the screen. */
+  /* A form waits on the box its answer goes to (data-g-busy-for="#sel") while that box shows something, else on its own card. data-g-no-busy: no line */
+  function formBox(form) {
+    let t = null;
+    try { t = form.getAttribute('data-g-busy-for') && document.querySelector(form.getAttribute('data-g-busy-for')); } catch (_) { /* not a selector */ }
+    if (t && (t.children.length || t.textContent.trim())) return t;
+    return form.closest('article, aside, dialog, .g-panel') || form;
+  }
+  function busy(el, on) {
+    if (typeof el === 'string') el = document.querySelector(el);
+    if (!el || !el.setAttribute) return;
+    if (el.tagName === 'FORM') {   /* a form: the line goes on its box (formBox), and goes away from that same box */
+      if (!on) { const b = el._gBusyBox; el._gBusyBox = null; return b ? busy(b, false) : undefined; }
+      if (el.hasAttribute('data-g-no-busy') || (el._gBusyBox && el._gBusyBox.hasAttribute('data-g-busy'))) return;   /* already waiting (a box that Glass.morph has filled is not) */
+      el = el._gBusyBox = formBox(el);
+    }
+    if (on) {
+      if (el.hasAttribute('data-g-busy')) return;
+      const empty = !el.children.length && !el.textContent.trim();
+      el.setAttribute('data-g-busy', empty ? 'empty' : ''); el.setAttribute('aria-busy', 'true');
+      const bar = document.createElement('i'); bar.className = 'g-busy-bar'; bar.setAttribute('aria-hidden', 'true'); el.prepend(bar);
+      if (empty) { const ph = document.createElement('div'); ph.className = 'g-busy-lines'; ph.setAttribute('aria-hidden', 'true'); ph.innerHTML = '<i></i><i></i><i></i>'; el.append(ph); }
+      return;
+    }
+    if (!el.hasAttribute('data-g-busy')) return;
+    el.removeAttribute('data-g-busy'); el.removeAttribute('aria-busy');
+    [...el.children].forEach(x => { if (AUX_BUSY.test(x.className)) x.remove(); });
+  }
+  const AUX_BUSY = /(^|\s)(g-busy-bar|g-busy-lines)(\s|$)/;
+  /* Every form waits for the server with the busy line, nothing to set up: from its submit until the requests that submit started (fetch, XMLHttpRequest)
+     are answered; a form the browser sends itself, until the next page. A quick answer shows nothing (the line comes after --g-busy-box-delay).
+     A form sent by a script with no submit event (form.submit(), a request of its own): Glass.busy(form, true / false) */
+  function busyForms() {
+    let watch = null;   /* the form whose submit is running now: what is requested meanwhile is its answer */
+    const end = w => { if (--w.n <= 0 && !w.open) busy(w.form, false); };
+    const take = () => { const w = watch; if (w) w.n++; return w; };
+    if (window.XMLHttpRequest) {
+      const send = XMLHttpRequest.prototype.send;
+      XMLHttpRequest.prototype.send = function () { const w = take(); if (w) this.addEventListener('loadend', () => setTimeout(() => end(w)), { once: true }); return send.apply(this, arguments); };
+    }
+    if (window.fetch) {
+      const f = window.fetch;
+      window.fetch = function () { const w = take(), p = f.apply(this, arguments); if (w) p.then(() => {}, () => {}).then(() => setTimeout(() => end(w))); return p; };
+    }
+    document.addEventListener('submit', e => {   /* capture: before the page's own handlers, which start the requests */
+      const form = e.target;
+      if (!(form instanceof HTMLFormElement) || form.hasAttribute('data-g-no-busy')) return;
+      busy(form, true);
+      const w = watch = { form, n: 0, open: true };
+      setTimeout(() => {   /* the submit and its handlers are over */
+        if (watch === w) watch = null;
+        w.open = false;
+        if (w.n) return;
+        const blank = ((e.submitter && e.submitter.getAttribute('formtarget')) || form.target) === '_blank';
+        if (e.defaultPrevented || blank) busy(form, false);   /* handled by the page with no request (or one the line cannot see), or opened elsewhere: nothing to wait for */
+        else setTimeout(() => busy(form, false), 30000);   /* the browser sends it: the next page ends it; an answer that is a download leaves this page as it is */
+      });
+    }, true);
+    addEventListener('pageshow', e => { if (e.persisted) $$('form').forEach(f => busy(f, false)); });   /* back to a page kept in memory: it waits for nothing */
+  }
+  const morph = (() => {
+    const SKIP = new Set(['SCRIPT', 'STYLE', 'TEMPLATE', 'NOSCRIPT']);   /* never paired, never animated */
+    const FORM = new Set(['INPUT', 'TEXTAREA', 'SELECT']);               /* the user's value is not touched, they are not walked into */
+    const KEEP = new Set(['data-new', 'data-g-new']);                    /* entrance markers of the rows */
+    const NUM = /^[\d\s., ]*\d[\d\s., ]*%?$/, MAX = 300;   /* a number, with a percent sign after it */
+    /* the numbers of a box are the same things with new values only when nothing but digits differs in its text (another row of a list has other words) */
+    const sameButDigits = (a, b) => a.textContent.replace(/[\d\s.,%]/g, '') === b.textContent.replace(/[\d\s.,%]/g, '');
+    /* the paired elements stand in another order than before: they are moved, not only changed */
+    const reordered = ps => ps.slice().sort((a, b) => a[0] - b[0]).some((p, k, a) => k && p[1] < a[k - 1][1]);
+    const isNum = e => !e.children.length && NUM.test(e.textContent);
+    const AUX = /(^|\s)(g-busy-bar|g-busy-lines|g-morph-ghost)(\s|$)/;   /* the kit's own passing parts in a box: not content */
+    const kids = p => [...p.children].filter(c => !SKIP.has(c.tagName) && !AUX.test(c.className));
+    const later = (el, cls, ms, then) => setTimeout(() => { el.classList.remove(cls); if (!el.className) el.removeAttribute('class'); if (then) then(); }, ms);
+    const quiet = () => document.hidden;
+    const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;   /* less motion: nothing slides, glides or turns; what is new or changed fades */
+    /* in the viewport and with a size: one getBoundingClientRect per element, the reads go in a batch */
+    const onScreen = r => !!(r.width || r.height) && r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth;
+    const inView = el => onScreen(el.getBoundingClientRect());
+    /* Before the patch, content the browser skips (in a content-visibility: auto box out of the viewport) is not measured: a read would make it lay all that content out.
+       Told by the box (its own rect is there without its content); returns [box, its rect] or null. One per batch of reads: each box is looked up once */
+    const skipper = () => {
+      const m = new Map();
+      return el => {
+        for (let p = el.parentElement; p; p = p.parentElement) {
+          let v = m.get(p);
+          if (v === undefined) { v = false; if (getComputedStyle(p).contentVisibility === 'auto') { const r = p.getBoundingClientRect(); if (!onScreen(r)) v = r; } m.set(p, v); }
+          if (v) return [p, v];
+        }
+        return null;
+      };
+    };
+    function sig(el) {
+      if (FORM.has(el.tagName)) return (el.getAttribute('name') || '') + '|' + (el.getAttribute('type') || '');
+      return el.textContent.trim();
+    }
+    /* a key that is set on purpose is the identity of the element in the whole tree: opts.key(el), data-key, id (an id is unique in a document) */
+    function explicitKey(el, o) {
+      const k = o.key && o.key(el), d = k != null ? k : el.getAttribute('data-key');
+      return d != null && d !== '' ? 'k:' + d : el.id ? 'id:' + el.id : null;
+    }
+    /* where the element stands, from the container (the box that is morphed) down: TAG[index among the children of its parent]/TAG[...]/... */
+    function path(el, root) {
+      const p = [];
+      for (let e = el; e && e !== root; e = e.parentElement) p.push(e.tagName + (e.parentElement ? kids(e.parentElement).indexOf(e) : ''));
+      return p.reverse().join('/');
+    }
+    /* what an element with no text is told by: the tag, what it points at, and the full path to it, so that no two of them have one key */
+    const looks = (el, root) => el.tagName + '|' + ['src', 'href', 'name', 'type', 'data-icon'].map(a => el.getAttribute(a) || '').join('|') + '|' + path(el, root);
+    /* The roots of the two trees that are compared (set while a morph runs): the container and the new content */
+    let R = null;
+    /* the key of every element of a sibling list: a set key, else the tag and the text, else (no text) the tag, what it points at and the path; a key that repeats gets #2, ... */
+    function keys(list, o, root) {
+      const seen = {}, explicit = [];
+      return { explicit, keys: list.map(el => {
+        const own = explicitKey(el, o), text = sig(el); explicit.push(!!own);
+        const k = own || (text ? el.tagName + '|' + text : looks(el, root));
+        seen[k] = (seen[k] || 0) + 1; return k + '#' + seen[k];
+      }) };
+    }
+    /* the same list row or keyed element in the whole old tree and the whole new one: a word that moved to another list (rows grouped by length) is still that word.
+       Only what is unique by its key in both trees is paired. G = { map: new element -> old element, claimed: Set of old elements } while a morph runs */
+    let G = null;
+    function globalPairs(target, next, o) {
+      const key = e => { const k = explicitKey(e, o); if (k) return k; const t = e.tagName === 'LI' && sig(e); return t ? 'LI|' + t : null; };   /* a set key or id, else a list row is its text; what repeats is not paired */
+      const index = root => { const m = new Map(); root.querySelectorAll('ol > li, ul > li, [data-key], [id]').forEach(e => { const k = key(e); if (k != null) m.set(k, m.has(k) ? null : e); }); return m; };
+      const old = index(target), fresh = index(next), g = { map: new Map(), claimed: new Set() };
+      fresh.forEach((n, k) => { const e = old.get(k); if (n && e) { g.map.set(n, e); g.claimed.add(e); } });
+      return g;
+    }
+    /* pairs of indexes [old, new] and the unpaired of both sides */
+    function match(oldL, newL, o, nums) {   /* nums: a function, asked only when there are numbers left to pair (it reads the text of the whole box) */
+      const ok = keys(oldL, o, R && R.old), nk = keys(newL, o, R && R.next), byKey = {}, usedO = {}, usedN = {}, pairs = [], groups = {};
+      ok.keys.forEach((k, i) => { byKey[k] = i; });
+      nk.keys.forEach((k, j) => { if (k in byKey) { pairs.push([byKey[k], j]); usedO[byKey[k]] = usedN[j] = 1; } });
+      const foreign = [];   /* [new index, the old element of another parent that it is] */
+      if (G) {
+        const at = new Map(oldL.map((e, i) => [e, i]));
+        newL.forEach((n, j) => {
+          const e = !usedN[j] && G.map.get(n), i = e && at.has(e) ? at.get(e) : -1;
+          if (i >= 0 && !usedO[i]) { pairs.push([i, j]); usedO[i] = usedN[j] = 1; } else if (e && i < 0) { foreign.push([j, e]); usedN[j] = 1; }
+        });
+        oldL.forEach((e, i) => { if (!usedO[i] && G.claimed.has(e)) usedO[i] = 1; });   /* it goes to its new place, it is not removed here */
+      }
+      const grp = el => groups[el.tagName] || (groups[el.tagName] = { o: [], n: [] });
+      oldL.forEach((el, i) => { if (!usedO[i] && !ok.explicit[i] && !FORM.has(el.tagName)) grp(el).o.push(i); });
+      newL.forEach((el, j) => { if (!usedN[j] && !nk.explicit[j] && !FORM.has(el.tagName)) grp(el).n.push(j); });
+      Object.keys(groups).forEach(tag => {
+        const g = groups[tag], oc = g.o.filter(i => oldL[i].children.length), nc = g.n.filter(j => newL[j].children.length);
+        /* boxes are walked into in order, but only a box of the same kind (its first class): a list does not turn into the "nothing found" card */
+        const kind = e => e.classList[0] || '', queue = {};
+        nc.forEach(j => (queue[kind(newL[j])] = queue[kind(newL[j])] || []).push(j));
+        oc.forEach(i => { const q = queue[kind(oldL[i])], j = q && q.shift(); if (j != null) { pairs.push([i, j]); usedO[i] = usedN[j] = 1; } });
+        const ol = g.o.filter(i => !usedO[i]), nl = g.n.filter(j => !usedN[j]);
+        const one = ol.length === 1 && nl.length === 1 && (kind(oldL[ol[0]]) === kind(newL[nl[0]]) || (!oldL[ol[0]].children.length && !newL[nl[0]].children.length));   /* one for one: a leaf, or a box of the same kind */
+        if (one) { pairs.push([ol[0], nl[0]]); usedO[ol[0]] = usedN[nl[0]] = 1; }
+        else if (ol.length && nl.length && nums()) {   /* a row of numbers (<data>63%</data><data>13</data>): the numbers that changed are the same elements, in order, so their digits turn */
+          const on = ol.filter(i => isNum(oldL[i])), nn = nl.filter(j => isNum(newL[j]));
+          /* a percent is not a count: the numbers of one class go together */
+          new Set(on.map(i => oldL[i].className)).forEach(c => {
+            const oi = on.filter(i => oldL[i].className === c), nj = nn.filter(j => newL[j].className === c);
+            for (let k = 0; k < Math.min(oi.length, nj.length); k++) { pairs.push([oi[k], nj[k]]); usedO[oi[k]] = usedN[nj[k]] = 1; }
+          });
+        }
+      });
+      return { pairs, foreign, oldL, newL, removed: oldL.filter((_, i) => !usedO[i]) };
+    }
+    /* phase 1: the old elements that have no pair in the new tree (the top one of a removed subtree) */
+    function collect(op, np, o, out, moved) {
+      const m = match(kids(op), kids(np), o, () => sameButDigits(op, np));
+      out.push(...m.removed);
+      if (moved) m.pairs.forEach(([i]) => moved.add(m.oldL[i]));   /* on a level that changes the others may be pushed: their rects are read before the DOM is touched (apply) */
+      m.pairs.forEach(([i, j]) => { const a = m.oldL[i], b = m.newL[j]; if (!FORM.has(a.tagName) && !a.isEqualNode(b)) collect(a, b, o, out, moved); });
+    }
+    function syncAttrs(a, b) {
+      const form = FORM.has(a.tagName);
+      [...b.attributes].forEach(x => { if (!(form && /^(value|checked|selected)$/.test(x.name)) && a.getAttribute(x.name) !== x.value) a.setAttribute(x.name, x.value); });
+      [...a.attributes].forEach(x => {
+        if (b.hasAttribute(x.name) || KEEP.has(x.name) || (x.name === 'style' && a.classList.contains('g-morph-enter'))) return;
+        if (x.name === 'style' && a.style.getPropertyValue('--g-text-w')) { const w = a.style.getPropertyValue('--g-text-w'); a.removeAttribute('style'); a.style.setProperty('--g-text-w', w); return; }   /* the measure of data-g-fit is the kit's own, it is not in the new markup and nothing would measure it again */
+        a.removeAttribute(x.name);
+      });
+    }
+    /* the SVG filters of the reels: Gaussian blur along Y only, in 3 strengths; added to the page on the first reel */
+    function blurFilters() {
+      if (document.getElementById('g-reel-blur-1')) return;
+      document.body.insertAdjacentHTML('beforeend', '<svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">' +
+        [1.5, 3, 5].map((v, i) => `<filter id="g-reel-blur-${i + 1}" x="-20%" y="-50%" width="140%" height="200%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="0 ${v}"/></filter>`).join('') + '</svg>');
+    }
+    const el = (cls, text) => { const e = document.createElement('span'); e.className = cls; if (text != null) e.textContent = text; return e; };
+    /* Replaces the text node `t` (a number) with a board of reels that shows `to` at the end. The characters are aligned to the right and a reel runs only
+       where the digit changed. When it is over, the board is a plain text node again. */
+    function reel(t, to, T) {
+      blurFilters();
+      const from = t.nodeValue, n = Math.max(from.length, to.length), a = from.padStart(n, '\0'), b = to.padStart(n, '\0');
+      const up = parseFloat(to.replace(/[^\d.]/g, '')) >= parseFloat(from.replace(/[^\d.]/g, ''));   /* the number grew: the reels run up */
+      const board = el('g-reel'); board.setAttribute('aria-label', to.trim()); board.setAttribute('role', 'text');
+      let changed = 0;
+      for (let i = n - 1; i >= 0; i--) {   /* right to left: the units run first */
+        const o = a[i] === '\0' ? '' : a[i], c = b[i] === '\0' ? '' : b[i], cell = el('g-reel__cell'), size = el('g-reel__size', c || o || ' '), d = changed * T.reelStagger + 'ms';
+        cell.setAttribute('aria-hidden', 'true'); cell.appendChild(size);
+        if (o !== c && (o === '' || c === '')) { cell.classList.add('g-reel__cell--' + (o === '' ? 'new' : 'gone')); cell.style.setProperty('--g-reel-d', d); }
+        if (o !== c && /^\d?$/.test(o) && /^\d?$/.test(c)) {   /* digit to digit (or to nothing): a sign never turns */
+          /* the digits the reel passes, as an odometer counts (9 -> 3 goes 9, 0, 1, 2, 3); a digit that appears or goes away: blank -> digit */
+          const seq = [o];
+          if (o !== '' && c !== '') { for (let k = 0, d2 = +o; k < 10 && d2 !== +c; k++) { d2 = (d2 + (up ? 1 : 9)) % 10; seq.push(String(d2)); } } else seq.push(c);
+          if (!up) seq.reverse();   /* the strip always runs up through its list; to go down it is listed the other way round */
+          const strip = el('g-reel__strip g-reel__strip--' + (up ? 'up' : 'down'));
+          seq.forEach(ch => { const r = document.createElement('i'); r.textContent = ch; strip.appendChild(r); });
+          strip.style.setProperty('--g-reel-n', seq.length - 1); strip.style.setProperty('--g-reel-d', d);
+          cell.appendChild(strip); changed++;
+        } else { size.style.visibility = 'visible'; size.textContent = c || o; }   /* the same character, or a separator that appeared / went away */
+        board.insertBefore(cell, board.firstChild);
+      }
+      const cs = t.parentElement ? getComputedStyle(t.parentElement) : null;   /* a cell is as tall as a line of its host */
+      board.style.setProperty('--g-reel-h', (cs && parseFloat(cs.lineHeight) || (cs ? parseFloat(cs.fontSize) : 16) * 1.25) + 'px');
+      board._arm = () => $$('.g-reel__cell--new, .g-reel__cell--gone', board).forEach(c => { c.style.setProperty('--g-reel-w', c.firstChild.getBoundingClientRect().width + 'px'); });   /* once it is in the DOM */
+      board._finish = () => { clearTimeout(board._timer); if (board.parentNode) board.parentNode.replaceChild(document.createTextNode(to), board); };
+      board._timer = setTimeout(board._finish, T.reel + Math.max(changed - 1, 0) * T.reelStagger + 60);
+      return board;
+    }
+    /* A text that changed: the words that are new in it are wrapped for a moment (.g-morph-word: they come in out of a soft blur on a tint that fades),
+       the rest stays plain text. Returns a fragment for the old node `t`, or null when there is nothing new to show (only removed words) or the text is long. */
+    function words(t, to, ctx) {
+      const a = t.nodeValue.split(/(\s+)/), b = to.split(/(\s+)/);
+      if (!to.trim() || a.length * b.length > 40000) return null;
+      const L = Array.from({ length: a.length + 1 }, () => new Uint16Array(b.length + 1));   /* the longest common run of words */
+      for (let i = a.length - 1; i >= 0; i--) for (let j = b.length - 1; j >= 0; j--) L[i][j] = a[i] === b[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+      const fresh = new Array(b.length).fill(false);
+      for (let i = 0, j = 0; j < b.length;) { if (i < a.length && a[i] === b[j]) { i++; j++; } else if (i < a.length && L[i + 1][j] >= L[i][j + 1]) i++; else fresh[j++] = true; }
+      const word = j => fresh[j] && b[j].trim() !== '';
+      b.forEach((x, j) => { if (fresh[j] && !x.trim()) fresh[j] = j > 0 && j < b.length - 1 && word(j - 1) && word(j + 1); });   /* a space joins two new words, it does not stand alone */
+      if (!b.some((x, j) => word(j))) return null;
+      const frag = document.createDocumentFragment(), spans = [];
+      let run = '', on = null;
+      const out = () => { if (!run) return; if (on) { const s = el('g-morph-word', run); spans.push(s); frag.appendChild(s); } else frag.appendChild(document.createTextNode(run)); run = ''; };
+      b.forEach((x, j) => { if (fresh[j] !== on) { out(); on = fresh[j]; } run += x; });
+      out();
+      const host = t.parentElement;
+      const finish = () => { clearTimeout(timer); spans.forEach(s => { if (s.parentNode) s.replaceWith(s.firstChild || ''); }); if (host.isConnected) host.normalize(); };   /* plain text again, one node */
+      const timer = setTimeout(finish, ctx.T.word + 60);
+      spans.forEach(s => { s._finish = finish; });
+      ctx.words.push([host, finish]);
+      return frag;
+    }
+    /* phase 2: patch `op` (live) to look like `np` */
+    function reconcile(op, np, o, ctx) {
+      const oldL = kids(op), newL = kids(np), m = match(oldL, newL, o, () => sameButDigits(op, np)), pairOf = new Map(), oldTexts = [...op.childNodes].filter(n => n.nodeType === 3);
+      /* where they stood: ctx.flush slides them from there; read before the patch (ctx.pre), a read here would lay the half-patched page out again */
+      if (ctx.play && o.move !== false) {
+        const live = m.pairs.length > 1 && reordered(m.pairs);   /* not read before (no leave phase): only a reordered level reads here */
+        m.pairs.forEach(([i]) => { const e = oldL[i]; if (FORM.has(e.tagName) || ctx.moves.has(e)) return; const r = ctx.pre.get(e) || (live ? e.getBoundingClientRect() : null); if (r) ctx.moves.set(e, r); });
+      }
+      m.pairs.forEach(([i, j]) => pairOf.set(newL[j], oldL[i]));
+      m.foreign.forEach(([j, e]) => pairOf.set(newL[j], e));
+      /* what goes before the cursor is gathered in a fragment and put in with one insert: fewer mutations of the live tree (and fewer records for observers) */
+      let cursor = op.firstChild, textChanged = false, batch = null;
+      const put = () => { if (batch) { op.insertBefore(batch, cursor); batch = null; } };
+      [...np.childNodes].forEach(nk => {   /* the new children are taken out of `np` as they are placed: a copy */
+        let node = nk;
+        if (nk.nodeType === 1 && !SKIP.has(nk.tagName)) {
+          if (pairOf.has(nk)) {
+            node = pairOf.get(nk);
+            if (!node.isEqualNode(nk)) { syncAttrs(node, nk); if (!FORM.has(node.tagName)) reconcile(node, nk, o, ctx); }
+          } else {
+            const rows = G ? [...nk.querySelectorAll('li, [data-key]')] : [], fresh = [];
+            rows.forEach(n => {   /* a new box with rows that are old rows: the old ones come to it, they are not drawn again */
+              const e = G.map.get(n);
+              if (!e || e === n) return fresh.push(n);
+              if (!e.isEqualNode(n)) { syncAttrs(e, n); if (!FORM.has(e.tagName)) reconcile(e, n, o, ctx); }
+              n.replaceWith(e);
+            });
+            /* animated after, if it is in the viewport (ctx.flush); a box that took old rows does not come in itself (they glide to it), only its new rows do */
+            if (ctx.play) { if (fresh.length < rows.length) { const set = new Set(fresh); ctx.entering.push(...fresh.filter(n => { for (let p = n.parentElement; p && p !== nk; p = p.parentElement) if (set.has(p)) return false; return true; })); } else ctx.entering.push(node); }
+          }
+        } else if (nk.nodeType === 3) {
+          const t = oldTexts.shift();
+          if (t) {
+            node = t;
+            if (t.nodeValue !== nk.nodeValue) {
+              if (ctx.play && o.reel !== false && NUM.test(t.nodeValue) && NUM.test(nk.nodeValue) && t.parentElement && inView(t.parentElement)) node = reel(t, nk.nodeValue, ctx.T);   /* the old node stays at the cursor and goes below */
+              else if (ctx.play && o.flash !== false && t.parentElement && (node = words(t, nk.nodeValue, ctx))) { /* the changed words are marked; the old node goes below */ }
+              else { node = t; if (t.nodeValue.trim() || nk.nodeValue.trim()) textChanged = true; t.nodeValue = nk.nodeValue; }   /* not the whitespace between tags */
+            }
+          } else if (nk.nodeValue.trim() && !op.children.length && !oldTexts.length && cursor) textChanged = true;
+        }
+        if (node === cursor) { put(); cursor = cursor.nextSibling; }
+        else (batch || (batch = document.createDocumentFragment())).appendChild(node);
+        if (node._arm) { put(); node._arm(); }   /* a reel measures itself: it has to be in the page */
+      });
+      put();
+      while (cursor) { const next = cursor.nextSibling; op.removeChild(cursor); cursor = next; }
+      if (textChanged && ctx.play && o.flash !== false) ctx.flashing.push(op);
+    }
+    /* What leaves does not hold the update up: it is put back where it stood, in its own parent but out of the flow (it pushes nothing),
+       and fades out while the new content comes in and the rest glides. list: [element, parent, x, y, width, height, the parent is static] (all read before the patch:
+       a read here, after the writes of the update, would make the page work out its styles once more). */
+    function ghost(list, ms) {
+      const held = new Map();   /* parent -> how many ghosts it still holds; a static parent is positioned for them meanwhile */
+      list.forEach(([e, p, x, y, w, h, flat]) => {
+        if (!p.isConnected) return;
+        if (!held.has(p)) held.set(p, [0, flat]);
+        const hp = held.get(p); hp[0]++;
+        if (hp[1]) p.style.position = 'relative';
+        e.classList.remove('g-morph-leave', 'g-morph-enter'); e.style.animationDelay = '';
+        Object.assign(e.style, { position: 'absolute', left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px', margin: '0', pointerEvents: 'none', boxSizing: 'border-box', counterIncrement: 'none', counterSet: 'none', counterReset: 'none', zIndex: '0' });
+        e.classList.add('g-morph-ghost'); e.setAttribute('aria-hidden', 'true'); e.inert = true;
+        p.appendChild(e);
+        const an = e.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(-24px)' }], { duration: ms, easing: 'ease-in', fill: 'forwards' });
+        const done = e._done = () => { if (!e.parentNode) return; e.remove(); if (!--hp[0] && hp[1]) p.style.position = ''; };
+        an.onfinish = done; an.oncancel = done;
+        setTimeout(done, ms + 100);   /* a page that does not draw frames (a hidden pane) does not finish animations: it goes anyway */
+      });
+    }
+    return function morph(target, next, opts) {
+      if (typeof target === 'string') target = document.querySelector(target);
+      if (!target) return Promise.resolve(false);
+      let o = opts || {};
+      if (calm()) o = Object.assign({}, o, { leave: false, move: false, reel: false, height: false });   /* reduced motion: patched at once, the new and the changed fade in */
+      if (typeof next === 'string') { const tmp = target.cloneNode(false); tmp.innerHTML = next; next = tmp; }
+      if (!target.hasAttribute('data-g-no-enter')) target.setAttribute('data-g-no-enter', '');   /* the morph brings in its own new rows: the generic entrance of .g-list rows stays out */
+      $$('.g-reel, .g-morph-word', target).forEach(b => { if (b._finish) b._finish(); });
+      $$('.g-morph-ghost', target).forEach(e => { if (e._done) e._done(); else e.remove(); });   /* what was fading out of the last update is gone now */   /* a board that still turns is the plain number now, marked words plain text */
+      const prev = target._morph;
+      if (prev) { clearTimeout(prev.timer); prev.leaving.forEach(e => { e.classList.remove('g-morph-leave'); e.style.animationDelay = ''; }); prev.resolve(false); target._morph = null; }
+      const cs = getComputedStyle(target), css = (name, def) => parseFloat(cs.getPropertyValue(name)) || def;
+      const T = { leave: css('--g-morph-leave', 180), enter: css('--g-morph-enter', 250), stagger: css('--g-morph-stagger', 20), reel: css('--g-morph-reel', 320), reelStagger: css('--g-morph-reel-stagger', 35), move: css('--g-morph-move', 320), word: css('--g-morph-word', 1200), ease: cs.getPropertyValue('--g-ease').trim() || 'ease-out' };   /* read here, once: a style read among the writes of the update would make the page work out its styles again */
+      const play = !quiet();
+      const ctx = {
+        play, T, entering: [], flashing: [], moves: new Map(), pre: new Map(), words: [], h0: null,
+        /* after the DOM is patched: what is new / changed AND on the screen is animated (the stagger counts only those) */
+        flush() {
+          /* the reads first, all against one layout of the patched page (a read after a write lays the page out again): what is on the screen,
+             the ::after of what flashes, where the moved rows stand now */
+          /* after the patch the browser has not yet told which [data-g-lazy] boxes are on the screen (it does so in the next frame) and lays out
+             a new or changed one at a guessed or stale size: while these reads run, all of them are laid out as they are (data-g-measure, the kit's CSS) */
+          target.setAttribute('data-g-measure', '');
+          const enter = o.enter !== false ? ctx.entering.filter(inView).slice(0, MAX) : [];
+          const hidden = ctx.words.filter(([host]) => !inView(host));   /* marked words out of the viewport: plain text at once */
+          const box = target.getBoundingClientRect(), bs = getComputedStyle(target);
+          const extra = bs.boxSizing === 'border-box' ? 0 : ['paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth'].reduce((v, k) => v + (parseFloat(bs[k]) || 0), 0);
+          const flash = ctx.flashing.filter(inView).map(e => [e, getComputedStyle(e, '::after').content === 'none']);   /* the kit's highlight draws on ::after */
+          const glide = [];   /* an element that changed its place (moved, or pushed by what came, went or grew) glides from where it stood (FLIP) */
+          if (o.move !== false) {
+            const raw = new Map(), gliding = new Map();
+            ctx.moves.forEach((f, e) => {
+              if (!e.isConnected || !e.animate) return;
+              const l = e.getBoundingClientRect();
+              if (!f.box) return raw.set(e, [f.left - l.left, f.top - l.top, l]);
+              /* it was in a box out of the viewport (not measured): it goes the way its box went, or, in another box now, comes from where that box stood */
+              if (e.parentElement === f.box && f.box.isConnected) { const b = f.box.getBoundingClientRect(); raw.set(e, [f.at.left - b.left, f.at.top - b.top, l]); }
+              else raw.set(e, [0, f.at.top - l.top, l]);
+            });
+            /* parents first: an element inside a gliding box rides with it and glides only by what is its own (else it would go twice the way) */
+            [...raw.keys()].sort((x, y) => x.compareDocumentPosition(y) & 4 ? -1 : 1).forEach(e => {
+              if (glide.length >= MAX) return;
+              let [dx, dy, l] = raw.get(e);
+              for (let p = e.parentElement; p && p !== target; p = p.parentElement) { const a = gliding.get(p); if (a) { dx -= a[0]; dy -= a[1]; break; } }
+              if ((Math.abs(dx) > 1 || Math.abs(dy) > 1) && onScreen(l)) { const r = raw.get(e); gliding.set(e, [r[0], r[1]]); glide.push([e, dx, dy]); }
+            });
+          }
+          /* what moves and what comes in finish together: one end for all, the later of the glide and the last staggered entry */
+          target.removeAttribute('data-g-measure');   /* the reads are done: what is out of the viewport is skipped again in the next frame */
+          const lag = Math.min(enter.length - 1, 9) * T.stagger, end = Math.max(enter.length ? T.enter + lag : 0, ctx.moves.size && o.move !== false ? T.move : 0) || T.move;
+          ctx.end = end;
+          hidden.forEach(([, finish]) => finish());
+          /* the box takes its new height smoothly, so what is below it does not jump (overflow clipped along Y meanwhile; X stays visible for the slides) */
+          const h1 = box.height;
+          if (ctx.h0 != null && o.height !== false && Math.abs(h1 - ctx.h0) > 1 && (onScreen(box) || ctx.h0Seen) && target.animate) {
+            if (target._hAnim) target._hAnim.cancel();
+            const was = target.style.overflowY;
+            target.style.overflowY = 'clip';
+            const an = target._hAnim = target.animate([{ height: ctx.h0 - extra + 'px' }, { height: h1 - extra + 'px' }], { duration: end, easing: T.ease });
+            const done = () => { if (target._hAnim === an) { target._hAnim = null; target.style.overflowY = was; } };
+            an.onfinish = done; an.oncancel = done;
+          }
+          enter.forEach((e, i) => {
+            e.classList.add('g-morph-enter'); e.style.setProperty('--g-morph-i', Math.min(i, 9)); e.style.setProperty('--g-morph-enter', (end - Math.min(i, 9) * T.stagger) + 'ms');   /* a later start, a shorter run: all end at once */ later(e, 'g-morph-enter', end + 50, () => e.style.removeProperty('--g-morph-enter'));
+          });
+          const again = flash.filter(([e, own]) => !own && e.classList.contains('g-morph-flash'));   /* a flash that still runs starts over: one reflow for all of them */
+          if (again.length) { again.forEach(([e]) => e.classList.remove('g-morph-flash')); void again[0][0].offsetWidth; }
+          flash.forEach(([e, own]) => {
+            if (own) { animate(e, 'highlight'); later(e, 'g-anim-highlight', 1600); }
+            else { e.classList.add('g-morph-flash'); later(e, 'g-morph-flash', 1050); }
+          });
+          glide.forEach(([e, dx, dy]) => e.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { duration: end, easing: T.ease }));
+          ctx.entering = []; ctx.flashing = []; ctx.moves = new Map(); ctx.pre = new Map(); ctx.words = []; ctx.h0 = null;
+        }
+      };
+      return new Promise(resolve => {
+        const gone = [], moved = new Set(), g = globalPairs(target, next, o), roots = { old: target, next };
+        G = g; R = roots;
+        if (play && o.leave !== false) collect(target, next, o, gone, o.move !== false ? moved : null);
+        G = null; R = null;
+        const carries = e => g.claimed.has(e) || [...e.querySelectorAll('li, [data-key]')].some(c => g.claimed.has(c));   /* what goes to another place does not slide out */
+        /* what leaves fades out where it stood while the new content comes in: nothing waits (it is not what goes to another place) */
+        const leaving = gone.filter(e => !carries(e));
+        G = g; R = roots;
+        target._morph = null;
+        let ghosts = [];
+        if (play) {   /* the reads before the patch, one layout for all of them: the height of the box, where the rows stand, where the leaving ones are */
+          const skipped = skipper();
+          const box = target.getBoundingClientRect();
+          ctx.h0 = box.height; ctx.h0Seen = onScreen(box);
+          if (o.move !== false) {
+            const at = e => { const s = skipped(e); return s ? { box: s[0], at: s[1] } : e.getBoundingClientRect(); };
+            g.claimed.forEach(e => { if (!ctx.moves.has(e)) ctx.moves.set(e, at(e)); });
+            moved.forEach(e => { if (!ctx.moves.has(e) && e.isConnected) ctx.pre.set(e, at(e)); });
+          }
+          const flat = new Map(), isFlat = p => { if (!flat.has(p)) flat.set(p, getComputedStyle(p).position === 'static'); return flat.get(p); };
+          ghosts = leaving.slice(0, MAX).map(e => { const p = e.parentElement; if (!p || skipped(e)) return null; const r = e.getBoundingClientRect(); if (!onScreen(r)) return null; const pr = p.getBoundingClientRect(); return [e, p, r.left - pr.left - p.clientLeft + p.scrollLeft, r.top - pr.top - p.clientTop + p.scrollTop, r.width, r.height, isFlat(p)]; }).filter(Boolean);
+        }
+        busy(target, false);
+        gone.forEach(e => { if (e.parentNode) e.parentNode.removeChild(e); });
+        reconcile(target, next, o, ctx);
+        G = null; R = null;
+        if (play) ctx.flush();
+        if (ghosts.length) ghost(ghosts, Math.max(T.leave, (ctx.end || T.move) * .75));   /* gone a little before the rest settles */
+        resolve(true);
+      });
+    };
+  })();
+
   /* Theme: Glass.setTheme('light' | 'dark' | 'auto'); sets data-theme on <html> and follows the system in 'auto' */
   const themeMq = window.matchMedia ? matchMedia('(prefers-color-scheme: light)') : null;
 
@@ -1062,7 +1506,7 @@
   if (!document.documentElement.hasAttribute('data-theme')) document.documentElement.setAttribute('data-theme', 'dark');/* default: dark */
   function popBy(sel) { return document.querySelector(sel); }
   global.Glass = {
-    init, animate, fileProgress, ruler, setTheme, toast, setProgress, validate, nav: navAuto,
+    init, animate, morph, busy, fileProgress, ruler, setTheme, toast, setProgress, validate, nav: navAuto,
     popover: { open(sel) { const p = popBy(sel); if (p && p.showPopover) p.showPopover(); }, close(sel) { const p = popBy(sel); if (p && p.hidePopover) p.hidePopover(); } },
     mount(sel, fn) { MOUNTS.push([sel, fn]); allMounts = ''; mount(sel, fn); }   /* for plugins such as glass-ui-liquid.js */
   };

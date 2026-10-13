@@ -63,3 +63,18 @@ test('grid: columns are equal and every gap is --g-gap', async () => {
     return { cols: w.length, spread: Math.max(...w) - Math.min(...w), gap: c.columnGap + ' ' + c.rowGap }; });
   assert.ok(r.cols > 1, 'columns: ' + r.cols); assert.ok(r.spread < 1, 'columns differ by ' + r.spread + 'px'); assert.equal(r.gap, '16px 16px');
 });
+
+test('morph: a row that stays is the same node, a gone one slides out, a new one slides in, a number turns', async () => {
+  const r = await page.evaluate(async () => {
+    const box = document.createElement('div'); box.innerHTML = '<p><b>199</b> words</p><ol class="g-list"><li data-key="a">a</li><li data-key="b">b</li></ol>'; box.style.cssText = 'position:fixed;top:8px;left:8px;z-index:9999'; document.body.appendChild(box);   // in the viewport: only what is on the screen is animated
+    const a = box.querySelector('[data-key=a]'), out = {};
+    const p = Glass.morph(box, '<p><b>203</b> words</p><ol class="g-list"><li data-key="a">a</li><li data-key="c">c</li></ol>');
+    await new Promise(r => setTimeout(r, 40)); out.leaving = box.querySelectorAll('.g-morph-leave').length;
+    await p; await new Promise(r => setTimeout(r, 40));
+    out.keys = [...box.querySelectorAll('li')].map(l => l.dataset.key).join(); out.same = box.querySelector('[data-key=a]') === a;
+    out.entering = box.querySelector('[data-key=c]').classList.contains('g-morph-enter'); out.reel = box.querySelectorAll('.g-reel__strip').length;
+    await new Promise(r => setTimeout(r, 900)); out.plain = box.querySelector('b').textContent; box.remove();
+    return out;
+  });
+  assert.deepEqual(r, { leaving: 1, keys: 'a,c', same: true, entering: true, reel: 3, plain: '203' });
+});

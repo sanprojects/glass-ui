@@ -46,6 +46,7 @@ Recessed fields with icons and validation states, number stepper, date, time and
 
 A form is an adaptive grid: any container that holds `.g-field` children lays them out in columns of equal width, never narrower than an input (200px), with one gap between them. The labels, controls and hints of one line share their rows (subgrid), so the controls stand on one line. A lone field takes the whole row. A field without a label (a button: `<div class="g-field"><button>Go</button></div>`) stands at the height of the controls beside it, and in a grid too narrow to put anything beside it becomes a row of its own.
 
+
 <img src="docs/forms-1.webp" alt="Form controls" width="100%">
 
 <img src="docs/forms-2.webp" alt="Form controls" width="100%">
@@ -83,6 +84,8 @@ An app shell with a tool panel, a workspace and an inspector. The inspector uses
 Seven effects you add with a single class: appear, shimmer, ripple, pulse, highlight, rotate and zoom. Each plays once; add `g-anim--loop` to repeat, `--g-anim-delay` to stagger a list, or call `Glass.animate(el, 'highlight')` from JavaScript.
 
 <img src="docs/motion.webp" alt="Motion effects" width="100%">
+
+**Morph.** `Glass.morph('#result', html)` swaps the content of a box for new content and animates only the difference: rows that are gone slide out, new rows slide in (the ones on the screen only), a changed text lights up, and a number that changed turns its digits like an odometer. It works for any elements, not only lists. Elements that are in both versions stay the same nodes, so focus, scroll and typed values survive. Pair rows with `data-key` (a list row of words: `<li data-key="word">`); without it an element is paired by its text. Returns a Promise. Tune it with `--g-morph-leave`, `--g-morph-enter`, `--g-morph-stagger`, `--g-morph-reel`.
 
 ### Appearance
 

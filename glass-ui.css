@@ -602,6 +602,8 @@ span.g-input-end { right: var(--g-inset); width: var(--g-icon-md); height: var(-
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager])) { position: relative; display: flex; align-items: center; gap: var(--g-gap); min-height: var(--g-nav-h); padding: 10px 12px 10px 24px; border-radius: var(--g-radius-pill); }
 :where(:is(.g-root,[role="listbox"]) nav[data-position="sticky"]) { position: sticky; top: 12px; z-index: 50; }
 :where(:is(.g-root,[role="listbox"]) nav[data-position="fixed"]) { position: fixed; z-index: 50; top: calc(12px + env(safe-area-inset-top, 0px)); left: 16px; right: 16px; max-width: var(--g-page-w); margin-inline: auto; }
+/* The page column: --g-page-w, centred. Any container takes it with .g-page; the bar, the content and the footer that sit directly in <body class="g-root"> take it without a class (the fixed bar has its own rule above). Zero specificity: a page can widen any of them. */
+:where(.g-page, body.g-root > :is(nav:not([data-position="fixed"]), main, footer)) { width: 100%; max-width: var(--g-page-w); box-sizing: border-box; margin-inline: auto; }
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > a) { display: flex; align-items: center; gap: var(--g-gap-inner); flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; font-weight: 700; font-size: var(--g-fs-body); letter-spacing: -.01em; color: var(--g-text); text-decoration: none; margin-right: auto; }   /* on the narrowest bars the name is clipped before anything overlaps */
 /* Logo dot for the brand link: <nav><a href="/"><span class="g-brand-dot"></span>Name</a>…</nav> */
 .g-brand-dot { width: 22px; height: 22px; border-radius: 50%; background: conic-gradient(from 200deg, #fff, var(--g-accent), #9be7ff, #fff); box-shadow: inset 0 0 0 1px rgba(255,255,255,.5); }
@@ -1006,6 +1008,69 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> i
 @keyframes g-a-highlight { from { opacity: 1; } to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { :is(.g-anim-appear, .g-anim-zoom, .g-anim-shimmer, .g-anim-ripple, .g-anim-pulse, .g-anim-highlight), :is(.g-anim-shimmer, .g-anim-ripple, .g-anim-highlight)::after, .g-anim-rotate > * { animation-duration: .001ms !important; animation-iteration-count: 1 !important; } }
 
+
+/* ---------- Morph: Glass.morph(target, next) swaps the content of a box for new content and animates the difference ----------
+ * At once: a row that is gone fades out where it stood, a new one slides in, the rest glides, new words of a text light up, a number turns its digits.
+ * The tuning is custom properties; set them on the box: <div id="result" style="--g-morph-leave: 120ms"> (the script reads them in ms).
+ * !important: a row that is still entering has the rules of .g-list rows (and of the site) with a higher specificity. */
+:root { --g-morph-leave: 180ms; --g-morph-enter: 250ms; --g-morph-stagger: 20ms; --g-morph-reel: 320ms; --g-morph-reel-stagger: 35ms; --g-morph-move: 320ms; }
+@keyframes g-slide-out { to { opacity: 0; transform: translateX(-24px); } }
+@keyframes g-morph-flash { from { background: var(--g-fill-strong); } }
+.g-morph-leave { animation: g-slide-out var(--g-morph-leave) ease-in forwards !important; pointer-events: none; }
+.g-morph-enter { animation: g-slide-in var(--g-morph-enter) var(--g-ease) backwards !important; animation-delay: calc(var(--g-morph-i, 0) * var(--g-morph-stagger)) !important; }
+.g-morph-flash { animation: g-morph-flash 1s ease-out !important; }   /* the highlight of the kit (g-anim-highlight) is used when the element's ::after is free */
+/* A changed text: only its new words light up, they come in out of a soft blur on a tint that fades (--g-morph-word, read by the script too) */
+:root { --g-morph-word: 1200ms; }
+@keyframes g-morph-word { 0% { background-color: var(--g-fill-strong); opacity: .25; filter: blur(2px); } 22% { opacity: 1; filter: none; } 100% { background-color: transparent; } }
+@keyframes g-morph-word-calm { from { background-color: var(--g-fill-strong); } }
+.g-morph-word { border-radius: 3px; -webkit-box-decoration-break: clone; box-decoration-break: clone; animation: g-morph-word var(--g-morph-word) ease-out; }
+.g-morph-ghost { z-index: 0; }   /* the old content of a swapped box fading out where it stood (the script places it) */
+/* data-g-lazy: a long part of a page (a group of a thousand rows) that the browser lays out and paints only when it is near the viewport; until then it
+   stands at --g-lazy-h, once drawn at its real height. Keep in mind it keeps its CSS counters to itself (a numbering through several of them: counter-set on its first row) */
+[data-g-lazy] { content-visibility: auto; contain-intrinsic-block-size: auto var(--g-lazy-h, 500px); }
+/* Glass.morph measures the patched box at once, before the browser has told which of them are on the screen: for those reads they are all laid out
+   (else a new or changed one stands at a guessed size, and what glides would aim wrong). Only [data-g-lazy] is named: switching it touches nothing else */
+[data-g-measure] [data-g-lazy] { content-visibility: visible; }
+/* Less motion: nothing slides, glides or turns (the script), what is new fades in and the new words only tint */
+@media (prefers-reduced-motion: reduce) {
+  .g-morph-enter { animation-name: g-fade !important; }
+  .g-morph-word { animation-name: g-morph-word-calm; }
+}
+
+/* ---------- Busy box: Glass.busy(box, true | false) ----------
+ * While new content is on the way: after --g-busy-box-delay a thin line runs along the top edge of the box (the content stays as it is);
+ * an empty box gets three placeholder lines. A quick answer shows nothing. Glass.morph into the box ends it. */
+:root { --g-busy-box-delay: 300ms; }
+:where([data-g-busy]) { position: relative; }
+@keyframes g-busy-run { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+@keyframes g-busy-pulse { to { opacity: .45; } }
+.g-busy-bar { position: absolute; z-index: 2; inset: 0 0 auto; height: 2px; overflow: hidden; pointer-events: none; border-radius: 2px; animation: g-fade var(--g-dur) var(--g-busy-box-delay) backwards; }
+.g-busy-bar::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 35%; border-radius: inherit; background: linear-gradient(90deg, transparent, var(--g-accent), transparent); animation: g-busy-run 1.1s ease-in-out infinite; }
+.g-busy-lines { display: grid; gap: .6em; padding-block: .4em; animation: g-fade var(--g-dur) var(--g-busy-box-delay) backwards; }
+.g-busy-lines > i { display: block; height: .8em; border-radius: 4px; background: var(--g-fill); animation: g-busy-pulse 1.4s ease-in-out infinite alternate; }
+.g-busy-lines > i:nth-child(2) { width: 85%; }
+.g-busy-lines > i:nth-child(3) { width: 60%; }
+@media (prefers-reduced-motion: reduce) { .g-busy-bar::before { animation: none; width: 100%; opacity: .5; } .g-busy-lines > i { animation: none; } }
+
+/* The reels: a changed digit is a strip of digits, from the old one to the new one the way an odometer counts, that runs by in its cell:
+ * up when the number grew, down when it fell, fast at first and slowing down on the new digit. The blur along Y only is the speed
+ * (an SVG filter: CSS blur() blurs both ways); CSS cannot animate the strength of an SVG filter, so the keyframes step through 3 of them.
+ * A digit that appears or goes away widens / narrows its cell during the run, so that the text next to the number does not jump. */
+@keyframes g-reel-up { from { transform: translateY(0); } to { transform: translateY(calc(var(--g-reel-n) * var(--g-reel-h) * -1)); } }
+@keyframes g-reel-down { from { transform: translateY(calc(var(--g-reel-n) * var(--g-reel-h) * -1)); } to { transform: translateY(0); } }
+@keyframes g-reel-blur { 0%, 24% { filter: url(#g-reel-blur-3); } 25%, 49% { filter: url(#g-reel-blur-2); } 50%, 74% { filter: url(#g-reel-blur-1); } 75%, 100% { filter: none; } }
+@keyframes g-reel-grow { from { max-width: 0; } to { max-width: var(--g-reel-w); } }
+@keyframes g-reel-shrink { from { max-width: var(--g-reel-w); } to { max-width: 0; } }
+.g-reel { display: inline-block; white-space: pre; font-variant-numeric: tabular-nums; }
+.g-reel__cell { position: relative; display: inline-block; vertical-align: top; height: var(--g-reel-h); line-height: var(--g-reel-h); overflow: hidden; }
+.g-reel__size { visibility: hidden; }
+.g-reel__strip { position: absolute; inset: 0 0 auto; text-align: center; animation-duration: var(--g-morph-reel); animation-timing-function: cubic-bezier(.12,.75,.25,1), linear; animation-fill-mode: both; animation-delay: var(--g-reel-d); }
+.g-reel__strip > i { display: block; height: var(--g-reel-h); font-style: normal; }
+.g-reel__strip--up { animation-name: g-reel-up, g-reel-blur; }
+.g-reel__strip--down { animation-name: g-reel-down, g-reel-blur; }
+.g-reel__cell--new, .g-reel__cell--gone { animation-duration: var(--g-morph-reel); animation-timing-function: cubic-bezier(.12,.75,.25,1); animation-fill-mode: both; animation-delay: var(--g-reel-d, 0ms); }
+.g-reel__cell--new { animation-name: g-reel-grow; }
+.g-reel__cell--gone { animation-name: g-reel-shrink; }
 
 /* ---------- App shell: tool panel | workspace | inspector ----------
  * <div class="g-shell">

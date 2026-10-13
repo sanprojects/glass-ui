@@ -52,7 +52,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
 .scene[data-scene="drops"]{background-image:url(scenes/drops.webp);}
 .bg-row .sw-btn[data-scene="drops"]{--sw:url(scenes/drops.webp) center/cover;}
 
-.page{ width:100%; max-width:1120px; margin:0 auto; padding-inline:16px; padding-block:92px 80px; display:flex; flex-direction:column; gap:28px; }
+.page{ padding-inline:16px; padding-block:92px 80px; display:flex; flex-direction:column; gap:28px; }
 .nav-brand-dot{ width:22px; height:22px; border-radius:50%; background:conic-gradient(from 200deg,#fff,#0071E3,#9be7ff,#fff); box-shadow:inset 0 0 0 1px rgba(255,255,255,.5); }
 .hero{ padding:40px 8px 20px; display:flex; flex-direction:column; gap:18px; max-width:760px; }
 .hero > data{ align-self:flex-start; }
@@ -108,7 +108,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
 
 <div class="scene" id="scene" data-scene="gradient" data-g-gradient aria-hidden="true"><div class="g-liquid" data-g-liquid data-for="liquid" data-colors="#00283c,#33a7e1,#9bbbf9,#34b8c9"><i></i><i></i><i></i><i></i></div></div>
 
-<div class="page g-root">
+<div class="page g-page g-root">
   <nav data-position="fixed" aria-label="Sections">
     <a href="#top"><span class="nav-brand-dot"></span>Glass UI</a>
     <ul data-g-nav-auto data-sections=".sec[id]"></ul>
@@ -598,6 +598,12 @@ Glass.animate(el, 'highlight');
 
 /* ripple starts at the click, select fills from the left */
 &lt;button class="g-anim-ripple"&gt;Press&lt;/button&gt;</pre></div>
+      <div class="code"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0">/* swap the content of a box and animate the difference: rows that are gone slide out, new ones slide in,
+   a changed text lights up, a changed number turns its digits like an odometer (up when it grew, down when it fell) */
+Glass.morph('#result', html);              // html string or an element; returns a Promise
+
+&lt;li data-key="word"&gt;…&lt;/li&gt;              &lt;!-- pairs the row with the same row of the old content (default: by its text) --&gt;
+&lt;div id="result" style="--g-morph-leave: 120ms"&gt;&lt;/div&gt;   /* also --g-morph-enter, --g-morph-stagger, --g-morph-reel */</pre></div>
     </div>
   </section>
 
