@@ -867,6 +867,7 @@
     }))).observe(document.documentElement, { childList: true, subtree: true });
   }
   function start() {
+    addressForms();   /* first: its snapshot of <main> is the markup as it came, and its submit handler goes before the others */
     fitLate(); newRows(); busyForms();
     hints(document);   // the "?" markers take room in their elements: add them before the first paint, so nothing shifts when they would appear later
     ['pointerover', 'pointerdown', 'keydown', 'focusin', 'click'].forEach(t => { document.addEventListener(t, lazy, true); });
@@ -1495,6 +1496,261 @@
       });
     };
   })();
+
+  /* ---------- Address: a GET form and the address of the page are one state ----------
+   * A <form method="get"> in <main> whose action is this page keeps its fields in the address and gets its answer without leaving the page. Nothing to set up:
+   *   action="/find-words/{word}"  the field `word` is a path segment (/find-words/апельсин); every other field goes into the query, in the order of the form.
+   *                                A field at its default is left out: an empty text, an unchecked box, the first option of a select, the first radio of a group.
+   *   typing                       a form with no submit button answers as it is filled in: the address follows every keystroke (the first one of an edit adds
+   *                                a history entry, the next ones replace it), a choice (select, box, a step of a number) is an entry of its own. A form with a
+   *                                submit button (a slow or not idempotent action: ping, a send) waits for it: each submit is an entry. Back / forward and an
+   *                                address opened by a link put the fields back.
+   *   answer                       GET of the same address with the header X-G-Fetch: 1 (the server may answer with just <title> and <main>): after a pause in
+   *                                typing, at once for a choice or a submit. What differs from the last answer is morphed in (Glass.morph): the smallest elements with an id
+   *                                that hold the change, so the rest of <main> and what other scripts put there stay as they are. <title>, canonical and
+   *                                description follow; the scripts that came in run. A change outside every element with an id, an error or an answer that is not
+   *                                HTML: the page is loaded the usual way. Back to an address seen before: no request.
+   *   links                        a click on a link to an address of this form is followed in place.
+   * data-g-url="off" on the form: left alone. After an answer is on the page, document gets g:navigate { url, title } (analytics). */
+  function addressForms() {
+    const DELAY = 350;   /* ms of quiet in typing before the request */
+    const TEXT = /^(text|search|email|tel|url|number|password)$/;
+    const cache = new Map();   /* address -> Promise of { url, html } */
+    let form = null, tpl = null, live = true, snap = null, ctl = null, timer = 0, editing = false, applying = false, shown = '', pending = '';
+    const here = () => location.pathname + location.search;
+    const enc = v => encodeURIComponent(v);
+    const dec = v => { try { return decodeURIComponent(v); } catch (_) { return v; } };
+    const isText = e => e.tagName === 'TEXTAREA' || (e.tagName === 'INPUT' && TEXT.test(e.type));
+    const fieldsOf = f => [...f.elements].filter(e => e.name && !e.disabled && /^(INPUT|SELECT|TEXTAREA)$/.test(e.tagName) && !/^(submit|button|reset|image|file)$/.test(e.type));
+    const radios = e => fieldsOf(form).filter(r => r.type === 'radio' && r.name === e.name);
+    /* action="/section/{a}/{b}" -> { base: '/section', vars: ['a', 'b'] } (the base as the address carries it, percent-encoded); null: another site, or a {name} that is not a whole trailing segment */
+    function template(f) {
+      const vars = [], a = (f.getAttribute('action') || '').trim().replace(/\{([^{}/]+)\}/g, (_, n) => '__g' + (vars.push(n) - 1) + '__');
+      let u; try { u = new URL(a || location.href, location.href); } catch (_) { return null; }
+      if (u.origin !== location.origin) return null;
+      const segs = u.pathname.split('/'), isVar = s => /^__g\d+__$/.test(s), at = segs.findIndex(isVar);
+      if (segs.some((s, i) => at < 0 || i < at ? s.indexOf('__g') !== -1 : !isVar(s))) return null;
+      return { base: (at < 0 ? segs : segs.slice(0, at)).join('/').replace(/\/$/, ''), vars: at < 0 ? [] : segs.slice(at).map(s => vars[+s.slice(3, -2)]) };
+    }
+    function bind() {
+      form = tpl = null;
+      for (const f of $$('main form')) {
+        if ((f.getAttribute('method') || 'get').toLowerCase() !== 'get' || f.getAttribute('data-g-url') === 'off' || (f.target && f.target !== '_self')) continue;
+        const t = template(f), p = location.pathname;
+        if (t && (!t.base || p === t.base || p.startsWith(t.base + '/'))) {
+          form = f; tpl = t;
+          live = ![...f.elements].some(e => e.type === 'submit' || e.type === 'image');   /* a <button> with no type is a submit button */
+          return true;
+        }
+      }
+      return false;
+    }
+    const ready = () => (form && form.isConnected) || bind();
+    function atDefault(e) {
+      if (e.type === 'checkbox') return !e.checked;
+      if (e.type === 'radio') return !e.checked || radios(e)[0] === e;
+      if (e.tagName === 'SELECT') return e.selectedIndex <= 0;
+      return e.value === '';
+    }
+    /* the address of what the form holds now */
+    function address() {
+      const path = [], q = [];
+      for (const e of fieldsOf(form)) {
+        if (e.tagName === 'SELECT' && e.multiple) { [...e.selectedOptions].forEach(o => q.push([e.name, o.value])); continue; }
+        if (atDefault(e)) continue;
+        const i = tpl.vars.indexOf(e.name);
+        if (i !== -1 && path[i] === undefined && e.value.indexOf('/') === -1) path[i] = e.value;   /* a slash cannot stand in a segment: that value goes into the query */
+        else q.push([e.name, e.value]);
+      }
+      let url = tpl.base, i = 0;
+      for (; i < tpl.vars.length && path[i] !== undefined; i++) url += '/' + enc(path[i]);
+      for (; i < tpl.vars.length; i++) if (path[i] !== undefined) q.push([tpl.vars[i], path[i]]);   /* a segment after a missing one: into the query */
+      return (url || '/') + (q.length ? '?' + q.map(([k, v]) => enc(k) + '=' + enc(v)).join('&') : '');
+    }
+    /* an address of this form -> Map name -> [values]; null: not an address of this form */
+    function read(href) {
+      const u = new URL(href, location.href), p = u.pathname.replace(/\/$/, '');
+      if (u.origin !== location.origin || (tpl.base && p !== tpl.base && !p.startsWith(tpl.base + '/'))) return null;
+      const segs = p.slice(tpl.base.length).split('/').filter(Boolean), m = new Map();
+      if (segs.length > tpl.vars.length) return null;
+      const add = (k, v) => { if (!m.has(k)) m.set(k, []); m.get(k).push(v); };
+      segs.forEach((s, i) => add(tpl.vars[i], dec(s)));
+      u.searchParams.forEach((v, k) => add(k, v));
+      return m;
+    }
+    /* the fields take the values; a field the values do not name goes back to its default */
+    function fill(values) {
+      applying = true;
+      const seen = new Map(), changed = new Set();
+      for (const e of fieldsOf(form)) {
+        const vs = values.get(e.name) || [];
+        if (e.type === 'checkbox' || e.type === 'radio') {
+          const on = vs.length ? vs.includes(e.value) : e.type === 'radio' && radios(e)[0] === e;
+          if (e.checked !== on) { e.checked = on; changed.add(e); }
+        } else if (e.tagName === 'SELECT') {
+          const opts = [...e.options];
+          if (e.multiple) opts.forEach(o => { const on = vs.includes(o.value); if (o.selected !== on) { o.selected = on; changed.add(e); } });
+          else { const i = Math.max(0, opts.findIndex(o => o.value === vs[0])); if (e.selectedIndex !== i) { e.selectedIndex = i; changed.add(e); } }
+        } else {
+          const n = seen.get(e.name) || 0, v = vs[n] !== undefined ? vs[n] : '';
+          seen.set(e.name, n + 1);
+          if (e.value !== v) { e.value = v; changed.add(e); }
+        }
+      }
+      changed.forEach(commit);   /* the kit's select, stepper and cross, and the page, see the new values */
+      applying = false;
+    }
+    /* the fields, kept in the history entry: back to an address this form cannot read (an old format, a default the server picked) still restores them */
+    const remember = () => Object.assign({}, history.state && typeof history.state === 'object' ? history.state : null, { gForm: [...new FormData(form)].filter(p => typeof p[1] === 'string') });
+    const toMap = pairs => pairs.reduce((m, [k, v]) => (m.has(k) ? m.get(k).push(v) : m.set(k, [v]), m), new Map());
+    function write(push) {
+      const url = address();
+      history[push && url !== here() ? 'pushState' : 'replaceState'](remember(), '', url);
+      return url;
+    }
+    function fetchPage(url, signal) {
+      if (cache.has(url)) return cache.get(url);
+      const p = fetch(url, { headers: { 'X-G-Fetch': '1' }, signal, credentials: 'same-origin' }).then(res => {
+        const u = new URL(res.url);
+        if (res.status >= 500 || u.origin !== location.origin || !/html/i.test(res.headers.get('content-type') || '')) return null;
+        return res.text().then(html => ({ url: u.pathname + u.search, html }));
+      });
+      cache.set(url, p);
+      p.then(r => { if (!r) cache.delete(url); }, () => cache.delete(url));
+      if (cache.size > 30) cache.delete(cache.keys().next().value);
+      return p;
+    }
+    /* outermost descendants with an id */
+    function regions(root) {
+      const out = [];
+      (function walk(n) { for (const c of n.children) { if (c.id) out.push(c); else walk(c); } })(root);
+      return out;
+    }
+    /* an element as markup to compare two answers by: the values of the fields are the user's, not the answer's; cut: the regions inside are empty */
+    function flat(el, cut) {
+      const c = el.cloneNode(true);
+      if (cut) regions(c).forEach(r => { const p = document.createElement(r.tagName); p.id = r.id; r.replaceWith(p); });
+      $$('input', c).forEach(i => { i.removeAttribute('value'); i.removeAttribute('checked'); });
+      $$('option', c).forEach(o => o.removeAttribute('selected'));
+      $$('textarea', c).forEach(t => { t.textContent = ''; });
+      $$('script', c).forEach(s => s.removeAttribute('type'));
+      return c.outerHTML;
+    }
+    /* a and b: one element in the last answer and in the new one. true when they differ only inside elements with an id; the new ones of those go to out */
+    function differ(a, b, out) {
+      if (flat(a) === flat(b)) return true;
+      if (flat(a, true) !== flat(b, true)) return false;
+      const x = regions(a), y = regions(b);
+      x.forEach((e, i) => { if (!differ(e, y[i], out)) out.push(y[i]); });
+      return true;
+    }
+    function runScripts(list) {   /* a script that came with markup does not run: a new one with the same source and attributes does, in order */
+      return list.reduce((p, s) => p.then(() => {
+        const n = document.createElement('script');
+        [...s.attributes].forEach(a => n.setAttribute(a.name, a.value));
+        if (!s.src) { n.textContent = s.textContent; document.head.appendChild(n); n.remove(); return; }
+        n.async = false;
+        return new Promise(done => { n.onload = n.onerror = done; document.head.appendChild(n); });
+      }), Promise.resolve());
+    }
+    /* the answer onto the page; false when it cannot be placed */
+    function apply(html) {
+      const doc = new DOMParser().parseFromString(html, 'text/html'), main = document.querySelector('main');
+      const next = main && ((main.id && doc.getElementById(main.id)) || doc.querySelector('main'));
+      if (!snap || !next || next.tagName !== 'MAIN') return false;
+      const out = [];
+      if (!differ(snap, next, out)) return false;   /* a change in <main> outside every element with an id */
+      const live = out.map(n => [document.getElementById(n.id), n]);
+      if (live.some(([l]) => !l || !main.contains(l))) return false;
+      snap = next.cloneNode(true);
+      const t = doc.querySelector('title');
+      if (t) document.title = t.textContent;
+      [['link[rel=canonical]', 'href'], ['meta[name=description]', 'content']].forEach(([s, a]) => { const o = document.head.querySelector(s), n = doc.querySelector(s); if (o && n) o.setAttribute(a, n.getAttribute(a)); });
+      live.forEach(([l, n]) => {
+        const run = $$('script', n).filter(s => !s.type || /javascript|module/i.test(s.type));
+        morph(l, n).then(() => { init(l); return runScripts(run); });
+      });
+      return true;
+    }
+    const go = () => location.replace(here());   /* what cannot be done in place: the page the usual way */
+    function load(url) {
+      clearTimeout(timer);
+      if (url === pending) return;
+      if (ctl) { ctl.abort(); ctl = null; pending = ''; }
+      if (url === shown) { busy(form, false); return; }
+      const c = ctl = new AbortController();
+      pending = url;
+      busy(form, true);
+      fetchPage(url, c.signal).then(r => {
+        if (ctl !== c) return;   /* a newer one is on its way */
+        ctl = null; pending = '';
+        if (!r || !apply(r.html)) return go();
+        shown = url;
+        if (r.url !== url && here() === url) { history.replaceState(history.state, '', r.url); shown = r.url; }   /* the server put the address right (a redirect) */
+        busy(form, false);
+        fire(document, 'g:navigate', { url: new URL(shown, location.href).href, title: document.title });
+      }, () => { if (ctl === c) { ctl = null; pending = ''; go(); } });
+    }
+    const schedule = url => { clearTimeout(timer); timer = setTimeout(() => load(url), DELAY); };
+    const ours = e => !applying && ready() && e.target.form === form && e.target.name;
+
+    if (!bind()) return;
+    const main = document.querySelector('main');
+    /* the markup of <main> as the server sent it: taken before anything here builds its parts, it is what the first answer is compared with */
+    snap = main && main.cloneNode(true);
+    shown = here();
+    history.replaceState(remember(), '');
+    if (snap) {   /* back to the first address: its answer is the page as it came */
+      const d = document.implementation.createHTMLDocument(document.title);
+      ['link[rel=canonical]', 'meta[name=description]'].forEach(s => { const n = document.head.querySelector(s); if (n) d.head.appendChild(n.cloneNode(true)); });
+      d.body.appendChild(snap.cloneNode(true));
+      cache.set(shown, Promise.resolve({ url: shown, html: d.documentElement.outerHTML }));
+    }
+    document.addEventListener('input', e => {
+      if (!live || !ours(e) || !isText(e.target)) return;   /* a box or a select: its change */
+      const url = write(!editing);
+      editing = true;
+      schedule(url);
+    });
+    document.addEventListener('change', e => {
+      if (!live || !ours(e)) return;
+      const url = write(!isText(e.target));   /* a choice is an entry; the end of an edit is the entry the edit made */
+      editing = false;
+      load(url);
+    });
+    document.addEventListener('focusout', e => { if (ours(e) && isText(e.target)) editing = false; });
+    /* capture, and first: the page's own submit handlers (an ajax loader, the kit's busy line) are not for this form */
+    document.addEventListener('submit', e => {
+      if (!ready() || e.target !== form) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      const url = write(!live || (e.isTrusted && !editing));   /* in a live form a submit sent by a script (submit on change) is not the end of an edit */
+      if (e.isTrusted) editing = false;
+      load(url);
+    }, true);
+    document.addEventListener('click', e => {
+      if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || !ready()) return;
+      const a = e.target.closest && e.target.closest('a[href]');
+      if (!a || (a.target && a.target !== '_self') || a.hasAttribute('download')) return;
+      const u = new URL(a.href, location.href);
+      if (u.hash && u.pathname + u.search === here()) return;   /* an anchor on this page */
+      const values = read(u.href), names = new Set(fieldsOf(form).map(f => f.name));
+      if (!values || [...values.keys()].some(k => !names.has(k))) return;   /* it carries something this form does not hold */
+      e.preventDefault();
+      fill(values);
+      editing = false;
+      load(write(true));
+    });
+    addEventListener('popstate', e => {
+      if (!ready()) return;
+      const url = here();
+      if (url === shown && !pending) return;   /* only the fragment changed */
+      const st = e.state && e.state.gForm, values = st ? toMap(st) : read(location.href);
+      if (!values) return location.reload();
+      fill(values);
+      editing = false;
+      load(url);
+    });
+  }
 
   /* Theme: Glass.setTheme('light' | 'dark' | 'auto'); sets data-theme on <html> and follows the system in 'auto' */
   const themeMq = window.matchMedia ? matchMedia('(prefers-color-scheme: light)') : null;
