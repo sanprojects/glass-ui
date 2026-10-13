@@ -424,15 +424,19 @@
   /* data-g-fit on a .g-list, or on a box with lists in it (a result made of several lists): the columns are as wide as the longest text of all the rows, measured, not counted in characters
      (sets --g-text-w; follows rows that are added, removed or changed, and fonts that load late; a list that is shown later is measured when it is shown) */
   function initFit(box) {
-    const sel = box.classList.contains('g-list') ? ':scope > li > :is(span, a)' : '.g-list > li > :is(span, a)';
+    const sel = (box.classList.contains('g-list') ? ':scope > li' : '.g-list > li') + ':not(.g-morph-ghost) > :is(span, a)';   /* a row that fades out (Glass.morph) is not measured */
     let ro = null;
     const fit = () => {
-      const w = textWidth($$(sel, box));
-      if (w) { box.style.setProperty('--g-text-w', (Math.ceil(w) + 1) + 'px'); if (ro) { ro.disconnect(); ro = null; } }
+      const w = textWidth($$(sel, box)), v = (Math.ceil(w) + 1) + 'px';
+      if (w) { if (box.style.getPropertyValue('--g-text-w') !== v) box.style.setProperty('--g-text-w', v); if (ro) { ro.disconnect(); ro = null; } }
       else if (!ro && window.ResizeObserver) { ro = new ResizeObserver(fit); ro.observe(box); }
     };
     fit();
-    new MutationObserver(fit).observe(box, { childList: true, characterData: true, subtree: true });
+    /* a row that fades out coming or going changes nothing: every measure lays the page out, and a morph takes away its faded rows at the end */
+    const faded = n => n.nodeType === 1 && n.classList.contains('g-morph-ghost');
+    const mo = new MutationObserver(recs => { if (recs.some(r => r.type !== 'childList' || [...r.addedNodes, ...r.removedNodes].some(n => !faded(n)))) fit(); });
+    mo.observe(box, { childList: true, characterData: true, subtree: true });
+    box._gFit = () => { mo.takeRecords(); fit(); };   /* Glass.morph: the new width is set before it reads where the rows end up */
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
   }
   function initMore(list) {
@@ -867,7 +871,7 @@
     }))).observe(document.documentElement, { childList: true, subtree: true });
   }
   function start() {
-    addressForms();   /* first: its snapshot of <main> is the markup as it came, and its submit handler goes before the others */
+    addressForms();   /* first: its snapshot of <main> is the markup as it came, before anything here builds its parts */
     fitLate(); newRows(); busyForms();
     hints(document);   // the "?" markers take room in their elements: add them before the first paint, so nothing shifts when they would appear later
     ['pointerover', 'pointerdown', 'keydown', 'focusin', 'click'].forEach(t => { document.addEventListener(t, lazy, true); });
@@ -927,7 +931,7 @@
   /* ---------- Ruler: a section index inside a scrolling box ----------
    <div style="overflow:auto"> … <h3 data-ruler="Food">…</h3> … </div>  -> the [data-ruler] elements alone switch it on for their nearest scrolling ancestor (data-g-ruler on a box asks for it explicitly): a hairline + name per [data-ruler] element, as tall as the section's share of the scroll height (re-read when the box or its content changes)
    Glass.ruler(box, [{ label, from, to, title? (the spoken name), weight? (the share of the ruler's height; by default the section's length, a root of it makes a few huge sections not crowd out the small ones) }, …])  -> the sections given by hand, from / to in px of the scrollable height (for virtual lists, where the sections are not in the DOM); Glass.ruler(box) returns the ruler
-   A click on the name goes to the start of the section, a click lower goes to the same share of it (data-ruler-offset="n": px kept above the target, default half a gap). Fires `g:ruler` on the box with { index, id }.
+   A click on the name scrolls to the start of the section (reduced motion: is there at once), a click lower to the same share of it (data-ruler-offset="n": px kept above the target, default half a gap). Fires `g:ruler` on the box with { index, id }.
    Every mark is a link to its section: <a href="#id">, the id being the element's own (an element without one gets one made of the name; sections given by hand take { id } or one made of the label). A click puts it into the address (a new history entry), and an address with #id opens that section when the page loads and on back / forward. */
   function slug(t) { return String(t).trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '') || 'section'; }
   function freeId(base, taken) { let id = base, n = 2; while (taken(id)) id = base + '-' + n++; return id; }
@@ -1017,22 +1021,22 @@
       if (cur !== now) { if (segs[now]) segs[now].removeAttribute('aria-current'); if (segs[cur]) segs[cur].setAttribute('aria-current', 'true'); now = cur; }
     }
     function later() { clearTimeout(timer); timer = setTimeout(manual ? place : build, 30); }
-    function jump(i, y, own) {   // y: the click's distance from the top of the section's mark, in px; own: the section itself, not the group of hidden ones that its mark stands for
+    function jump(i, y, own, smooth) {   // y: the click's distance from the top of the section's mark, in px; own: the section itself, not the group of hidden ones that its mark stands for; smooth: it scrolls there (a click, back / forward), else it is there at once (the page opens on it)
       const s = own ? list[i] : eff[i] || list[i], k = segs[i].getBoundingClientRect().height || 1, offset = num(box, 'data-ruler-offset', lead);
       const at = y <= 14 ? s.from : s.from + Math.min(.999, y / k) * (s.to - s.from);
-      (page ? window : box).scrollTo({ top: Math.max(0, at - offset), behavior: 'instant' });
+      (page ? window : box).scrollTo({ top: Math.max(0, at - offset), behavior: smooth && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 'smooth' : 'instant' });
       fire(box, 'g:ruler', { index: i, id: list[i].id });
     }
     function indexOfHash() { let h = location.hash.slice(1); try { h = decodeURIComponent(h); } catch (e) {} return h ? list.findIndex(s => s.id === h) : -1; }
     function go(i, y) {   // a click on a mark: jump and put the section's id into the address
-      jump(i, y); const h = '#' + encodeURIComponent(list[i].id);
+      jump(i, y, false, true); const h = '#' + encodeURIComponent(list[i].id);
       if (location.hash !== h && history.pushState) history.pushState(null, '', h);
     }
     if (window.ResizeObserver) { const ro = new ResizeObserver(later); ro.observe(page ? document.body : box); [...(page ? document.body : box).children].forEach(c => { if (c !== root) ro.observe(c); }); }
     if (window.MutationObserver) new MutationObserver(recs => { if (!manual && recs.some(r => !root.contains(r.target))) later(); }).observe(page ? document.body : box, { childList: true, subtree: true, characterData: true });
     (page ? window : box).addEventListener('scroll', mark, { passive: true });
     addEventListener('resize', later); addEventListener('load', later);
-    addEventListener('hashchange', () => { const i = indexOfHash(); if (i >= 0) jump(i, 0, true); });
+    addEventListener('hashchange', () => { const i = indexOfHash(); if (i >= 0) jump(i, 0, true, true); });
     let opened = false;   // the address of the page names a section: it is shown once, when the sections are known
     function openByHash() {
       if (opened || !list.length) return; opened = true;
@@ -1068,10 +1072,12 @@
    * How an old element is paired with a new one (siblings of one parent): 1) by key: opts.key(el), data-key or id (only when it is unique among
    * the siblings; the same id on every row is ignored), otherwise by tag + text (a list row is its word), and with no text by tag + src / href / name /
    * type / data-icon; what is still the same (two of a kind) is told apart by the order among them; 2) the rest, of one tag: containers
-   * (with child elements) in order, they are walked into; a single leaf for a single leaf is the same element with another text.
+   * (with child elements) in order, they are walked into; a single leaf for a single leaf is the same element with another text. A list row (<li>)
+   * is paired that way only when nothing but its numbers changed: a row with other words is another row.
    * Only what is on the screen is animated: an element outside the viewport is patched without an animation and takes no part in the stagger.
    * Hidden tab: patched at once. Reduced motion: patched at once, what is new fades in and new words only tint.
-   * opts: key(el) -> string | null; leave / enter / flash / reel / move / height: false switches a part off.
+   * opts: key(el) -> string | null; keep(el) -> true: an element (of the box) that is paired stays as it is, nothing in it is patched (the form being sent);
+   * leave / enter / flash / reel / move / height: false switches a part off.
    * Timing: --g-morph-leave, --g-morph-enter, --g-morph-stagger, --g-morph-reel, --g-morph-reel-stagger, --g-morph-move (CSS, on :root or on the target). */
   /* Busy box: Glass.busy(box, true) while its new content is on the way; Glass.busy(box, false), or Glass.morph into the box, when it is there.
    * After --g-busy-box-delay a thin line runs along its top edge (the old content stays as it is); an empty box shows a few placeholder lines instead.
@@ -1087,7 +1093,7 @@
     if (typeof el === 'string') el = document.querySelector(el);
     if (!el || !el.setAttribute) return;
     if (el.tagName === 'FORM') {   /* a form: the line goes on its box (formBox), and goes away from that same box */
-      if (!on) { const b = el._gBusyBox; el._gBusyBox = null; return b ? busy(b, false) : undefined; }
+      if (!on) { const b = el._gBusyBox; el._gBusyBox = null; if (!b) return; if (b !== el) return busy(b, false); }   /* a form that is its own box (no card around it, the box in a header) is cleared below */
       if (el.hasAttribute('data-g-no-busy') || (el._gBusyBox && el._gBusyBox.hasAttribute('data-g-busy'))) return;   /* already waiting (a box that Glass.morph has filled is not) */
       el = el._gBusyBox = formBox(el);
     }
@@ -1148,6 +1154,9 @@
     const AUX = /(^|\s)(g-busy-bar|g-busy-lines|g-morph-ghost)(\s|$)/;   /* the kit's own passing parts in a box: not content */
     const kids = p => [...p.children].filter(c => !SKIP.has(c.tagName) && !AUX.test(c.className));
     const later = (el, cls, ms, then) => setTimeout(() => { el.classList.remove(cls); if (!el.className) el.removeAttribute('class'); if (then) then(); }, ms);
+    /* the animations of an update start with the first frame drawn after it, up to ~100 ms after the update itself (a large one): what is cleared when they
+       are over counts from there, so it neither cuts them short nor lays the page out while they still move */
+    const settled = f => requestAnimationFrame(() => requestAnimationFrame(f));
     const quiet = () => document.hidden;
     const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;   /* less motion: nothing slides, glides or turns; what is new or changed fades */
     /* in the viewport and with a size: one getBoundingClientRect per element, the reads go in a batch */
@@ -1225,10 +1234,12 @@
         const g = groups[tag], oc = g.o.filter(i => oldL[i].children.length), nc = g.n.filter(j => newL[j].children.length);
         /* boxes are walked into in order, but only a box of the same kind (its first class): a list does not turn into the "nothing found" card */
         const kind = e => e.classList[0] || '', queue = {};
+        /* a list row is its text: a row with other words is another row (it slides in, the old one out), not this one with a new text; only its numbers may change (a counter) */
+        const same = (a, b) => a.tagName !== 'LI' || sameButDigits(a, b);
         nc.forEach(j => (queue[kind(newL[j])] = queue[kind(newL[j])] || []).push(j));
-        oc.forEach(i => { const q = queue[kind(oldL[i])], j = q && q.shift(); if (j != null) { pairs.push([i, j]); usedO[i] = usedN[j] = 1; } });
+        oc.forEach(i => { const q = queue[kind(oldL[i])], k = q ? q.findIndex(j => same(oldL[i], newL[j])) : -1; if (k >= 0) { const j = q.splice(k, 1)[0]; pairs.push([i, j]); usedO[i] = usedN[j] = 1; } });
         const ol = g.o.filter(i => !usedO[i]), nl = g.n.filter(j => !usedN[j]);
-        const one = ol.length === 1 && nl.length === 1 && (kind(oldL[ol[0]]) === kind(newL[nl[0]]) || (!oldL[ol[0]].children.length && !newL[nl[0]].children.length));   /* one for one: a leaf, or a box of the same kind */
+        const one = ol.length === 1 && nl.length === 1 && same(oldL[ol[0]], newL[nl[0]]) && (kind(oldL[ol[0]]) === kind(newL[nl[0]]) || (!oldL[ol[0]].children.length && !newL[nl[0]].children.length));   /* one for one: a leaf, or a box of the same kind */
         if (one) { pairs.push([ol[0], nl[0]]); usedO[ol[0]] = usedN[nl[0]] = 1; }
         else if (ol.length && nl.length && nums()) {   /* a row of numbers (<data>63%</data><data>13</data>): the numbers that changed are the same elements, in order, so their digits turn */
           const on = ol.filter(i => isNum(oldL[i])), nn = nl.filter(j => isNum(newL[j]));
@@ -1246,7 +1257,7 @@
       const m = match(kids(op), kids(np), o, () => sameButDigits(op, np));
       out.push(...m.removed);
       if (moved) m.pairs.forEach(([i]) => moved.add(m.oldL[i]));   /* on a level that changes the others may be pushed: their rects are read before the DOM is touched (apply) */
-      m.pairs.forEach(([i, j]) => { const a = m.oldL[i], b = m.newL[j]; if (!FORM.has(a.tagName) && !a.isEqualNode(b)) collect(a, b, o, out, moved); });
+      m.pairs.forEach(([i, j]) => { const a = m.oldL[i], b = m.newL[j]; if (!FORM.has(a.tagName) && !(o.keep && o.keep(a)) && !a.isEqualNode(b)) collect(a, b, o, out, moved); });
     }
     function syncAttrs(a, b) {
       const form = FORM.has(a.tagName);
@@ -1292,7 +1303,7 @@
       board.style.setProperty('--g-reel-h', (cs && parseFloat(cs.lineHeight) || (cs ? parseFloat(cs.fontSize) : 16) * 1.25) + 'px');
       board._arm = () => $$('.g-reel__cell--new, .g-reel__cell--gone', board).forEach(c => { c.style.setProperty('--g-reel-w', c.firstChild.getBoundingClientRect().width + 'px'); });   /* once it is in the DOM */
       board._finish = () => { clearTimeout(board._timer); if (board.parentNode) board.parentNode.replaceChild(document.createTextNode(to), board); };
-      board._timer = setTimeout(board._finish, T.reel + Math.max(changed - 1, 0) * T.reelStagger + 60);
+      settled(() => { if (board.parentNode) board._timer = setTimeout(board._finish, T.reel + Math.max(changed - 1, 0) * T.reelStagger + 60); });
       return board;
     }
     /* A text that changed: the words that are new in it are wrapped for a moment (.g-morph-word: they come in out of a soft blur on a tint that fades),
@@ -1337,13 +1348,13 @@
         if (nk.nodeType === 1 && !SKIP.has(nk.tagName)) {
           if (pairOf.has(nk)) {
             node = pairOf.get(nk);
-            if (!node.isEqualNode(nk)) { syncAttrs(node, nk); if (!FORM.has(node.tagName)) reconcile(node, nk, o, ctx); }
+            if (!node.isEqualNode(nk) && !(o.keep && o.keep(node))) { syncAttrs(node, nk); if (!FORM.has(node.tagName)) reconcile(node, nk, o, ctx); }
           } else {
             const rows = G ? [...nk.querySelectorAll('li, [data-key]')] : [], fresh = [];
             rows.forEach(n => {   /* a new box with rows that are old rows: the old ones come to it, they are not drawn again */
               const e = G.map.get(n);
               if (!e || e === n) return fresh.push(n);
-              if (!e.isEqualNode(n)) { syncAttrs(e, n); if (!FORM.has(e.tagName)) reconcile(e, n, o, ctx); }
+              if (!e.isEqualNode(n) && !(o.keep && o.keep(e))) { syncAttrs(e, n); if (!FORM.has(e.tagName)) reconcile(e, n, o, ctx); }
               n.replaceWith(e);
             });
             /* animated after, if it is in the viewport (ctx.flush); a box that took old rows does not come in itself (they glide to it), only its new rows do */
@@ -1370,9 +1381,10 @@
     }
     /* What leaves does not hold the update up: it is put back where it stood, in its own parent but out of the flow (it pushes nothing),
        and fades out while the new content comes in and the rest glides. list: [element, parent, x, y, width, height, the parent is static] (all read before the patch:
-       a read here, after the writes of the update, would make the page work out its styles once more). */
-    function ghost(list, ms) {
-      const held = new Map();   /* parent -> how many ghosts it still holds; a static parent is positioned for them meanwhile */
+       a read here, after the writes of the update, would make the page work out its styles once more). They fade out in `ms` and are taken away, all at once,
+       at `until`: taking one away lays the page out, so they go when nothing moves any more, and in one go. */
+    function ghost(list, ms, until) {
+      const held = new Map(), all = [];   /* parent -> how many ghosts it still holds; a static parent is positioned for them meanwhile */
       list.forEach(([e, p, x, y, w, h, flat]) => {
         if (!p.isConnected) return;
         if (!held.has(p)) held.set(p, [0, flat]);
@@ -1382,15 +1394,28 @@
         Object.assign(e.style, { position: 'absolute', left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px', margin: '0', pointerEvents: 'none', boxSizing: 'border-box', counterIncrement: 'none', counterSet: 'none', counterReset: 'none', zIndex: '0' });
         e.classList.add('g-morph-ghost'); e.setAttribute('aria-hidden', 'true'); e.inert = true;
         p.appendChild(e);
-        const an = e.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(-24px)' }], { duration: ms, easing: 'ease-in', fill: 'forwards' });
-        const done = e._done = () => { if (!e.parentNode) return; e.remove(); if (!--hp[0] && hp[1]) p.style.position = ''; };
-        an.onfinish = done; an.oncancel = done;
-        setTimeout(done, ms + 100);   /* a page that does not draw frames (a hidden pane) does not finish animations: it goes anyway */
+        e.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(-24px)' }], { duration: ms, easing: 'ease-in', fill: 'forwards' });
+        e._done = () => { if (!e.parentNode) return; e.remove(); if (!--hp[0] && hp[1]) p.style.position = ''; };
+        all.push(e);
       });
+      if (all.length) settled(() => setTimeout(() => all.forEach(e => e._done()), until));   /* a timer, not the end of the animation: one in a hidden pane does not finish */
+    }
+    /* A morph starts after the next frame is drawn: what the click or the key that asked for it shows at once (a switch that turns, the letter typed)
+       is on the screen then and runs on its own while the page is patched. The morphs asked for meanwhile run in that one go, in the order asked */
+    let batch = null;
+    function afterPaint(run) {
+      if (batch) return batch.push(run);
+      const b = batch = [run], go = () => { if (batch !== b) return; batch = null; b.forEach(f => f()); };
+      requestAnimationFrame(() => setTimeout(go));
+      setTimeout(go, 100);   /* a page that draws no frames */
     }
     return function morph(target, next, opts) {
       if (typeof target === 'string') target = document.querySelector(target);
       if (!target) return Promise.resolve(false);
+      if (quiet()) return patch(target, next, opts);
+      return new Promise((resolve, reject) => afterPaint(() => { try { patch(target, next, opts).then(resolve, reject); } catch (e) { reject(e); } }));
+    };
+    function patch(target, next, opts) {
       let o = opts || {};
       if (calm()) o = Object.assign({}, o, { leave: false, move: false, reel: false, height: false });   /* reduced motion: patched at once, the new and the changed fade in */
       if (typeof next === 'string') { const tmp = target.cloneNode(false); tmp.innerHTML = next; next = tmp; }
@@ -1411,34 +1436,44 @@
           /* after the patch the browser has not yet told which [data-g-lazy] boxes are on the screen (it does so in the next frame) and lays out
              a new or changed one at a guessed or stale size: while these reads run, all of them are laid out as they are (data-g-measure, the kit's CSS) */
           target.setAttribute('data-g-measure', '');
+          /* the columns of a [data-g-fit] take the width of the new words first (else they would after this, and the rows would not end where they are read) */
+          [...$$('[data-g-fit]', target), target.closest('[data-g-fit]')].forEach(b => { if (b) { if (b._gFit) b._gFit(); else mount1(b, ['[data-g-fit]', initFit]); } });
           const enter = o.enter !== false ? ctx.entering.filter(inView).slice(0, MAX) : [];
           const hidden = ctx.words.filter(([host]) => !inView(host));   /* marked words out of the viewport: plain text at once */
           const box = target.getBoundingClientRect(), bs = getComputedStyle(target);
           const extra = bs.boxSizing === 'border-box' ? 0 : ['paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth'].reduce((v, k) => v + (parseFloat(bs[k]) || 0), 0);
           const flash = ctx.flashing.filter(inView).map(e => [e, getComputedStyle(e, '::after').content === 'none']);   /* the kit's highlight draws on ::after */
-          const glide = [];   /* an element that changed its place (moved, or pushed by what came, went or grew) glides from where it stood (FLIP) */
+          const glide = [], away = [];   /* an element that changed its place (moved, or pushed by what came, went or grew) glides from where it stood (FLIP) */
           if (o.move !== false) {
-            const raw = new Map(), gliding = new Map();
+            const raw = new Map(), gliding = new Map(), came = new Set();
             ctx.moves.forEach((f, e) => {
               if (!e.isConnected || !e.animate) return;
               const l = e.getBoundingClientRect();
-              if (!f.box) return raw.set(e, [f.left - l.left, f.top - l.top, l]);
+              if (!f.box) return raw.set(e, [f.left - l.left, f.top - l.top, l, onScreen(f)]);
               /* it was in a box out of the viewport (not measured): it goes the way its box went, or, in another box now, comes from where that box stood */
-              if (e.parentElement === f.box && f.box.isConnected) { const b = f.box.getBoundingClientRect(); raw.set(e, [f.at.left - b.left, f.at.top - b.top, l]); }
-              else raw.set(e, [0, f.at.top - l.top, l]);
+              if (e.parentElement === f.box && f.box.isConnected) { const b = f.box.getBoundingClientRect(); raw.set(e, [f.at.left - b.left, f.at.top - b.top, l, false]); }
+              else raw.set(e, [0, f.at.top - l.top, l, false]);
             });
             /* parents first: an element inside a gliding box rides with it and glides only by what is its own (else it would go twice the way) */
             [...raw.keys()].sort((x, y) => x.compareDocumentPosition(y) & 4 ? -1 : 1).forEach(e => {
-              if (glide.length >= MAX) return;
-              let [dx, dy, l] = raw.get(e);
-              for (let p = e.parentElement; p && p !== target; p = p.parentElement) { const a = gliding.get(p); if (a) { dx -= a[0]; dy -= a[1]; break; } }
-              if ((Math.abs(dx) > 1 || Math.abs(dy) > 1) && onScreen(l)) { const r = raw.get(e); gliding.set(e, [r[0], r[1]]); glide.push([e, dx, dy]); }
+              if (glide.length + away.length >= MAX) return;
+              const r = raw.get(e);
+              let [dx, dy, l, seen] = r;
+              for (let p = e.parentElement; p && p !== target; p = p.parentElement) { if (came.has(p)) return; const a = gliding.get(p); if (a) { dx -= a[0]; dy -= a[1]; break; } }
+              if (Math.abs(dx) <= 1 && Math.abs(dy) <= 1) return;
+              const on = onScreen(l);
+              /* only what is on the screen before and after glides: one that comes from out of the viewport comes in as a new one does, one that goes
+                 out of it fades out where it stood (a glide over thousands of pixels would only flash across the screen) */
+              if (on && !seen && o.enter !== false) { came.add(e); enter.push(e); }
+              else if (on) { gliding.set(e, [r[0], r[1]]); glide.push([e, dx, dy]); }
+              else if (seen) { gliding.set(e, [r[0], r[1]]); away.push([e, dx, dy]); }
             });
+            if (came.size) enter.sort((x, y) => x.compareDocumentPosition(y) & 4 ? -1 : 1).splice(MAX);
           }
           /* what moves and what comes in finish together: one end for all, the later of the glide and the last staggered entry */
           target.removeAttribute('data-g-measure');   /* the reads are done: what is out of the viewport is skipped again in the next frame */
           const lag = Math.min(enter.length - 1, 9) * T.stagger, end = Math.max(enter.length ? T.enter + lag : 0, ctx.moves.size && o.move !== false ? T.move : 0) || T.move;
-          ctx.end = end;
+          ctx.end = end; ctx.fade = Math.max(T.leave, end * .75); ctx.until = Math.max(T.leave, end) + 50;   /* what leaves: faded a little before the rest settles, taken away after it */
           hidden.forEach(([, finish]) => finish());
           /* the box takes its new height smoothly, so what is below it does not jump (overflow clipped along Y meanwhile; X stays visible for the slides) */
           const h1 = box.height;
@@ -1451,8 +1486,9 @@
             an.onfinish = done; an.oncancel = done;
           }
           enter.forEach((e, i) => {
-            e.classList.add('g-morph-enter'); e.style.setProperty('--g-morph-i', Math.min(i, 9)); e.style.setProperty('--g-morph-enter', (end - Math.min(i, 9) * T.stagger) + 'ms');   /* a later start, a shorter run: all end at once */ later(e, 'g-morph-enter', end + 50, () => e.style.removeProperty('--g-morph-enter'));
+            e.classList.add('g-morph-enter'); e.style.setProperty('--g-morph-i', Math.min(i, 9)); e.style.setProperty('--g-morph-enter', (end - Math.min(i, 9) * T.stagger) + 'ms');   /* a later start, a shorter run: all end at once */
           });
+          if (enter.length) settled(() => enter.forEach(e => later(e, 'g-morph-enter', end + 50, () => e.style.removeProperty('--g-morph-enter'))));
           const again = flash.filter(([e, own]) => !own && e.classList.contains('g-morph-flash'));   /* a flash that still runs starts over: one reflow for all of them */
           if (again.length) { again.forEach(([e]) => e.classList.remove('g-morph-flash')); void again[0][0].offsetWidth; }
           flash.forEach(([e, own]) => {
@@ -1460,6 +1496,9 @@
             else { e.classList.add('g-morph-flash'); later(e, 'g-morph-flash', 1050); }
           });
           glide.forEach(([e, dx, dy]) => e.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { duration: end, easing: T.ease }));
+          /* gone out of the viewport: held where it stood, it fades out as a ghost does; then it is in its new place, out of sight */
+          away.forEach(([e, dx, dy]) => { const at = `translate(${dx}px, ${dy}px)`, to = `translate(${dx - 24}px, ${dy}px)`;
+            e.animate([{ transform: at, opacity: 1, easing: 'ease-in' }, { transform: to, opacity: 0, offset: ctx.fade / ctx.until }, { transform: to, opacity: 0 }], { duration: ctx.until }); });
           ctx.entering = []; ctx.flashing = []; ctx.moves = new Map(); ctx.pre = new Map(); ctx.words = []; ctx.h0 = null;
         }
       };
@@ -1491,31 +1530,41 @@
         reconcile(target, next, o, ctx);
         G = null; R = null;
         if (play) ctx.flush();
-        if (ghosts.length) ghost(ghosts, Math.max(T.leave, (ctx.end || T.move) * .75));   /* gone a little before the rest settles */
+        if (ghosts.length) ghost(ghosts, ctx.fade, ctx.until);
         resolve(true);
       });
-    };
+    }
   })();
 
   /* ---------- Address: a GET form and the address of the page are one state ----------
-   * A <form method="get"> in <main> whose action is this page keeps its fields in the address and gets its answer without leaving the page. Nothing to set up:
+   * A <form method="get"> whose action names this page keeps its fields in the address and gets its answer without leaving the page. Nothing to set up. The form
+   * of <main>, or else one elsewhere (the search box in the header):
    *   action="/find-words/{word}"  the field `word` is a path segment (/find-words/апельсин); every other field goes into the query, in the order of the form.
    *                                A field at its default is left out: an empty text, an unchecked box, the first option of a select, the first radio of a group.
    *   typing                       a form with no submit button answers as it is filled in: the address follows every keystroke (the first one of an edit adds
    *                                a history entry, the next ones replace it), a choice (select, box, a step of a number) is an entry of its own. A form with a
-   *                                submit button (a slow or not idempotent action: ping, a send) waits for it: each submit is an entry. Back / forward and an
-   *                                address opened by a link put the fields back.
+   *                                submit button (a slow or not idempotent action: ping, a random pick) waits for it: each submit is an entry and is asked
+   *                                anew. The clear cross of a field is one more button: the answer with that field empty comes at once. Back / forward
+   *                                and an address opened by a link put the fields back.
    *   answer                       GET of the same address with the header X-G-Fetch: 1 (the server may answer with just <title> and <main>): after a pause in
    *                                typing, at once for a choice or a submit. What differs from the last answer is morphed in (Glass.morph): the smallest elements with an id
    *                                that hold the change, so the rest of <main> and what other scripts put there stay as they are. <title>, canonical and
    *                                description follow; the scripts that came in run. A change outside every element with an id, an error or an answer that is not
    *                                HTML: the page is loaded the usual way. Back to an address seen before: no request.
-   *   links                        a click on a link to an address of this form is followed in place.
-   * data-g-url="off" on the form: left alone. After an answer is on the page, document gets g:navigate { url, title } (analytics). */
+   *                                A page that works the answer out itself (a filter over what it already holds) cancels g:answer { url } on the form, which comes
+   *                                before each answer, at once on every keystroke: nothing is asked, the page shows it (from the fields), the address is kept here.
+   *   links                        a click on a link to an address of this form is followed in place. A value a script puts into a field (a tile that puts its
+   *                                name into the box) and announces with `change` is a choice, an entry of its own.
+   *   POST                         a <form method="post"> whose action names this page is sent in the background as well (with X-G-Fetch: 1), and its answer is
+   *                                morphed in the same way; a change outside every element with an id morphs <main> as a whole. What is typed, the focus and
+   *                                the scroll stay; the address stays. An error or an answer that is not HTML (a file): the browser sends the form itself.
+   * Left alone: a form with no action, data-g-url="off" on it, and a form whose submit a script of the page cancels (from that submit on).
+   * After an answer is on the page, document gets g:navigate { url, title } (analytics). */
   function addressForms() {
     const DELAY = 350;   /* ms of quiet in typing before the request */
     const TEXT = /^(text|search|email|tel|url|number|password)$/;
     const cache = new Map();   /* address -> Promise of { url, html } */
+    const theirs = new WeakSet();   /* forms whose submit a script of the page cancelled: that script runs them */
     let form = null, tpl = null, live = true, snap = null, ctl = null, timer = 0, editing = false, applying = false, shown = '', pending = '';
     const here = () => location.pathname + location.search;
     const enc = v => encodeURIComponent(v);
@@ -1526,18 +1575,24 @@
     /* action="/section/{a}/{b}" -> { base: '/section', vars: ['a', 'b'] } (the base as the address carries it, percent-encoded); null: another site, or a {name} that is not a whole trailing segment */
     function template(f) {
       const vars = [], a = (f.getAttribute('action') || '').trim().replace(/\{([^{}/]+)\}/g, (_, n) => '__g' + (vars.push(n) - 1) + '__');
-      let u; try { u = new URL(a || location.href, location.href); } catch (_) { return null; }
+      if (!a) return null;   /* no action: the form does not say what address it stands for (such a form is usually run by a script of the page) */
+      let u; try { u = new URL(a, location.href); } catch (_) { return null; }
       if (u.origin !== location.origin) return null;
       const segs = u.pathname.split('/'), isVar = s => /^__g\d+__$/.test(s), at = segs.findIndex(isVar);
       if (segs.some((s, i) => at < 0 || i < at ? s.indexOf('__g') !== -1 : !isVar(s))) return null;
       return { base: (at < 0 ? segs : segs.slice(0, at)).join('/').replace(/\/$/, ''), vars: at < 0 ? [] : segs.slice(at).map(s => vars[+s.slice(3, -2)]) };
     }
+    /* the template of f when it is a form of this page sent with `method` ('get' | 'post'): its action names this page (a POST form: in <main>), not opted out, not run by a script of the page */
+    function pageForm(f, method) {
+      if (theirs.has(f) || (f.getAttribute('method') || 'get').toLowerCase() !== method || f.getAttribute('data-g-url') === 'off' || (f.target && f.target !== '_self') || (method === 'post' && !f.closest('main'))) return null;
+      const t = template(f), p = location.pathname;
+      return t && (!t.base || p === t.base || p.startsWith(t.base + '/')) ? t : null;
+    }
     function bind() {
       form = tpl = null;
-      for (const f of $$('main form')) {
-        if ((f.getAttribute('method') || 'get').toLowerCase() !== 'get' || f.getAttribute('data-g-url') === 'off' || (f.target && f.target !== '_self')) continue;
-        const t = template(f), p = location.pathname;
-        if (t && (!t.base || p === t.base || p.startsWith(t.base + '/'))) {
+      for (const f of [...$$('main form'), ...$$('form')]) {   /* the form of <main> first */
+        const t = pageForm(f, 'get');
+        if (t) {
           form = f; tpl = t;
           live = ![...f.elements].some(e => e.type === 'submit' || e.type === 'image');   /* a <button> with no type is a submit button */
           return true;
@@ -1653,14 +1708,15 @@
         return new Promise(done => { n.onload = n.onerror = done; document.head.appendChild(n); });
       }), Promise.resolve());
     }
-    /* the answer onto the page; false when it cannot be placed */
-    function apply(html) {
+    /* the answer onto the page; false when it cannot be placed. sent: the POST form whose answer it is - it cannot be asked again the usual way, so a change
+       outside every element with an id morphs <main> as a whole, and that form stays as it is (what is typed in it, the kit's parts of its fields) */
+    function apply(html, sent) {
       const doc = new DOMParser().parseFromString(html, 'text/html'), main = document.querySelector('main');
       const next = main && ((main.id && doc.getElementById(main.id)) || doc.querySelector('main'));
       if (!snap || !next || next.tagName !== 'MAIN') return false;
-      const out = [];
-      if (!differ(snap, next, out)) return false;   /* a change in <main> outside every element with an id */
-      const live = out.map(n => [document.getElementById(n.id), n]);
+      let out = [];
+      if (!differ(snap, next, out)) { if (!sent) return false; out = [next]; }   /* a change in <main> outside every element with an id */
+      const live = out.map(n => [n === next ? main : document.getElementById(n.id), n]);
       if (live.some(([l]) => !l || !main.contains(l))) return false;
       snap = next.cloneNode(true);
       const t = doc.querySelector('title');
@@ -1668,16 +1724,29 @@
       [['link[rel=canonical]', 'href'], ['meta[name=description]', 'content']].forEach(([s, a]) => { const o = document.head.querySelector(s), n = doc.querySelector(s); if (o && n) o.setAttribute(a, n.getAttribute(a)); });
       live.forEach(([l, n]) => {
         const run = $$('script', n).filter(s => !s.type || /javascript|module/i.test(s.type));
-        morph(l, n).then(() => { init(l); return runScripts(run); });
+        morph(l, n, sent ? { keep: e => e === sent } : undefined).then(() => { init(l); return runScripts(run); });
       });
       return true;
     }
     const go = () => location.replace(here());   /* what cannot be done in place: the page the usual way */
-    function load(url) {
+    /* true when the page shows the answer to url itself: it cancelled g:answer */
+    function own(url) {
+      if (form.dispatchEvent(new CustomEvent('g:answer', { bubbles: true, cancelable: true, detail: { url: new URL(url, location.href).href } }))) return false;
+      clearTimeout(timer);
+      if (ctl) { ctl.abort(); ctl = null; pending = ''; }
+      shown = url;
+      busy(form, false);
+      fire(document, 'g:navigate', { url: location.href, title: document.title });
+      return true;
+    }
+    /* fresh: asked anew even when this address is on the screen or seen before (the submit button of a form: a random pick, a ping); told: g:answer has been sent */
+    function load(url, fresh, told) {
       clearTimeout(timer);
       if (url === pending) return;
       if (ctl) { ctl.abort(); ctl = null; pending = ''; }
-      if (url === shown) { busy(form, false); return; }
+      if (url === shown && !fresh) { busy(form, false); return; }
+      if (!told && own(url)) return;
+      if (fresh) cache.delete(url);
       const c = ctl = new AbortController();
       pending = url;
       busy(form, true);
@@ -1691,15 +1760,43 @@
         fire(document, 'g:navigate', { url: new URL(shown, location.href).href, title: document.title });
       }, () => { if (ctl === c) { ctl = null; pending = ''; go(); } });
     }
-    const schedule = url => { clearTimeout(timer); timer = setTimeout(() => load(url), DELAY); };
+    const schedule = url => { clearTimeout(timer); if (url === shown || !own(url)) timer = setTimeout(() => load(url, false, true), DELAY); };   /* the page's own answer: at once */
+    /* A POST form of this page is sent in the background too: what is typed, the focus and the scroll stay. The address stays (an answer that redirects
+       to this page puts the new address into the history; one that redirects elsewhere is loaded there); a newer submit of the form cancels the older
+       one. An error, an answer that is not HTML (a file): the browser sends the form itself, as it would without the kit. */
+    const posts = new WeakMap(), passing = new WeakSet();   /* form -> the AbortController of its request on the way; a form the browser is sending itself (while its submit runs) */
+    function post(f, by) {
+      if (posts.has(f)) posts.get(f).abort();
+      const c = new AbortController(); posts.set(f, c);
+      by = by && by.form === f ? by : null;
+      const data = by ? new FormData(f, by) : new FormData(f);
+      const body = (f.enctype || '').toLowerCase() === 'multipart/form-data' ? data : new URLSearchParams([...data].filter(p => typeof p[1] === 'string'));
+      const native = () => { if (posts.get(f) !== c) return; posts.delete(f); busy(f, false); passing.add(f); try { if (by) f.requestSubmit(by); else f.requestSubmit(); } finally { passing.delete(f); } };
+      busy(f, true);
+      fetch(f.action, { method: 'POST', body, headers: { 'X-G-Fetch': '1' }, signal: c.signal, credentials: 'same-origin' }).then(res => {
+        const u = new URL(res.url), to = u.pathname + u.search;
+        if (posts.get(f) !== c) return;
+        if (res.status >= 500 || u.origin !== location.origin || !/html/i.test(res.headers.get('content-type') || '')) return native();
+        if (res.redirected && u.pathname !== location.pathname) { posts.delete(f); return location.assign(to); }   /* a GET: safe to ask again */
+        return res.text().then(html => {
+          if (posts.get(f) !== c) return;
+          posts.delete(f);
+          if (res.redirected && to !== here()) history.pushState(null, '', to);
+          if (!apply(html, f)) return native();
+          busy(f, false);
+          fire(document, 'g:navigate', { url: location.href, title: document.title });
+        });
+      }).catch(err => { if (err && err.name !== 'AbortError') native(); });
+    }
     const ours = e => !applying && ready() && e.target.form === form && e.target.name;
 
-    if (!bind()) return;
+    const hasGet = bind();
+    if (!hasGet && !$$('main form').some(f => pageForm(f, 'post'))) return;
     const main = document.querySelector('main');
     /* the markup of <main> as the server sent it: taken before anything here builds its parts, it is what the first answer is compared with */
     snap = main && main.cloneNode(true);
     shown = here();
-    history.replaceState(remember(), '');
+    if (hasGet) history.replaceState(remember(), '');
     if (snap) {   /* back to the first address: its answer is the page as it came */
       const d = document.implementation.createHTMLDocument(document.title);
       ['link[rel=canonical]', 'meta[name=description]'].forEach(s => { const n = document.head.querySelector(s); if (n) d.head.appendChild(n.cloneNode(true)); });
@@ -1714,19 +1811,38 @@
     });
     document.addEventListener('change', e => {
       if (!live || !ours(e)) return;
-      const url = write(!isText(e.target));   /* a choice is an entry; the end of an edit is the entry the edit made */
+      const url = write(!isText(e.target) || !e.isTrusted);   /* a choice is an entry (a value a script put in too); the end of an edit is the entry the edit made */
       editing = false;
       load(url);
     });
     document.addEventListener('focusout', e => { if (ours(e) && isText(e.target)) editing = false; });
-    /* capture, and first: the page's own submit handlers (an ajax loader, the kit's busy line) are not for this form */
-    document.addEventListener('submit', e => {
-      if (!ready() || e.target !== form) return;
-      e.preventDefault(); e.stopImmediatePropagation();
-      const url = write(!live || (e.isTrusted && !editing));   /* in a live form a submit sent by a script (submit on change) is not the end of an edit */
-      if (e.isTrusted) editing = false;
-      load(url);
-    }, true);
+    /* the clear cross of a field is one more button of the form: at once, the answer with that field empty (with a submit button: asked anew, as the button does) */
+    document.addEventListener('click', e => {
+      const b = e.target.closest && e.target.closest('[data-g-clear-input]'), i = b && clearInput(b);
+      if (!i || !ours({ target: i })) return;
+      editing = false;
+      load(write(true), !live);
+    });
+    /* on window, last: a script of the page that cancels the submit runs this form itself, and from then on it is left to that script */
+    addEventListener('submit', e => {
+      const f = e.target;
+      if (ready() && f === form) {
+        if (e.defaultPrevented) {
+          theirs.add(form); form = null;
+          clearTimeout(timer); if (ctl) { ctl.abort(); ctl = null; pending = ''; }
+          return;
+        }
+        e.preventDefault();
+        const url = write(!live || (e.isTrusted && !editing));   /* in a live form a submit sent by a script (submit on change) is not the end of an edit */
+        if (e.isTrusted) editing = false;
+        load(url, !live);
+        return;
+      }
+      if (!(f instanceof HTMLFormElement) || passing.has(f) || !snap || !pageForm(f, 'post')) return;
+      if (e.defaultPrevented) { theirs.add(f); return; }
+      e.preventDefault();
+      post(f, e.submitter);
+    });
     document.addEventListener('click', e => {
       if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || !ready()) return;
       const a = e.target.closest && e.target.closest('a[href]');

@@ -69,12 +69,53 @@ test('morph: a row that stays is the same node, a gone one slides out, a new one
     const box = document.createElement('div'); box.innerHTML = '<p><b>199</b> words</p><ol class="g-list"><li data-key="a">a</li><li data-key="b">b</li></ol>'; box.style.cssText = 'position:fixed;top:8px;left:8px;z-index:9999'; document.body.appendChild(box);   // in the viewport: only what is on the screen is animated
     const a = box.querySelector('[data-key=a]'), out = {};
     const p = Glass.morph(box, '<p><b>203</b> words</p><ol class="g-list"><li data-key="a">a</li><li data-key="c">c</li></ol>');
-    await new Promise(r => setTimeout(r, 40)); out.leaving = box.querySelectorAll('.g-morph-leave').length;
+    await new Promise(r => setTimeout(r, 40)); out.leaving = box.querySelectorAll('li.g-morph-ghost').length;   // the gone row fades out where it stood
     await p; await new Promise(r => setTimeout(r, 40));
-    out.keys = [...box.querySelectorAll('li')].map(l => l.dataset.key).join(); out.same = box.querySelector('[data-key=a]') === a;
+    out.keys = [...box.querySelectorAll('li:not(.g-morph-ghost)')].map(l => l.dataset.key).join(); out.same = box.querySelector('[data-key=a]') === a;
     out.entering = box.querySelector('[data-key=c]').classList.contains('g-morph-enter'); out.reel = box.querySelectorAll('.g-reel__strip').length;
-    await new Promise(r => setTimeout(r, 900)); out.plain = box.querySelector('b').textContent; box.remove();
+    await new Promise(r => setTimeout(r, 900)); out.plain = box.querySelector('b').textContent; out.ghosts = box.querySelectorAll('.g-morph-ghost').length; box.remove();
     return out;
   });
-  assert.deepEqual(r, { leaving: 1, keys: 'a,c', same: true, entering: true, reel: 3, plain: '203' });
+  assert.deepEqual(r, { leaving: 1, keys: 'a,c', same: true, entering: true, reel: 3, plain: '203', ghosts: 0 });
+});
+
+test('morph: a list row with other words is another row (it comes in, nothing lights up), a row whose number changed is the same row', async () => {
+  const r = await page.evaluate(async () => {
+    const box = document.createElement('div'); box.innerHTML = '<ol class="g-list"><li><a href="#x">кот</a></li><li>онлайн <b>5</b></li></ol>'; box.style.cssText = 'position:fixed;top:8px;left:8px;z-index:9999'; document.body.appendChild(box);
+    const counter = box.querySelectorAll('li')[1];
+    await Glass.morph(box, '<ol class="g-list"><li><a href="#y">дом</a></li><li>онлайн <b>7</b></li></ol>');
+    const li = box.querySelectorAll('li:not(.g-morph-ghost)');
+    const out = { words: box.querySelectorAll('.g-morph-word').length, entering: li[0].classList.contains('g-morph-enter'), counter: li[1] === counter, reel: box.querySelectorAll('.g-reel__strip').length };
+    box.remove();
+    return out;
+  });
+  assert.deepEqual(r, { words: 0, entering: true, counter: true, reel: 1 });
+});
+
+test('busy: a form with no card around it waits on itself, and stops waiting when its submit is handled with no request', async () => {
+  const r = await page.evaluate(async () => {
+    const f = document.createElement('form'); f.className = 'g-input-wrap'; f.innerHTML = '<input name="q">'; f.onsubmit = () => false; document.body.appendChild(f);
+    f.requestSubmit();
+    const during = f.hasAttribute('data-g-busy');
+    await new Promise(r => setTimeout(r, 100));
+    const out = { during, after: f.hasAttribute('data-g-busy') || f.hasAttribute('aria-busy') || !!f.querySelector('.g-busy-bar') };
+    f.remove();
+    return out;
+  });
+  assert.deepEqual(r, { during: true, after: false });
+});
+
+test('morph: a row that fades out is not measured by data-g-fit, the columns take the width of the new words at once', async () => {
+  const r = await page.evaluate(async () => {
+    const list = words => '<div data-g-fit><ol class="g-list">' + words.map(w => `<li data-key="${w}"><a href="#">${w}</a></li>`).join('') + '</ol></div>';
+    const box = document.createElement('div'); box.innerHTML = list(['ab', 'a rather long row of words']); box.style.cssText = 'position:fixed;top:8px;left:8px;width:600px;z-index:9999'; document.body.appendChild(box);
+    await new Promise(r => setTimeout(r, 100));
+    const width = () => parseFloat(box.querySelector('[data-g-fit]').style.getPropertyValue('--g-text-w'));
+    const w0 = width();
+    await Glass.morph(box, list(['ab', 'cd']));
+    const out = { ghosts: box.querySelectorAll('.g-morph-ghost').length, narrower: width() < w0 / 2 };
+    box.remove();
+    return out;
+  });
+  assert.deepEqual(r, { ghosts: 1, narrower: true });
 });

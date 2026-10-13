@@ -189,4 +189,121 @@ test('a form with a submit button waits for it', async () => {
   assert.equal(await page.evaluate(() => location.pathname + location.search), '/ping/example.org?v6=1');
   assert.equal(await page.textContent('#out'), 'example.org');
   assert.equal(await page.evaluate(() => window.marker), 1);
+  const entries = await page.evaluate(() => history.length);
+  await page.click('button');   // the same address once more: asked anew (a ping, a random pick), not taken from what is on the screen
+  await page.waitForTimeout(500);
+  assert.equal(fetches().filter(r => r.url === '/ping/example.org').length, 2);
+  assert.equal(await page.evaluate(() => history.length), entries);   // and no new history entry
+});
+
+test('the clear cross is one more button: the answer with that field empty comes at once', async () => {
+  const cross = () => page.evaluate(() => { const i = document.querySelector('input[name=word], input[name=host]'), w = document.createElement('span'); w.className = 'g-input-wrap'; i.replaceWith(w); w.append(i); w.insertAdjacentHTML('beforeend', '<button class="g-input-end" data-icon="x" data-g-clear-input></button>'); });
+  await cross();
+  const entries = await page.evaluate(() => history.length);
+  await page.click('[data-g-clear-input]');
+  await page.waitForTimeout(150);   // less than the pause in typing
+  assert.equal(await path_(), '/find');
+  assert.deepEqual(fetches().map(r => r.url), ['/find']);
+  assert.equal(await page.evaluate(() => history.length), entries + 1);   // an entry: back is the word again
+  await page.waitForTimeout(300);
+  assert.match(await result(), /^-nouns-1/);
+  // a form with a submit button: the cross sends it, as its button does
+  const ping = host => `<!doctype html><title>ping ${esc(host)}</title><script defer src="/glass-ui.js"></script><main id="m"><form method="get" action="/ping/{host}"><input name="host" value="${esc(host)}"><button>Ping</button></form><pre id="out">${esc(host) || '-'}</pre></main>`;
+  await page.route(ORIGIN + '/ping**', route => { const u = new URL(route.request().url()); requests.push({ url: u.pathname, fetchMode: route.request().headers()['x-g-fetch'] === '1' }); return route.fulfill({ contentType: 'text/html', body: ping(decodeURIComponent(u.pathname.split('/')[2] || '')) }); });
+  await page.goto(ORIGIN + '/ping/example.org');
+  await page.waitForFunction(() => window.Glass);
+  await cross();
+  await page.click('[data-g-clear-input]');
+  await page.waitForTimeout(300);
+  assert.equal(await page.evaluate(() => location.pathname + location.search), '/ping');
+  assert.equal(await page.textContent('#out'), '-');
+  assert.deepEqual(errors, []);
+});
+
+test('a box in the header whose answer the page works out itself: the address is the form\'s, nothing is asked', async () => {
+  const home = q => `<!doctype html><title>home</title><script defer src="/glass-ui.js"></script><nav><form action="/"><input name="q" type="search" value="${esc(q)}"></form></nav><main id="m"><p id="shown"></p><a id="page" href="/about">about</a></main><script>
+    const f = document.querySelector('form'), shown = document.getElementById('shown'), show = () => { shown.textContent = f.q.value; };
+    show();
+    f.addEventListener('g:answer', e => { e.preventDefault(); show(); });
+  </script>`;
+  await page.route(ORIGIN + '/**', route => {
+    const u = new URL(route.request().url());
+    if (/\.(js|css)$/.test(u.pathname)) return route.fallback();
+    requests.push({ url: decodeURIComponent(u.pathname), fetchMode: route.request().headers()['x-g-fetch'] === '1' });
+    return route.fulfill({ contentType: 'text/html', body: home(u.searchParams.get('q') || '') });
+  });
+  await page.goto(ORIGIN + '/');
+  await page.waitForFunction(() => window.Glass);
+  await page.click('input[name=q]');
+  await page.keyboard.type('ко');
+  assert.equal(await path_(), '/?q=ко');   // the address of the form
+  assert.equal(await page.textContent('#shown'), 'ко');   // at once, with no pause and no request
+  await page.evaluate(() => { const i = document.querySelector('input[name=q]'); i.value = 'дом'; i.dispatchEvent(new Event('change', { bubbles: true })); });   // a script's choice: an entry
+  assert.equal(await path_(), '/?q=дом');
+  assert.equal(await page.textContent('#shown'), 'дом');
+  await page.goBack();
+  await page.waitForTimeout(100);
+  assert.equal(await path_(), '/?q=ко');
+  assert.equal(await page.inputValue('input[name=q]'), 'ко');
+  assert.equal(await page.textContent('#shown'), 'ко');
+  await page.click('#page');   // a link to another page is the browser's
+  await page.waitForURL(ORIGIN + '/about');
+  assert.deepEqual(fetches(), []);
+  assert.deepEqual(errors, []);
+});
+
+test('a form with no action, or whose submit the page cancels, is the page\'s', async () => {
+  const own = '<!doctype html><script defer src="/glass-ui.js"></script><main><form id="a" method="get"><input name="q"></form>'
+    + '<form id="b" method="get" action="/own"><input name="w"><button>Go</button></form><p id="out"></p></main>'
+    + '<script>document.getElementById("b").addEventListener("submit", e => { e.preventDefault(); out.textContent += "page:" + e.target.w.value + ";"; });</script>';
+  await page.route(ORIGIN + '/own**', route => { requests.push({ url: new URL(route.request().url()).pathname, fetchMode: route.request().headers()['x-g-fetch'] === '1' }); return route.fulfill({ contentType: 'text/html', body: own }); });
+  await page.goto(ORIGIN + '/own');
+  await page.waitForFunction(() => window.Glass);
+  await page.fill('#a input', 'x');
+  await page.waitForTimeout(500);
+  assert.equal(await page.evaluate(() => location.pathname + location.search), '/own');   // no action: not bound
+  await page.fill('#b input', 'y');
+  await page.click('#b button');
+  await page.fill('#b input', 'z');
+  await page.click('#b button');
+  await page.waitForTimeout(500);
+  assert.equal(await page.textContent('#out'), 'page:y;page:z;');   // the page's handler gets every submit
+  assert.equal(await page.evaluate(() => location.pathname + location.search), '/own');
+  assert.equal(fetches().length, 0);
+});
+
+test('a POST form of the page is sent in the background: the focus and what is typed stay, the address stays', async () => {
+  const posted = [];
+  const page2 = (text, extra) => `<!doctype html><title>stat</title><script defer src="/glass-ui.js"></script><main id="m"><aside><form id="p" method="post" action="/stat"><textarea name="t">${esc(text)}</textarea><input name="u"></form></aside>${extra || ''}<section id="out">${text ? 'words: ' + esc(text).split(/\s+/).length : 'nothing'}</section></main>`;
+  await page.route(ORIGIN + '/stat**', async route => {
+    const r = route.request();
+    if (r.method() === 'POST') {
+      const t = new URLSearchParams(r.postData()).get('t') || '', u = new URLSearchParams(r.postData()).get('u') || '';
+      posted.push({ t, fetchMode: r.headers()['x-g-fetch'] === '1' });
+      if (u === 'file') return route.fulfill({ contentType: 'text/xml', body: '<x>' + esc(t) + '</x>' });
+      return route.fulfill({ contentType: 'text/html', body: page2(t, u === 'outside' ? '<p>outside every region</p>' : '') });
+    }
+    return route.fulfill({ contentType: 'text/html', body: page2('') });
+  });
+  await page.goto(ORIGIN + '/stat');
+  await page.waitForFunction(() => window.Glass);
+  await page.evaluate(() => { window.marker = 1; });
+  await page.click('textarea');
+  await page.keyboard.type('one two three');
+  await page.evaluate(() => document.getElementById('p').requestSubmit());   // what a script sends (submit on change)
+  await page.waitForFunction(() => document.getElementById('out').textContent === 'words: 3');
+  assert.deepEqual(posted, [{ t: 'one two three', fetchMode: true }]);
+  assert.deepEqual(await page.evaluate(() => [document.activeElement.name, document.activeElement.value, window.marker, location.pathname + location.search]), ['t', 'one two three', 1, '/stat']);
+  await page.fill('input[name=u]', 'outside');   // a change outside every region: <main> is morphed as a whole, the form being sent stays as it is
+  await page.evaluate(() => { const i = document.createElement('i'); i.className = 'part'; document.getElementById('p').append(i); });   // what scripts built in it (the kit's parts of its fields)
+  await page.click('textarea');
+  await page.keyboard.type(' four');
+  await page.evaluate(() => document.getElementById('p').requestSubmit());
+  await page.waitForFunction(() => document.getElementById('out').textContent === 'words: 4');
+  await page.waitForTimeout(600);   // what leaves is gone by now
+  assert.deepEqual(await page.evaluate(() => [document.activeElement.name, !!document.querySelector('main > p'), !!document.querySelector('#p > .part:not(.g-morph-ghost)'), window.marker]), ['t', true, true, 1]);
+  await page.fill('input[name=u]', 'file');   // an answer that is not a page: the browser sends the form itself
+  await page.evaluate(() => document.getElementById('p').requestSubmit());
+  await page.waitForFunction(() => !window.marker && document.contentType === 'text/xml');
+  assert.deepEqual(posted.map(p => p.fetchMode), [true, true, true, false]);
 });
