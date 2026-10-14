@@ -4,7 +4,11 @@
 <link rel="stylesheet" href="../glass-morph.css">
 <script defer src="../glass-ui.js"></script>
 <script defer src="../glass-morph.js"></script>
-<style>body { margin: 0; } #bar { position: sticky; top: 0; height: 40px; } main { width: 400px; }</style>
+<style>body { margin: 0; }
+  /* the page's own: its tiles are links around a glass card; what comes in or goes is the link, the card fades itself (a link that fades would take its blur away) */
+  #tiles > a.g-morph-enter, #tiles > a.g-morph-ghost { animation: none !important; }
+  #tiles > a.g-morph-enter > article { animation: g-morph-in var(--g-morph-enter) ease-out var(--g-morph-d, 0ms) backwards; }
+  #tiles > a.g-morph-ghost > article { animation: g-morph-away var(--g-morph-run) ease-out var(--g-morph-d, 0ms) both; } #bar { position: sticky; top: 0; height: 40px; } main { width: 400px; }</style>
 </head>
 <body class="g-root" data-g-morph>
 <nav id="bar"><b id="clock">0</b></nav>
@@ -12,7 +16,7 @@
   <p>Found: <b id="count">3</b> <span id="deep"><i>5</i></span></p>
   <div id="res"><ol class="g-list"><li>alpha</li><li>beta</li><li>gamma</li></ol></div>
   <div id="own" data-g-morph><ol class="g-list"><li>one</li><li>two</li></ol></div>
-  <div id="tiles"><a href="#t1"><article style="backdrop-filter: blur(4px); padding: 8px">tile one</article></a></div>
+  <div id="tiles"><a href="#t1" data-key="t1"><article style="backdrop-filter: blur(4px); padding: 8px">tile one</article></a></div>
   <ol class="g-list" id="more"><li>m1</li><li hidden>m2</li></ol>
   <p id="below">below</p>
   <details id="shut"><summary>more</summary><div id="inside"><p>hidden text</p></div></details>

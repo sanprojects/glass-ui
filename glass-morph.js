@@ -27,7 +27,11 @@
  * <div data-g-morph>   whatever a script, a framework or the page changes in it is animated as Glass.morph does (rows go, come in, glide, a
  *                      number turns); its new nodes stay the page's. Glass.watch(el) for a box made later by hand (returns a function that stops).
  * <body data-g-morph>  the whole page: not while it loads, a box with its own data-g-morph in it animates its own changes, what is not content
- *                      is left out (see ASIDE), data-g-no-morph leaves a part out.
+ *                      is left out (ASIDE: popover, dialog, svg, edited text, aria-hidden), data-g-no-morph leaves a part out.
+ * Glass.morphSkip = 'selector'   parts that are not content for it (a UI kit's widgets that run by themselves; glass-ui.js sets its own).
+ * The animations are CSS (glass-morph.css): .g-morph-enter (what comes in) and .g-morph-ghost (what goes), their timing in custom properties
+ * that inherit (--g-morph-d: when, --g-morph-enter / --g-morph-run: how long). A page can move them to a part of the element in its own CSS
+ * (an element that fades is a backdrop root: glass, backdrop-filter, in it blurs nothing until the fade ends; let the glass fade itself).
  */
 (function (global) {
   'use strict';
@@ -45,7 +49,7 @@
     /* the paired elements stand in another order than before: they are moved, not only changed */
     const reordered = ps => ps.slice().sort((a, b) => a[0] - b[0]).some((p, k, a) => k && p[1] < a[k - 1][1]);
     const isNum = e => !e.children.length && NUM.test(e.textContent);
-    const AUX = /(^|\s)(g-busy-bar|g-busy-lines|g-morph-ghost)(\s|$)/;   /* the kit's own passing parts in a box: not content */
+    const AUX = /(^|\s)g-morph-ghost(\s|$)/;   /* what fades out of the last update: not content */
     const kids = p => [...p.children].filter(c => !SKIP.has(c.tagName) && !AUX.test(c.className));
     const later = (el, cls, ms, then) => setTimeout(() => { el.classList.remove(cls); if (!el.className) el.removeAttribute('class'); if (then) then(); }, ms);
     /* the animations of an update start with the first frame drawn after it, up to ~100 ms after the update itself (a large one): what is cleared when they
@@ -287,24 +291,6 @@
        a read here, after the writes of the update, would make the page work out its styles once more). They fade out in `ms` and are taken away, all at once,
        at `until`: taking one away lays the page out, so they go when nothing moves any more, and in one go. Each starts with the new one of the
        place it stood (wave: viewport x, y -> ms of delay), on the same curve (ease) and the same way (to the right), and fades out in run(delay) ms. */
-    /* What fades: the element itself, unless glass is in it. An element that fades is a backdrop root: the glass in it (backdrop-filter) would
-       blur nothing behind it until the fade is over, and its blur would come back at once at the end. So what fades is split down to the glass,
-       up to 3 levels deep: the glass fades itself, and each part around it fades too (a wrapper, <a><article>, has nothing of its own to show;
-       a grid that comes in as a whole fades tile by tile). An element with text of its own is not split. Read with the other reads; at most
-       600 elements are looked at in one update */
-    const glassy = el => { const cs = getComputedStyle(el), b = cs.backdropFilter || cs.webkitBackdropFilter; return !!b && b !== 'none'; };
-    const ownText = el => { for (const n of el.childNodes) if (n.nodeType === 3 && n.nodeValue.trim()) return true; return false; };
-    function fader() {
-      let budget = 600;
-      const split = (e, depth) => {   /* [what fades, whether glass is in it] */
-        if (--budget < 0) return [[e], false];
-        if (glassy(e)) return [[e], true];
-        if (depth >= 3 || !e.childElementCount || ownText(e)) return [[e], false];
-        const parts = [...e.children].map(c => split(c, depth + 1));
-        return parts.some(x => x[1]) ? [parts.flatMap(x => x[0]), true] : [[e], false];
-      };
-      return e => split(e, 0)[0];
-    }
     function ghost(list, run, until, wave, ease) {
       /* parent -> [how many ghosts it still holds, static, its own isolation]. Meanwhile a static parent is positioned for them, and isolated: the
          ghosts stand under its content (z-index -1), what comes in at their place covers them, and they stay over its background */
@@ -315,16 +301,17 @@
         const hp = held.get(p); hp[0]++;
         if (hp[1]) p.style.position = 'relative';
         e.classList.remove('g-morph-leave', 'g-morph-enter'); e.removeAttribute('data-g-new'); e.style.animationDelay = '';   /* a row that was still coming in (newRows) only goes now */
-        e.querySelectorAll('.g-morph-enter').forEach(c => c.classList.remove('g-morph-enter'));   /* the glass of a wrapper that was still coming in */
         Object.assign(e.style, { position: 'absolute', left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px', margin: '0', pointerEvents: 'none', boxSizing: 'border-box', counterIncrement: 'none', counterSet: 'none', counterReset: 'none', zIndex: '-1' });
+        /* it fades out by the CSS of .g-morph-ghost (glass-morph.css): when (--g-morph-d, with the new one of its place) and how long (--g-morph-run).
+           Both inherit: a page can put that animation on a part of it instead (the card in a link, ...) */
+        const d = wave(vx, vy);
+        e.style.setProperty('--g-morph-d', d + 'ms'); e.style.setProperty('--g-morph-run', run(d) + 'ms');
         e.classList.add('g-morph-ghost'); e.setAttribute('aria-hidden', 'true'); e.inert = true;
         p.appendChild(e);
         e._done = () => { if (!e.parentNode) return; e.remove(); if (!--hp[0]) { if (hp[1]) p.style.position = ''; p.style.isolation = hp[2]; } };
-        all.push([e, wave(vx, vy)]);   /* with the new one of its place */
+        all.push(e);
       });
-      const fades = fader(), what = all.map(([e]) => fades(e));   /* read once all of them are in: one pass of styles */
-      all.forEach(([e, d], i) => what[i].forEach(f => f.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(24px)' }], { duration: run(d), delay: d, easing: ease, fill: 'both' })));
-      if (all.length) settled(() => setTimeout(() => all.forEach(([e]) => e._done()), until));   /* a timer, not the end of the animation: one in a hidden pane does not finish */
+      if (all.length) settled(() => setTimeout(() => all.forEach(e => e._done()), until));   /* a timer, not the end of the animation: one in a hidden pane does not finish */
     }
     /* the tuning of a box (its custom properties, in ms), read once per update: a style read among the writes of the update would make the page work out its styles again */
     function timings(target) {
@@ -384,7 +371,6 @@
           }
           /* where each row that goes is drawn: in its parent, where it stood in it (the parent may have moved with the update), as the new ones are read */
           ctx.ghosts.forEach(g => { const p = g[1]; if (!p.isConnected) return; const pr = p.getBoundingClientRect(); g[7] = pr.left + p.clientLeft - p.scrollLeft + g[2]; g[8] = pr.top + p.clientTop - p.scrollTop + g[3]; });
-          const fades = fader(), fadeOf = new Map(enter.map(e => [e, fades(e)]));   /* what of each one fades in (down to the glass in it) */
           if (ctx.onRead) ctx.onRead();   /* a watched box reads where all of it stands now, against this same layout */
           /* what moves and what comes in finish together: one end for all, the later of the glide and the last staggered entry */
           scope.forEach(s => s.removeAttribute('data-g-measure'));   /* the reads are done: what is out of the viewport is skipped again in the next frame */
@@ -416,9 +402,9 @@
           }
           enter.forEach(e => {
             const d = waveOf(e);
-            fadeOf.get(e).forEach(f => { f.classList.add('g-morph-enter'); f.style.setProperty('--g-morph-d', d + 'ms'); f.style.setProperty('--g-morph-enter', (end - d) + 'ms'); });   /* a later start, a shorter run: all end at once */
+            e.classList.add('g-morph-enter'); e.style.setProperty('--g-morph-d', d + 'ms'); e.style.setProperty('--g-morph-enter', (end - d) + 'ms');   /* a later start, a shorter run: all end at once; both inherit, as for what goes */
           });
-          if (enter.length) settled(() => enter.forEach(e => fadeOf.get(e).forEach(f => later(f, 'g-morph-enter', end + 50, () => { f.style.removeProperty('--g-morph-enter'); f.style.removeProperty('--g-morph-d'); }))));
+          if (enter.length) settled(() => enter.forEach(e => later(e, 'g-morph-enter', end + 50, () => { e.style.removeProperty('--g-morph-enter'); e.style.removeProperty('--g-morph-d'); })));
           const again = flash.filter(([e, own]) => !own && e.classList.contains('g-morph-flash'));   /* a flash that still runs starts over: one reflow for all of them */
           if (again.length) { again.forEach(([e]) => e.classList.remove('g-morph-flash')); void again[0][0].offsetWidth; }
           flash.forEach(([e, own]) => {
@@ -509,16 +495,20 @@
        animated while it loads, only what changes once it is loaded and drawn; an element that changes again and again (a clock, a running counter)
        and a page that changes on every frame (a game, a live chart) are left as they are while they run; what is not content (ASIDE) never is. */
     const WATCHED = new Map();   /* box -> watcher */
-    const OWN = /(^|\s)(g-busy-bar|g-busy-lines|g-morph-ghost|g-reel|g-morph-word)(\s|$)/;   /* the kit's own passing parts: their coming and going is not a change */
-    const OWN_IN = '.g-reel, .g-morph-word, .g-morph-ghost, .g-busy-bar, .g-busy-lines';
-    /* Not the page's content: the kit's parts that run by themselves (a select, a toast, a tooltip, the "more" button, a pager, the ruler, the cross
-       of a field, a liquid background, ...), what floats over the page (popover, dialog), graphics (svg), what the user edits, decoration
-       (aria-hidden) and what the page marked data-g-no-morph. A change in it, or one that only puts it in or takes it out, is no change */
-    const ASIDE = '.g-select, .g-tooltip, .g-toasts, .g-more, .g-clamp__btn, .g-ruler, .g-input-wrap, [data-g-pager], [data-g-file], [data-g-nav-auto], [data-g-liquid], ' +
-      '[data-g-anim-loop], [data-g-anim-random], [role="alert"], [popover], dialog, svg, [contenteditable]:not([contenteditable="false"]), select, textarea, ' +
-      '[aria-hidden="true"], [data-g-no-morph]';
+    const OWN = /(^|\s)(g-morph-ghost|g-reel|g-morph-word)(\s|$)/;   /* the library's own passing parts: their coming and going is not a change */
+    const OWN_IN = '.g-reel, .g-morph-word, .g-morph-ghost';
+    /* Not the page's content: what floats over the page (popover, dialog), graphics (svg), what the user edits, decoration (aria-hidden) and what
+       the page marked data-g-no-morph; plus Glass.morphSkip, a selector the host sets (a UI kit: its widgets that run by themselves, glass-ui.js
+       sets its own). A change in it, or one that only puts it in or takes it out, is no change */
+    const ASIDE_BASE = '[popover], dialog, svg, [contenteditable]:not([contenteditable="false"]), select, textarea, [aria-hidden="true"], [data-g-no-morph]';
     const INERT = 'script, style, template, noscript, link, meta, datalist';   /* not drawn: a <style> whose text a script sets is no text to light up */
-    const NOT_MINE = OWN_IN + ', ' + ASIDE + ', ' + INERT, NOT_SHOWN = ASIDE + ', ' + INERT;
+    let ASIDE = ASIDE_BASE, NOT_MINE = '', NOT_SHOWN = '', skipOf = null;
+    const skips = () => {   /* the selectors, again only when the host's selector changed */
+      if (skipOf === (kit.morphSkip || '')) return;
+      skipOf = kit.morphSkip || '';
+      ASIDE = ASIDE_BASE + (skipOf ? ', ' + skipOf : '');
+      NOT_MINE = OWN_IN + ', ' + ASIDE + ', ' + INERT; NOT_SHOWN = ASIDE + ', ' + INERT;
+    };
     /* a record of what the kit wrote itself or of what is not content: in one of those, or only those came or went (text nodes with them: a board that is a number again) */
     function ownRecord(r, seen) {
       const t = r.target.nodeType === 1 ? r.target : r.target.parentElement;
@@ -565,6 +555,7 @@
        few thousand elements in it) */
     function snapshot(W) {
       if (!W.box.isConnected) return;
+      skips();
       PX = scrollX; PY = scrollY;
       const sx = PX, sy = PY, cache = new Map(), lazy = new Map(), b = W.box.getBoundingClientRect(), stuck = new Set(), page = W.page;
       W.at = Object.assign({ x: b.left + sx, y: b.top + sy, h: b.height, seen: onScreen(b) }, frame(W.box));
@@ -642,6 +633,7 @@
     function changed(W, recs) {
       const box = W.box;
       if (!box.isConnected) return;
+      skips();
       const ours = new Map(), aside = new Map();   /* per target: most records of an update have one (the list) */
       recs = recs.filter(r => { const t = elOf(r.target); if (!t) return false; let v = ours.get(t); if (v === undefined) ours.set(t, v = owner(t) === box); return v; });   /* a box watched by itself in this one animates its own */
       const mine = recs.length;
@@ -651,7 +643,7 @@
       const shownRows = [];
       recs = recs.filter(r => {
         if (r.type !== 'attributes') return true;
-        if (r.attributeName === 'hidden' && r.oldValue !== null && !r.target.hidden && r.target.matches('.g-list > li')) shownRows.push(r.target);
+        if (r.attributeName === 'hidden' && r.oldValue !== null && !r.target.hidden && r.target.tagName === 'LI') shownRows.push(r.target);
         else stale(W);
         return false;
       });

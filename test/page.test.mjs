@@ -116,20 +116,14 @@ test('glass-morph.js alone (no glass-ui.js): a watched box and Glass.morph anima
   assert.deepEqual({ ...r, errs }, { watched: { ghosts: 'alpha', entering: 'gamma', reels: 1 }, done: true, api: 'morph,watch', errs: [] });
 });
 
-test('page: glass in a wrapper (<a><article>) fades itself and keeps its blur (a wrapper that fades would take the blur away)', async () => {
-  const r = await change(`document.getElementById('tiles').innerHTML += '<a href="#t2"><article style="backdrop-filter: blur(4px); padding: 8px">tile two</article></a>';
-    await new Promise(r => setTimeout(r, 20)); const a = document.querySelector('#tiles a[href="#t2"]'), art = a.firstElementChild;
-    out.on = { a: a.classList.contains('g-morph-enter'), article: art.classList.contains('g-morph-enter'), blur: getComputedStyle(art).backdropFilter };`);
-  assert.deepEqual({ on: r.on, after: await page.evaluate(() => getComputedStyle(document.querySelector('#tiles a[href="#t2"] article')).backdropFilter) },
-    { on: { a: false, article: true, blur: 'blur(4px)' }, after: 'blur(4px)' });
-});
-
-test('page: a grid of glass that comes in as a whole fades tile by tile (the grid that fades would take the blur of all its glass away)', async () => {
-  const r = await change(`const g = document.createElement('div'); g.id = 'grid2'; g.innerHTML = '<a href="#g1"><article style="backdrop-filter: blur(4px)">g1</article></a><a href="#g2"><article style="backdrop-filter: blur(4px)">g2</article></a>';
-    document.getElementById('tiles').after(g); await new Promise(r => setTimeout(r, 20));
-    out.on = { grid: g.classList.contains('g-morph-enter'), links: [...g.querySelectorAll('a.g-morph-enter')].length, glass: [...g.querySelectorAll('article.g-morph-enter')].length };`);
-  await page.evaluate(() => document.getElementById('grid2').remove());
-  assert.deepEqual(r.on, { grid: false, links: 0, glass: 2 });
+test('page: a page moves the fade to a part of what comes in or goes, in its own CSS (the timing inherits); the library only marks the element', async () => {
+  const r = await change(`const t = document.getElementById('tiles');
+    t.insertAdjacentHTML('beforeend', '<a href="#t2" data-key="t2"><article style="backdrop-filter: blur(4px); padding: 8px">tile two</article></a>');
+    t.querySelector('a[href="#t1"]').remove();
+    await new Promise(r => setTimeout(r, 20));
+    const a = t.querySelector('a[href="#t2"]'), g = t.querySelector('a.g-morph-ghost'), names = e => e.getAnimations().map(x => x.animationName).join();
+    out.on = { link: a.classList.contains('g-morph-enter'), linkRuns: names(a), cardRuns: names(a.firstElementChild), ghostRuns: g && names(g), ghostCardRuns: g && names(g.firstElementChild) };`);
+  assert.deepEqual(r.on, { link: true, linkRuns: '', cardRuns: 'g-morph-in', ghostRuns: '', ghostCardRuns: 'g-morph-away' });
 });
 
 test('page: new words light up once (putting the text back is no change: it used to light them up again and again)', async () => {
