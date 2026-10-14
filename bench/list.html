@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<!-- One list, animated by one of: nothing, auto-animate, a box watched by glass-morph, the page watched by glass-morph (bench/vs-auto-animate.mjs).
+     ?mode=none|aa|box|page&n=300. Only glass-morph.css is on the page (the kit is not needed by either). -->
+<html lang="en"><head><meta charset="utf-8"><title>List bench</title>
+<link rel="stylesheet" href="../glass-morph.css">
+<style>
+  body { margin: 0; font: 15px/1.4 system-ui, sans-serif; }
+  #wrap { width: 460px; padding: 8px; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { display: flex; justify-content: space-between; padding: 4px 10px; margin: 2px 0; border-radius: 6px; background: #eef1f6; }
+</style>
+<script defer src="../glass-morph.js"></script>
+</head><body>
+<div id="wrap"><ul id="list"></ul></div>
+<script type="module">
+  import autoAnimate from '../node_modules/@formkit/auto-animate/index.mjs';
+  const q = new URLSearchParams(location.search), mode = q.get('mode') || 'none', n = +q.get('n') || 300;
+  const list = document.getElementById('list'), wrap = document.getElementById('wrap');
+  let seq = 0, rnd = 1;
+  const random = () => (rnd = (rnd * 16807) % 2147483647) / 2147483647;   /* the same "random" ops in every mode */
+  const row = () => { const li = document.createElement('li'); const k = ++seq; li.dataset.key = k; li.innerHTML = '<span>word ' + k + '</span><b>' + Math.round(random() * 1000) + '</b>'; return li; };
+  for (let i = 0; i < n; i++) list.appendChild(row());
+  const ops = {
+    /* a framework moves the rows it keeps: the same nodes, another order */
+    shuffle() { const a = [...list.children]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } a.forEach(e => list.appendChild(e)); },
+    /* a framework takes k rows out and puts k new ones in, somewhere */
+    churn(k = Math.max(1, Math.round(n / 10))) { for (let i = 0; i < k; i++) { const c = list.children; c[Math.floor(random() * c.length)].remove(); } for (let i = 0; i < k; i++) { const c = list.children; list.insertBefore(row(), c[Math.floor(random() * (c.length + 1))] || null); } },
+    /* the first visible rows change: one goes at the top, one comes in (a search result that changes as you type) */
+    top() { list.firstElementChild.remove(); list.insertBefore(row(), list.children[2] || null); },
+    /* a server answer: all the HTML written anew (the same rows but 10% new, by their text) */
+    html() { const a = [...list.children].map(e => e.outerHTML); for (let i = 0; i < a.length; i += 10) a[i] = row().outerHTML; list.innerHTML = a.join(''); },
+  };
+  const go = () => {
+    if (mode === 'aa') autoAnimate(list, { duration: 320, easing: 'ease-out' });
+    if (mode === 'box') { wrap.setAttribute('data-g-morph', ''); Glass.watch(wrap); }
+    if (mode === 'page') { document.body.setAttribute('data-g-morph', ''); Glass.watch(document.body); }
+    window.bench = { ops, mode, n, ready: true };
+  };
+  if (document.readyState === 'complete') go(); else addEventListener('load', go);
+</script>
+</body></html>

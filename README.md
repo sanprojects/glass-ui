@@ -126,7 +126,7 @@ Also in the demo, without screenshots here:
 | File | Purpose |
 |---|---|
 | `glass-ui.css` / `.js` | the kit |
-| `glass-morph.css` / `.js` | Morph: `Glass.morph`, `Glass.watch`, `data-g-morph` (works on its own too) |
+| `glass-morph.css` / `.js` | Morph: `Glass.morph`, `Glass.watch`, `data-g-morph` (works on its own too; `node bench/vs-auto-animate.mjs` compares it with auto-animate) |
 | `glass-icons.css` | icon pack, used as `data-icon="name"` |
 | `glass-ui-light.css` | light theme: `Glass.setTheme('light' \| 'dark' \| 'auto')` |
 | `glass-ui-liquid.js` | optional animated background |

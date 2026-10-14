@@ -340,7 +340,9 @@
               else raw.set(e, [0, f.at.top - l.top, l, false]);
             });
             /* parents first: an element inside a gliding box rides with it and glides only by what is its own (else it would go twice the way) */
-            [...raw.keys()].sort((x, y) => x.compareDocumentPosition(y) & 4 ? -1 : 1).forEach(e => {
+            const deep = new Map();   /* parents first: by depth (the order among siblings does not matter; a sort by document order costs ~8 ms for 1000 siblings) */
+            raw.forEach((r, e) => { let d = 0; for (let p = e; p && p !== target; p = p.parentElement) d++; deep.set(e, d); });
+            [...raw.keys()].sort((x, y) => deep.get(x) - deep.get(y)).forEach(e => {
               if (glide.length + away.length >= MAX) return;
               const r = raw.get(e);
               let [dx, dy, l, seen] = r;
@@ -493,9 +495,9 @@
     const INERT = 'script, style, template, noscript, link, meta, datalist';   /* not drawn: a <style> whose text a script sets is no text to light up */
     const NOT_MINE = OWN_IN + ', ' + ASIDE + ', ' + INERT, NOT_SHOWN = ASIDE + ', ' + INERT;
     /* a record of what the kit wrote itself or of what is not content: in one of those, or only those came or went (text nodes with them: a board that is a number again) */
-    function ownRecord(r) {
+    function ownRecord(r, seen) {
       const t = r.target.nodeType === 1 ? r.target : r.target.parentElement;
-      if (t && t.closest(NOT_MINE)) return true;
+      if (t) { let v = seen.get(t); if (v === undefined) seen.set(t, v = !!t.closest(NOT_MINE)); if (v) return true; }   /* looked up once per target */
       if (r.type !== 'childList') return false;
       const els = [...r.addedNodes, ...r.removedNodes].filter(n => n.nodeType === 1);
       return els.length > 0 && els.every(n => OWN.test(n.className) || n.matches(NOT_SHOWN));
@@ -558,7 +560,7 @@
             if (!rs.length) continue;   /* not drawn, nor anything in it */
             if (keep) {
               const r = e.getBoundingClientRect(), holds = e.tagName !== 'LI' && e.firstElementChild;   /* a box rows may go back into (not a row: nothing goes back into a row) */
-              const c = { x: r.left + sx, y: r.top + sy, w: r.width, h: r.height, text: plain(e) };
+              const c = { x: r.left + sx, y: r.top + sy, w: r.width, h: r.height };
               const pos = page || holds ? getComputedStyle(e).position : null;
               if (holds) Object.assign(c, frame(e, pos));
               /* on the page: what stays in the window as the page scrolls (fixed, sticky, or in one of them) is kept where it is in the window; what
@@ -615,9 +617,10 @@
     function changed(W, recs) {
       const box = W.box;
       if (!box.isConnected) return;
-      recs = recs.filter(r => owner(r.target) === box);   /* a box watched by itself in this one animates its own */
+      const ours = new Map(), aside = new Map();   /* per target: most records of an update have one (the list) */
+      recs = recs.filter(r => { const t = elOf(r.target); if (!t) return false; let v = ours.get(t); if (v === undefined) ours.set(t, v = owner(t) === box); return v; });   /* a box watched by itself in this one animates its own */
       const mine = recs.length;
-      recs = recs.filter(r => !ownRecord(r));
+      recs = recs.filter(r => !ownRecord(r, aside));
       if (recs.length < mine) stale(W);   /* the kit's parts may have moved what is around them */
       /* a row that was hidden and is shown (Show more) comes in; anything else that shows or hides only moves things */
       const shownRows = [];
@@ -656,7 +659,7 @@
         }
       });
       const fresh = [...came].filter(n => !W.cache.has(n));   /* one that only moved is not new: its place is kept */
-      const was = e => olds.has(e) ? olds.get(e) : e === box ? W.text : (W.cache.get(e) || {}).text;   /* the text it had */
+      const was = e => olds.has(e) ? olds.get(e) : e === box ? W.text : undefined;   /* the text it had: what the records took out of it */
       const retext = [...texts].filter(e => { const t = was(e); return box.contains(e) && !e.children.length && t != null && t !== e.textContent; });
       if (!gone.length && !fresh.length && !retext.length && !shownRows.length && ![...came].some(n => W.cache.has(n))) { fits(); stale(W); return; }   /* nothing that shows (a text that is the same again) */
       let o = {};
@@ -678,7 +681,12 @@
       const oi = index(oldTops), ni = index(fresh), g = { map: new Map(), claimed: new Set() };
       ni.forEach((n, k) => { const e = oi.get(k); if (n && e) { g.map.set(n, e); g.claimed.add(e); } });
       const pair = (a, b) => { pairs.set(b, a); back.set(a, b); };
-      const same = (a, b) => { const x = kids(a), y = kids(b); x.forEach((c, i) => { if (y[i]) { pair(c, y[i]); same(c, y[i]); } }); };
+      /* two equal subtrees: what is in them is paired one by one only where an element whose place is kept is in them (it may glide); else the new
+         one stands for all of the old one (nothing in it goes or comes: eqOld / eqNew) */
+      const holds = new Set();
+      W.cache.forEach((c, e) => { for (let p = e.parentElement; p && p !== box && !holds.has(p); p = p.parentElement) holds.add(p); });
+      const eqOld = new Set(), eqNew = new Set();
+      const same = (a, b) => { if (!holds.has(a)) { eqOld.add(a); eqNew.add(b); return; } const x = kids(a), y = kids(b); x.forEach((c, i) => { if (y[i]) { pair(c, y[i]); same(c, y[i]); } }); };
       const walk = (oldL, newL) => {
         const m = match(oldL, newL, o, () => textOf(oldL) === textOf(newL));
         m.pairs.forEach(([i, j]) => { const a = m.oldL[i], b = m.newL[j]; pair(a, b); if (FORM.has(a.tagName)) return; if (a.isEqualNode(b)) same(a, b); else walk(kids(a), kids(b)); });
@@ -730,7 +738,7 @@
       const carry = new Set();
       pairs.forEach((a, b) => { for (let p = b.parentElement; p && p !== box && !carry.has(p); p = p.parentElement) carry.add(p); });
       W.cache.forEach((c, e) => { if (e.isConnected) for (let p = e.parentElement; p && p !== box && !carry.has(p); p = p.parentElement) carry.add(p); });
-      const into = n => { if (OWN.test(n.className)) return; if (!force.has(n) && (pairs.has(n) || W.cache.has(n) || carry.has(n))) kids(n).forEach(into); else ctx.entering.push(n); };   /* a board that turns or marked words are the kit's, not new content */
+      const into = n => { if (OWN.test(n.className) || eqNew.has(n)) return; if (!force.has(n) && (pairs.has(n) || W.cache.has(n) || carry.has(n))) kids(n).forEach(into); else ctx.entering.push(n); };   /* a board that turns or marked words are the kit's, not new content */
       fresh.forEach(into);
       shownRows.forEach(n => { if (!ctx.entering.includes(n)) ctx.entering.push(n); });
       /* what goes: fades out where it stood, in the place of its parent (the parent, or the new one of it); a box that held rows that live on does not */
@@ -746,6 +754,7 @@
         ghosts.push([copy, p, c.x - pc.x - pc.cl + pc.sl, c.y - pc.y - pc.ct + pc.st, c.w, c.h, pc.flat, 0, 0]);   /* the old parent's frame: the new one of it is of its kind */
       };
       const out = (e, p, oldParent) => {
+        if (eqOld.has(e)) return;   /* the same again: nothing of it goes */
         if (back.has(e)) { const b = back.get(e); kids(e).forEach(k => out(k, b, e)); return; }
         if (hasPaired(e)) return;
         leave(e, p, oldParent);
@@ -764,7 +773,9 @@
       if (ghosts.length) ghost(ghosts, ctx.run, ctx.until, ctx.wave, T.ease);
       W.mo.takeRecords();   /* the copies, the boards, the marked words: written here, not changes */
       W.busy = performance.now() + (ctx.until || 0) + 100;
-      settle(W, 0);
+      /* where all of it stands was read in the update (onRead: what glides or comes in moves by transform, the layout stays); read again when it is over
+         only after numbers turned or words lit up (their text, back in place, may be a little wider or narrower than the board was) */
+      if (jobs.length) settle(W, 0);
       /* the boxes it is in: what is below it moves as it grows, they read where all of it stands when it is over */
       WATCHED.forEach(V => { if (V !== W && V.box.contains(box)) { V.busy = Math.max(V.busy, W.busy); settle(V, 0); } });
     }
