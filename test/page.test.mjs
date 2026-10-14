@@ -163,6 +163,26 @@ test('page: a virtual list that writes its rows as its box scrolls is not animat
   assert.ok(r.write.enter > 0, 'a write at another time comes in: ' + JSON.stringify(r.write));
 });
 
+test('page: the hover held back while the page animates (data-g-still) is given when it is over, and before a press', async () => {
+  await page.evaluate(() => { const h = document.getElementById('hov'); window.__hov = []; ['mouseover', 'mouseenter', 'mouseout', 'mouseleave', 'pointerover'].forEach(t => h.addEventListener(t, () => window.__hov.push(t)));
+    h.addEventListener('pointerdown', () => window.__hov.push('down:' + (window.__hov.includes('mouseover') ? 'hovered' : 'not hovered'))); });
+  const at = async id => page.evaluate(id => { const r = document.getElementById(id).getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }, id);
+  const go = async () => { await page.evaluate(() => { const c = document.getElementById('count'); c.textContent = String(+c.textContent + 1); }); await page.waitForTimeout(40); };   /* an animation that moves nothing */
+  await page.evaluate(() => document.getElementById('hov').scrollIntoView({ block: 'center' })); await page.waitForTimeout(400);   /* out of the scroll's 200 ms */
+  const [ax, ay] = await at('away'), [hx, hy] = await at('hov');
+  // once it is over
+  await page.mouse.move(ax, ay); await page.waitForTimeout(100); await page.evaluate(() => { window.__hov.length = 0; });
+  await go(); await page.mouse.move(hx, hy);
+  const during = await page.evaluate(() => window.__hov.slice());
+  await page.waitForTimeout(900);
+  const after = await page.evaluate(() => window.__hov.slice());
+  // a press while it animates
+  await page.mouse.move(ax, ay); await page.waitForTimeout(900); await page.evaluate(() => { window.__hov.length = 0; });
+  await go(); await page.mouse.move(hx, hy); await page.mouse.down(); await page.mouse.up();
+  const pressed = await page.evaluate(() => window.__hov.slice());
+  assert.deepEqual({ during, after, pressed }, { during: [], after: ['pointerover', 'mouseover', 'mouseenter'], pressed: ['pointerover', 'mouseover', 'mouseenter', 'down:hovered'] });
+});
+
 test('page: new words light up once (putting the text back is no change: it used to light them up again and again)', async () => {
   await page.evaluate(() => { document.getElementById('below').textContent = 'Воды минеральные'; });
   await page.waitForTimeout(1600);

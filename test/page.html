@@ -13,7 +13,7 @@
   #tiles > a.g-morph-enter > article { animation: g-morph-in var(--g-morph-enter) ease-out var(--g-morph-d, 0ms) backwards; }
   #tiles > a.g-morph-ghost > article { animation: g-morph-away var(--g-morph-run) ease-out var(--g-morph-d, 0ms) both; } #bar { position: sticky; top: 0; height: 40px; } main { width: 400px; }</style>
 </head>
-<body class="g-root" data-g-morph>
+<body class="g-root" data-g-morph data-g-still>
 <nav id="bar"><b id="clock">0</b></nav>
 <main>
   <p>Found: <b id="count">3</b> <span id="deep"><i>5</i></span></p>
@@ -24,6 +24,7 @@
   <p style="text-align: right; width: 360px"><span id="rname">Green</span></p>
   <ol id="cols"><li data-key="c1">one <b class="fc">!</b></li><li data-key="c2">two</li><li data-key="c3">three</li><li data-key="c4">four</li><li data-key="c5">five</li><li data-key="c6">six</li><li data-key="c7">seven</li></ol>
   <div id="vlist" style="height: 120px; overflow: auto"><div style="position: relative; height: 3000px"><ol id="vrows" class="g-list" style="position: absolute; left: 0; right: 0; top: 0; margin: 0"><li>r0</li><li>r1</li><li>r2</li><li>r3</li></ol></div></div>
+  <p><span id="hov" style="display: inline-block; padding: 8px 16px; background: #ccc">hover me</span> <span id="away" style="display: inline-block; padding: 8px 16px">away</span></p>
   <p id="below">below</p>
   <details id="shut"><summary>more</summary><div id="inside"><p>hidden text</p></div></details>
   <style id="st">#below { color: inherit }</style>

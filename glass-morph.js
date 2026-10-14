@@ -875,6 +875,7 @@
     }
     morph.watch = watch;
     morph.busy = () => { const now = performance.now(); for (const W of WATCHED.values()) if (W.busy > now) return true; return false; };
+    morph.busyUntil = () => { let t = 0; for (const W of WATCHED.values()) t = Math.max(t, W.busy); return t; };   /* when what plays now is over (performance.now() time) */
     morph.watching = n => { for (const b of WATCHED.keys()) if (b.contains(n)) return true; return false; };
     return morph;
   })();
@@ -884,7 +885,40 @@
      fire them, and a hover that changes the page would answer with another animation). Clicks and moves go on; :hover in CSS is the browser's */
   const HOVER = ['mouseover', 'mouseout', 'mouseenter', 'mouseleave', 'pointerover', 'pointerout', 'pointerenter', 'pointerleave'];
   const moving = () => document.body && document.body.hasAttribute('data-g-still') && morph.busy();
-  HOVER.forEach(t => addEventListener(t, e => { if (moving()) e.stopImmediatePropagation(); }, true));
+  /* What was held back is given afterwards, as the browser would have given it: once the animation is over, the hover goes from the element the
+     page last heard of (hovered) to the one under the pointer (out, leave, over, enter); and a press during the animation first brings the hover
+     to what it presses (a click comes after the hover of what it clicks: a page that acts on the hovered item gets the right one). Only after
+     something was held back; else the browser's own events are all there is */
+  let hovered = null, held = false, px = -1, py = -1, replaying = false, wait = 0;
+  addEventListener('pointermove', e => { px = e.clientX; py = e.clientY; }, { capture: true, passive: true });
+  HOVER.forEach(t => addEventListener(t, e => {
+    if (replaying) return;
+    px = e.clientX; py = e.clientY;
+    if (moving()) { e.stopImmediatePropagation(); if (!held) { held = true; later(); } return; }
+    if (t === 'mouseover') hovered = e.target;
+    if (t === 'mouseout' && !e.relatedTarget) hovered = null;   /* the pointer left the window */
+  }, true));
+  function later() { clearTimeout(wait); wait = setTimeout(() => { if (moving()) later(); else follow(document.elementFromPoint(px, py)); }, Math.max(20, morph.busyUntil() - performance.now() + 20)); }
+  function follow(to) {
+    held = false; clearTimeout(wait);
+    const from = hovered && hovered.isConnected ? hovered : null;
+    if (from === to) return;
+    const fire = (el, type, rel) => {
+      const bubbles = !/enter|leave/.test(type), init = { bubbles, cancelable: bubbles, composed: true, view: window, clientX: px, clientY: py, relatedTarget: rel };
+      el.dispatchEvent(type.startsWith('pointer') && window.PointerEvent ? new PointerEvent(type, Object.assign({ pointerId: 1, pointerType: 'mouse', isPrimary: true }, init)) : new MouseEvent(type, init));
+    };
+    const chain = el => { const a = []; for (let n = el; n; n = n.parentElement) a.push(n); return a; };
+    const outOf = from ? chain(from).filter(n => !to || !n.contains(to)) : [], into = to ? chain(to).filter(n => !from || !n.contains(from)).reverse() : [];
+    replaying = true;
+    try {
+      ['pointer', 'mouse'].forEach(k => {   /* the pointer events, then the mouse ones, as the browser gives them */
+        if (from) { fire(from, k + 'out', to); outOf.forEach(n => fire(n, k + 'leave', to)); }
+        if (to) { fire(to, k + 'over', from); into.forEach(n => fire(n, k + 'enter', from)); }
+      });
+    } finally { replaying = false; }
+    hovered = to;
+  }
+  addEventListener('pointerdown', e => { if (held) follow(e.target); }, true);
   /* the boxes marked data-g-morph are watched from the start (a change made early is animated too), and those put in later as they come */
   function start() {
     $$('[data-g-morph]').forEach(b => morph.watch(b));
