@@ -997,7 +997,7 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> i
 .g-anim-shimmer::after, .g-anim-ripple::after, .g-anim-highlight::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; }
 .g-anim-shimmer::after, .g-anim-ripple::after, .g-anim-highlight::after { will-change: opacity; }
 .g-anim--loop, .g-anim--loop::after, .g-anim-rotate.g-anim--loop > * { animation-iteration-count: infinite !important; }
-@keyframes g-a-appear { from { opacity: 0; transform: translateY(16px); } }
+@keyframes g-a-appear { from { opacity: 0; transform: translateX(-24px); } }   /* in from the left, as a new row of Glass.morph comes in */
 @keyframes g-a-scroll { from { opacity: 0; transform: translateY(40px) scale(.96); } }
 @keyframes g-slide-in { from { opacity: 0; transform: translateX(-24px); } }
 @keyframes g-a-shimmer { from { background-position: -150% 0; opacity: 1; } to { background-position: 250% 0; opacity: 1; } }

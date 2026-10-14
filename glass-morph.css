@@ -12,6 +12,10 @@
 @keyframes g-morph-flash { from { background: var(--g-fill-strong, rgba(128,128,128,.28)); } }
 .g-morph-leave { animation: g-morph-out var(--g-morph-leave) ease-in forwards !important; pointer-events: none; }
 .g-morph-enter { animation: g-morph-in var(--g-morph-enter) var(--g-ease, cubic-bezier(.3,.7,.25,1)) backwards !important; animation-delay: var(--g-morph-d, calc(var(--g-morph-i, 0) * var(--g-morph-stagger))) !important; }   /* --g-morph-d: the script's wave */
+/* Glass that comes in (backdrop-filter: the script puts the class on the glass itself, not on a wrapper of it) is drawn without its blur until it is in:
+   every blur is a pass of the GPU in every frame, and a grid of glass tiles coming in at once drops frames (the home page of sanstv: 37 of 107 frames
+   over 25 ms with the blur, none without it). When the entrance is over the class goes and the blur is back */
+.g-morph-enter { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 .g-morph-flash { animation: g-morph-flash 1s ease-out !important; }   /* the highlight of the kit (g-anim-highlight) is used when the element's ::after is free */
 /* A changed text: only its new words light up, they come in out of a soft blur on a tint that fades (--g-morph-word, read by the script too) */
 :root { --g-morph-word: 1200ms; }

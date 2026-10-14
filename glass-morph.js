@@ -284,6 +284,18 @@
        a read here, after the writes of the update, would make the page work out its styles once more). They fade out in `ms` and are taken away, all at once,
        at `until`: taking one away lays the page out, so they go when nothing moves any more, and in one go. Each starts with the new one of the
        place it stood (wave: viewport x, y -> ms of delay), on the same curve (ease) and the same way (to the right), and fades out in run(delay) ms. */
+    /* What fades: the element itself, but not a wrapper of glass. An element that fades is a backdrop root: the glass in it (backdrop-filter) would
+       blur nothing behind it until the fade is over, and then the blur would come back at once. So the glass fades itself: the one child of a wrapper
+       (down to 3 levels: <a><article>), or each child of a box that holds glass; a wrapper has nothing of its own to show. Read with the other reads */
+    const glassy = el => { const cs = getComputedStyle(el), b = cs.backdropFilter || cs.webkitBackdropFilter; return !!b && b !== 'none'; };
+    const ownText = el => { for (const n of el.childNodes) if (n.nodeType === 3 && n.nodeValue.trim()) return true; return false; };
+    function fades(e) {
+      if (glassy(e)) return [e];
+      let c = e;
+      for (let i = 0; i < 3 && c.childElementCount === 1 && !ownText(c); i++) { c = c.firstElementChild; if (glassy(c)) return [c]; }
+      const ch = [...e.children];
+      return ch.length && !ownText(e) && ch.some(glassy) ? ch : [e];
+    }
     function ghost(list, run, until, wave, ease) {
       const held = new Map(), all = [];   /* parent -> how many ghosts it still holds; a static parent is positioned for them meanwhile */
       list.forEach(([e, p, x, y, w, h, flat, vx, vy]) => {
@@ -292,15 +304,16 @@
         const hp = held.get(p); hp[0]++;
         if (hp[1]) p.style.position = 'relative';
         e.classList.remove('g-morph-leave', 'g-morph-enter'); e.removeAttribute('data-g-new'); e.style.animationDelay = '';   /* a row that was still coming in (newRows) only goes now */
+        e.querySelectorAll('.g-morph-enter').forEach(c => c.classList.remove('g-morph-enter'));   /* the glass of a wrapper that was still coming in */
         Object.assign(e.style, { position: 'absolute', left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px', margin: '0', pointerEvents: 'none', boxSizing: 'border-box', counterIncrement: 'none', counterSet: 'none', counterReset: 'none', zIndex: '0' });
         e.classList.add('g-morph-ghost'); e.setAttribute('aria-hidden', 'true'); e.inert = true;
         p.appendChild(e);
-        const d = wave(vx, vy);   /* with the new one of its place */
-        e.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(24px)' }], { duration: run(d), delay: d, easing: ease, fill: 'both' });
         e._done = () => { if (!e.parentNode) return; e.remove(); if (!--hp[0] && hp[1]) p.style.position = ''; };
-        all.push(e);
+        all.push([e, wave(vx, vy)]);   /* with the new one of its place */
       });
-      if (all.length) settled(() => setTimeout(() => all.forEach(e => e._done()), until));   /* a timer, not the end of the animation: one in a hidden pane does not finish */
+      const what = all.map(([e]) => fades(e));   /* read once all of them are in: one pass of styles */
+      all.forEach(([e, d], i) => what[i].forEach(f => f.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(24px)' }], { duration: run(d), delay: d, easing: ease, fill: 'both' })));
+      if (all.length) settled(() => setTimeout(() => all.forEach(([e]) => e._done()), until));   /* a timer, not the end of the animation: one in a hidden pane does not finish */
     }
     /* the tuning of a box (its custom properties, in ms), read once per update: a style read among the writes of the update would make the page work out its styles again */
     function timings(target) {
@@ -360,6 +373,7 @@
           }
           /* where each row that goes is drawn: in its parent, where it stood in it (the parent may have moved with the update), as the new ones are read */
           ctx.ghosts.forEach(g => { const p = g[1]; if (!p.isConnected) return; const pr = p.getBoundingClientRect(); g[7] = pr.left + p.clientLeft - p.scrollLeft + g[2]; g[8] = pr.top + p.clientTop - p.scrollTop + g[3]; });
+          const fadeOf = new Map(enter.map(e => [e, fades(e)]));   /* what of each one fades in (the glass of a wrapper) */
           if (ctx.onRead) ctx.onRead();   /* a watched box reads where all of it stands now, against this same layout */
           /* what moves and what comes in finish together: one end for all, the later of the glide and the last staggered entry */
           scope.forEach(s => s.removeAttribute('data-g-measure'));   /* the reads are done: what is out of the viewport is skipped again in the next frame */
@@ -391,9 +405,9 @@
           }
           enter.forEach(e => {
             const d = waveOf(e);
-            e.classList.add('g-morph-enter'); e.style.setProperty('--g-morph-d', d + 'ms'); e.style.setProperty('--g-morph-enter', (end - d) + 'ms');   /* a later start, a shorter run: all end at once */
+            fadeOf.get(e).forEach(f => { f.classList.add('g-morph-enter'); f.style.setProperty('--g-morph-d', d + 'ms'); f.style.setProperty('--g-morph-enter', (end - d) + 'ms'); });   /* a later start, a shorter run: all end at once */
           });
-          if (enter.length) settled(() => enter.forEach(e => later(e, 'g-morph-enter', end + 50, () => { e.style.removeProperty('--g-morph-enter'); e.style.removeProperty('--g-morph-d'); })));
+          if (enter.length) settled(() => enter.forEach(e => fadeOf.get(e).forEach(f => later(f, 'g-morph-enter', end + 50, () => { f.style.removeProperty('--g-morph-enter'); f.style.removeProperty('--g-morph-d'); }))));
           const again = flash.filter(([e, own]) => !own && e.classList.contains('g-morph-flash'));   /* a flash that still runs starts over: one reflow for all of them */
           if (again.length) { again.forEach(([e]) => e.classList.remove('g-morph-flash')); void again[0][0].offsetWidth; }
           flash.forEach(([e, own]) => {
