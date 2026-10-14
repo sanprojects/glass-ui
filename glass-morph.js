@@ -287,17 +287,23 @@
        a read here, after the writes of the update, would make the page work out its styles once more). They fade out in `ms` and are taken away, all at once,
        at `until`: taking one away lays the page out, so they go when nothing moves any more, and in one go. Each starts with the new one of the
        place it stood (wave: viewport x, y -> ms of delay), on the same curve (ease) and the same way (to the right), and fades out in run(delay) ms. */
-    /* What fades: the element itself, but not a wrapper of glass. An element that fades is a backdrop root: the glass in it (backdrop-filter) would
-       blur nothing behind it until the fade is over, and then the blur would come back at once. So the glass fades itself: the one child of a wrapper
-       (down to 3 levels: <a><article>), or each child of a box that holds glass; a wrapper has nothing of its own to show. Read with the other reads */
+    /* What fades: the element itself, unless glass is in it. An element that fades is a backdrop root: the glass in it (backdrop-filter) would
+       blur nothing behind it until the fade is over, and its blur would come back at once at the end. So what fades is split down to the glass,
+       up to 3 levels deep: the glass fades itself, and each part around it fades too (a wrapper, <a><article>, has nothing of its own to show;
+       a grid that comes in as a whole fades tile by tile). An element with text of its own is not split. Read with the other reads; at most
+       600 elements are looked at in one update */
     const glassy = el => { const cs = getComputedStyle(el), b = cs.backdropFilter || cs.webkitBackdropFilter; return !!b && b !== 'none'; };
     const ownText = el => { for (const n of el.childNodes) if (n.nodeType === 3 && n.nodeValue.trim()) return true; return false; };
-    function fades(e) {
-      if (glassy(e)) return [e];
-      let c = e;
-      for (let i = 0; i < 3 && c.childElementCount === 1 && !ownText(c); i++) { c = c.firstElementChild; if (glassy(c)) return [c]; }
-      const ch = [...e.children];
-      return ch.length && !ownText(e) && ch.some(glassy) ? ch : [e];
+    function fader() {
+      let budget = 600;
+      const split = (e, depth) => {   /* [what fades, whether glass is in it] */
+        if (--budget < 0) return [[e], false];
+        if (glassy(e)) return [[e], true];
+        if (depth >= 3 || !e.childElementCount || ownText(e)) return [[e], false];
+        const parts = [...e.children].map(c => split(c, depth + 1));
+        return parts.some(x => x[1]) ? [parts.flatMap(x => x[0]), true] : [[e], false];
+      };
+      return e => split(e, 0)[0];
     }
     function ghost(list, run, until, wave, ease) {
       /* parent -> [how many ghosts it still holds, static, its own isolation]. Meanwhile a static parent is positioned for them, and isolated: the
@@ -316,7 +322,7 @@
         e._done = () => { if (!e.parentNode) return; e.remove(); if (!--hp[0]) { if (hp[1]) p.style.position = ''; p.style.isolation = hp[2]; } };
         all.push([e, wave(vx, vy)]);   /* with the new one of its place */
       });
-      const what = all.map(([e]) => fades(e));   /* read once all of them are in: one pass of styles */
+      const fades = fader(), what = all.map(([e]) => fades(e));   /* read once all of them are in: one pass of styles */
       all.forEach(([e, d], i) => what[i].forEach(f => f.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(24px)' }], { duration: run(d), delay: d, easing: ease, fill: 'both' })));
       if (all.length) settled(() => setTimeout(() => all.forEach(([e]) => e._done()), until));   /* a timer, not the end of the animation: one in a hidden pane does not finish */
     }
@@ -378,7 +384,7 @@
           }
           /* where each row that goes is drawn: in its parent, where it stood in it (the parent may have moved with the update), as the new ones are read */
           ctx.ghosts.forEach(g => { const p = g[1]; if (!p.isConnected) return; const pr = p.getBoundingClientRect(); g[7] = pr.left + p.clientLeft - p.scrollLeft + g[2]; g[8] = pr.top + p.clientTop - p.scrollTop + g[3]; });
-          const fadeOf = new Map(enter.map(e => [e, fades(e)]));   /* what of each one fades in (the glass of a wrapper) */
+          const fades = fader(), fadeOf = new Map(enter.map(e => [e, fades(e)]));   /* what of each one fades in (down to the glass in it) */
           if (ctx.onRead) ctx.onRead();   /* a watched box reads where all of it stands now, against this same layout */
           /* what moves and what comes in finish together: one end for all, the later of the glide and the last staggered entry */
           scope.forEach(s => s.removeAttribute('data-g-measure'));   /* the reads are done: what is out of the viewport is skipped again in the next frame */
@@ -821,11 +827,17 @@
       return W.stop;
     }
     morph.watch = watch;
+    morph.busy = () => { const now = performance.now(); for (const W of WATCHED.values()) if (W.busy > now) return true; return false; };
     morph.watching = n => { for (const b of WATCHED.keys()) if (b.contains(n)) return true; return false; };
     return morph;
   })();
   kit.morph = morph;
   kit.watch = morph.watch;
+  /* <body data-g-still>: the pointer's enter / leave events are not delivered while the page animates (what glides under a still pointer would
+     fire them, and a hover that changes the page would answer with another animation). Clicks and moves go on; :hover in CSS is the browser's */
+  const HOVER = ['mouseover', 'mouseout', 'mouseenter', 'mouseleave', 'pointerover', 'pointerout', 'pointerenter', 'pointerleave'];
+  const moving = () => document.body && document.body.hasAttribute('data-g-still') && morph.busy();
+  HOVER.forEach(t => addEventListener(t, e => { if (moving()) e.stopImmediatePropagation(); }, true));
   /* the boxes marked data-g-morph are watched from the start (a change made early is animated too), and those put in later as they come */
   function start() {
     $$('[data-g-morph]').forEach(b => morph.watch(b));

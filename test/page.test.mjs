@@ -124,6 +124,14 @@ test('page: glass in a wrapper (<a><article>) fades itself and keeps its blur (a
     { on: { a: false, article: true, blur: 'blur(4px)' }, after: 'blur(4px)' });
 });
 
+test('page: a grid of glass that comes in as a whole fades tile by tile (the grid that fades would take the blur of all its glass away)', async () => {
+  const r = await change(`const g = document.createElement('div'); g.id = 'grid2'; g.innerHTML = '<a href="#g1"><article style="backdrop-filter: blur(4px)">g1</article></a><a href="#g2"><article style="backdrop-filter: blur(4px)">g2</article></a>';
+    document.getElementById('tiles').after(g); await new Promise(r => setTimeout(r, 20));
+    out.on = { grid: g.classList.contains('g-morph-enter'), links: [...g.querySelectorAll('a.g-morph-enter')].length, glass: [...g.querySelectorAll('article.g-morph-enter')].length };`);
+  await page.evaluate(() => document.getElementById('grid2').remove());
+  assert.deepEqual(r.on, { grid: false, links: 0, glass: 2 });
+});
+
 test('page: new words light up once (putting the text back is no change: it used to light them up again and again)', async () => {
   await page.evaluate(() => { document.getElementById('below').textContent = 'Воды минеральные'; });
   await page.waitForTimeout(1600);
