@@ -202,12 +202,15 @@
         if (late) lineOf(board.parentElement);
         $$('.g-reel__cell--new, .g-reel__cell--gone', board).forEach(c => { c.style.setProperty('--g-reel-w', c.firstChild.getBoundingClientRect().width + 'px'); });
       };
-      board._finish = () => { clearTimeout(board._timer); if (board.parentNode) board.parentNode.replaceChild(document.createTextNode(to), board); };
+      board._finish = () => { clearTimeout(board._timer); if (board.parentNode) { const p = board.parentNode; p.replaceChild(document.createTextNode(to), board); unseen(p); } };
       settled(() => { if (board.parentNode) board._timer = setTimeout(board._finish, T.reel + Math.max(changed - 1, 0) * T.reelStagger + 60); });
       return board;
     }
     /* A text that changed: the words that are new in it are wrapped for a moment (.g-morph-word: they come in out of a soft blur on a tint that fades),
        the rest stays plain text. Returns a fragment for the old node `t`, or null when there is nothing new to show (only removed words) or the text is long. */
+    /* the kit put its text back (a board that turned, marked words): no change for the boxes that watch it. Seen, the merge of the text nodes
+       (normalize) would tell a part of the text as the text the element had, and the words would light up again and again */
+    function unseen(node) { WATCHED.forEach(W => { if (W.box.contains(node)) W.mo.takeRecords(); }); }
     function words(t, to, ctx) {
       const a = t.nodeValue.split(/(\s+)/), b = to.split(/(\s+)/);
       if (!to.trim() || a.length * b.length > 40000) return null;
@@ -224,7 +227,7 @@
       b.forEach((x, j) => { if (fresh[j] !== on) { out(); on = fresh[j]; } run += x; });
       out();
       const host = t.parentElement;
-      const finish = () => { clearTimeout(timer); spans.forEach(s => { if (s.parentNode) s.replaceWith(s.firstChild || ''); }); if (host.isConnected) host.normalize(); };   /* plain text again, one node */
+      const finish = () => { clearTimeout(timer); spans.forEach(s => { if (s.parentNode) s.replaceWith(s.firstChild || ''); }); if (host.isConnected) { host.normalize(); unseen(host); } };   /* plain text again, one node */
       const timer = setTimeout(finish, ctx.T.word + 60);
       spans.forEach(s => { s._finish = finish; });
       ctx.words.push([host, finish]);
@@ -664,8 +667,9 @@
       }
       /* what went (top of each subtree taken out, with the parent it was in), what came (top of each subtree put in), whose text changed and what it was */
       const gone = [], came = new Set(), texts = new Set(), olds = new Map();
+      const listed = new Set(recs.filter(r => r.type === 'childList').map(r => r.target));   /* the old value of a text node is the text of its element only when it was its one node */
       recs.forEach(r => {
-        if (r.type === 'characterData') { const p = r.target.parentElement; if (p) { texts.add(p); if (!olds.has(p) && p.childNodes.length === 1) olds.set(p, r.oldValue); } return; }
+        if (r.type === 'characterData') { const p = r.target.parentElement; if (p) { texts.add(p); if (!olds.has(p) && !listed.has(p) && p.childNodes.length === 1) olds.set(p, r.oldValue); } return; }
         let els = 0;
         r.removedNodes.forEach(n => { if (n.nodeType !== 1 || OWN.test(n.className)) return; els++; if (!box.contains(n)) gone.push([n, r.target]); });
         r.addedNodes.forEach(n => { if (n.nodeType !== 1 || OWN.test(n.className)) return; els++; if (box.contains(n)) came.add(n); });

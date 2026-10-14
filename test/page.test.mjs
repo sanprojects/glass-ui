@@ -29,9 +29,9 @@ after(async () => { await browser.close(); server.close(); });
 
 /* runs a change on the page, then tells what it animated (at `wait` ms) and what is left when all is over */
 const change = (code, wait = 40, settle = 1300) => page.evaluate(async ([code, wait, settle]) => {
-  const out = {}, made = { reels: 0, enter: [] };
+  const out = {}, made = { reels: 0, words: 0, enter: [] };
   const mo = new MutationObserver(rs => rs.forEach(r => {
-    r.addedNodes.forEach(n => { if (n.nodeType === 1 && n.classList.contains('g-reel')) made.reels++; });
+    r.addedNodes.forEach(n => { if (n.nodeType === 1 && n.classList.contains('g-reel')) made.reels++; if (n.nodeType === 1 && n.classList.contains('g-morph-word')) made.words++; });
     if (r.type === 'attributes' && r.target.classList.contains('g-morph-enter')) made.enter.push(r.target.id || r.target.className || r.target.textContent.trim());
   }));
   mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
@@ -46,7 +46,7 @@ const change = (code, wait = 40, settle = 1300) => page.evaluate(async ([code, w
   });
   await new Promise(r => setTimeout(r, settle));
   mo.disconnect();
-  out.made = { reels: made.reels, enter: [...new Set(made.enter)].join() };
+  out.made = { reels: made.reels, words: made.words, enter: [...new Set(made.enter)].join() };
   out.after = { ghosts: document.querySelectorAll('.g-morph-ghost').length, anims: [...document.querySelectorAll('main *')].filter(e => e.getAnimations().length).length, reels: document.querySelectorAll('.g-reel').length };
   return out;
 }, [code, wait, settle]);
@@ -122,6 +122,13 @@ test('page: glass in a wrapper (<a><article>) fades itself and keeps its blur (a
     out.on = { a: a.classList.contains('g-morph-enter'), article: art.classList.contains('g-morph-enter'), blur: getComputedStyle(art).backdropFilter };`);
   assert.deepEqual({ on: r.on, after: await page.evaluate(() => getComputedStyle(document.querySelector('#tiles a[href="#t2"] article')).backdropFilter) },
     { on: { a: false, article: true, blur: 'blur(4px)' }, after: 'blur(4px)' });
+});
+
+test('page: new words light up once (putting the text back is no change: it used to light them up again and again)', async () => {
+  await page.evaluate(() => { document.getElementById('below').textContent = 'Воды минеральные'; });
+  await page.waitForTimeout(1600);
+  const r = await change(`document.getElementById('below').textContent = 'Воды лечебно-столовые';`, 40, 3500);   /* "Воды" stays, one word is new */
+  assert.deepEqual({ words: r.made.words, text: await page.evaluate(() => [document.getElementById('below').childNodes.length, document.getElementById('below').textContent]) }, { words: 1, text: [1, 'Воды лечебно-столовые'] });
 });
 
 test('page: the page still runs without script errors', () => { assert.deepEqual(errors, []); });
