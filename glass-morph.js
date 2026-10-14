@@ -583,6 +583,8 @@
     /* where all of it stands now (page coordinates: a scroll of the page does not make them old), and the text of what holds only text */
     /* the scroll of the page, kept as it scrolls: read in a change it would lay the changed page out at once (the reads of an update come later, all in one) */
     let PX = 0, PY = 0;
+    /* when the page (the window or a box in it) scrolled last: what changes while it scrolls is drawn for the scroll, not changed (see changed()) */
+    let SCROLL_AT = -1e9;
     /* what a row that goes needs of the parent it goes back into: its border, its scroll, whether it is positioned (static: made relative for the ghosts) */
     const frame = (e, pos) => ({ cl: e.clientLeft, ct: e.clientTop, sl: e.scrollLeft, st: e.scrollTop, flat: (pos || getComputedStyle(e).position) === 'static' });
     /* What is kept of a box: its children down to 3 levels, and the rows (li, data-key, id) at any depth, not inside a row; at most 2000. On the
@@ -651,7 +653,7 @@
       if (listening) return;
       listening = true;
       const all = () => WATCHED.forEach(W => settle(W, 120));   /* once the scroll or the resize stops */
-      addEventListener('scroll', () => { PX = scrollX; PY = scrollY; all(); }, { passive: true, capture: true });
+      addEventListener('scroll', () => { PX = scrollX; PY = scrollY; SCROLL_AT = performance.now(); all(); }, { passive: true, capture: true });
       addEventListener('resize', all, { passive: true });
       if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', all);
       document.addEventListener('visibilitychange', () => { if (!document.hidden) all(); });
@@ -689,6 +691,11 @@
       recs.forEach(r => r.addedNodes.forEach(n => { if (n.nodeType === 1 && n.isConnected) added.push(n); }));
       const fits = () => (W.page ? added.flatMap(n => [n, ...$$('[data-g-fit]', n)]).filter(n => n.matches('[data-g-fit]')) : $$('[data-g-fit]', box))
         .forEach(b => { if (!b._gFit && kit.fit) kit.fit(b); });   /* what the kit left to the update (a fit box in a watched box) */
+      /* While the page scrolls (within 200 ms of the last scroll event of the window or of any box) what changes is drawn for the scroll: a
+         virtual list that writes the rows that come into view, rows loaded as the end comes near, a bar that follows the scroll, a panel that
+         shows what came under the still pointer. It is not a change of the content: nothing is animated, it is only read again (the scroll
+         that stops reads all anyway). The same write at another time animates as ever */
+      if (performance.now() - SCROLL_AT < 200) { fits(); stale(W); return; }
       if (quiet()) { fits(); settle(W, 0); return; }   /* a hidden page draws nothing: only where things stand is read again */
       if (W.page) {
         if (!W.live) { fits(); stale(W); return; }   /* the page is still loading: it is being built, not changed */

@@ -149,6 +149,20 @@ test('page: what stays stands, while what goes fades out, where it stands once t
   assert.equal(r.during, r.end);
 });
 
+test('page: a virtual list that writes its rows as its box scrolls is not animated; the same write at another time is', async () => {
+  const r = await change(`const box = document.getElementById('vlist'), ol = document.getElementById('vrows');
+    const draw = () => { const first = Math.floor(box.scrollTop / 30); ol.style.top = first * 30 + 'px'; ol.innerHTML = [0, 1, 2, 3].map(i => '<li>r' + (first + i) + '</li>').join(''); };
+    box.addEventListener('scroll', draw);
+    box.scrollTop = 300; await new Promise(r => setTimeout(r, 60));
+    out.scroll = { enter: ol.querySelectorAll('.g-morph-enter').length, ghosts: ol.querySelectorAll('.g-morph-ghost').length, first: ol.firstElementChild.textContent };
+    box.removeEventListener('scroll', draw);
+    await new Promise(r => setTimeout(r, 400));
+    ol.innerHTML = '<li>x1</li><li>x2</li>'; await new Promise(r => setTimeout(r, 30));
+    out.write = { enter: ol.querySelectorAll('.g-morph-enter').length };`, 0, 1300);
+  assert.deepEqual(r.scroll, { enter: 0, ghosts: 0, first: 'r10' });
+  assert.ok(r.write.enter > 0, 'a write at another time comes in: ' + JSON.stringify(r.write));
+});
+
 test('page: new words light up once (putting the text back is no change: it used to light them up again and again)', async () => {
   await page.evaluate(() => { document.getElementById('below').textContent = 'Воды минеральные'; });
   await page.waitForTimeout(1600);
