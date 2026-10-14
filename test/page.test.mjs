@@ -140,6 +140,15 @@ test('page: the same text written again while its words light up (two writes of 
     { kept: 2, late: true, text: [1, 'French Violet'] });
 });
 
+test('page: what stays stands, while what goes fades out, where it stands once that is gone (a ghost that selectors see does not move it)', async () => {
+  const r = await change(`const ol = document.getElementById('cols'), at = () => [...ol.querySelectorAll(':scope > li:not(.g-morph-ghost)')].map(e => [e.offsetLeft, e.offsetTop, e.offsetWidth].join(':')).join(' ');
+    ol.querySelector('[data-key="c1"]').remove();   /* the one row with a chip goes: 4 columns instead of 3 */
+    await new Promise(r => setTimeout(r, 30)); out.during = at(); out.cols = getComputedStyle(ol).gridTemplateColumns.split(' ').length;
+    await new Promise(r => setTimeout(r, 1300)); out.end = at();`, 0, 100);
+  assert.equal(r.cols, 4);
+  assert.equal(r.during, r.end);
+});
+
 test('page: new words light up once (putting the text back is no change: it used to light them up again and again)', async () => {
   await page.evaluate(() => { document.getElementById('below').textContent = 'Воды минеральные'; });
   await page.waitForTimeout(1600);

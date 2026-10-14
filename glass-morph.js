@@ -291,10 +291,10 @@
        a read here, after the writes of the update, would make the page work out its styles once more). They fade out in `ms` and are taken away, all at once,
        at `until`: taking one away lays the page out, so they go when nothing moves any more, and in one go. Each starts with the new one of the
        place it stood (wave: viewport x, y -> ms of delay), on the same curve (ease) and the same way (to the right), and fades out in run(delay) ms. */
-    function ghost(list, run, until, wave, ease) {
+    function ghost(list, run, until, wave) {
       /* parent -> [how many ghosts it still holds, static, its own isolation]. Meanwhile a static parent is positioned for them, and isolated: the
          ghosts stand under its content (z-index -1), what comes in at their place covers them, and they stay over its background */
-      const held = new Map(), all = [];
+      const held = new Map(), all = [], byParent = new Map();
       list.forEach(([e, p, x, y, w, h, flat, vx, vy]) => {
         if (!p.isConnected) return;
         if (!held.has(p)) { held.set(p, [0, flat, p.style.isolation]); p.style.isolation = 'isolate'; }
@@ -310,8 +310,36 @@
         p.appendChild(e);
         e._done = () => { if (!e.parentNode) return; e.remove(); if (!--hp[0]) { if (hp[1]) p.style.position = ''; p.style.isolation = hp[2]; } };
         all.push(e);
+        if (!byParent.has(p)) byParent.set(p, []);
+        byParent.get(p).push(e);
       });
       if (all.length) settled(() => setTimeout(() => all.forEach(e => e._done()), until));   /* a timer, not the end of the animation: one in a hidden pane does not finish */
+      return byParent;
+    }
+    /* The ghosts are back in their parents, out of the flow: they push nothing, but selectors still see them (:has(), :empty, :last-child,
+       :nth-child, a sibling combinator), so what stays may stand elsewhere while they are in the tree than once they are gone, and would jump
+       then (a list whose columns follow whether a row has a chip: the ghost of the row with the chip keeps the wide columns till it goes; the
+       ghost of a chip in a row that stays keeps the word beside it narrow). What stays must stand, now, where it will stand at the end: it is
+       read again with the ghosts in (one more layout, only when there are ghosts) against where it was read without them (kept). Where it differs,
+       the ghosts of the nearest parent of ghosts around what moved go at once, without their fade; then it is read again (at most 6 times, then
+       all of them go). Before anything is animated: the reads see no transform of this update */
+    function placed(byParent, kept) {
+      kept = kept.filter(k => onScreen(k[1]));   /* a jump out of the viewport is not seen (and one above it moves what is in it) */
+      const moved = () => kept.filter(([e, r]) => {
+        if (!e.isConnected) return false;
+        const b = e.getBoundingClientRect();
+        return Math.abs(b.left - r.left) > .5 || Math.abs(b.top - r.top) > .5 || Math.abs(b.width - r.width) > .5 || Math.abs(b.height - r.height) > .5;
+      }).map(k => k[0]);
+      const drop = p => { byParent.get(p).forEach(g => g._done()); byParent.delete(p); };
+      for (let i = 0; byParent.size; i++) {
+        const m = moved();
+        if (!m.length) return;
+        if (i >= 6) { [...byParent.keys()].forEach(drop); return; }
+        /* the parent of ghosts that holds what moved, the nearest one; else (a selector further away, :has() on an ancestor) the first */
+        let p = null;
+        for (const e of m) { for (let a = e; a && !p; a = a.parentElement) if (byParent.has(a)) p = a; if (p) break; }
+        drop(p || byParent.keys().next().value);
+      }
     }
     const least = (...v) => v.reduce((m, x) => Math.abs(x) < Math.abs(m) ? x : m);   /* the value nearest to 0 */
     /* the tuning of a box (its custom properties, in ms), read once per update: a style read among the writes of the update would make the page work out its styles again */
@@ -335,7 +363,8 @@
           /* the columns of a [data-g-fit] take the width of the new words first (else they would after this, and the rows would not end where they are read) */
           new Set(scope.flatMap(s => [...$$('[data-g-fit]', s), s.closest('[data-g-fit]')])).forEach(b => { if (b) fitBox(b); });
           const at = new Map();   /* where in the viewport each element that is animated starts: the wave reaches it from there */
-          const enter = o.enter !== false ? ctx.entering.filter(e => { if (ctx.floats && ctx.floats(e)) return false; const r = e.getBoundingClientRect(); at.set(e, [r.left, r.top]); return onScreen(r); }).slice(0, MAX) : [];
+          const kept = [];   /* [element, its rect]: where what stays stands in the new layout, without the ghosts (see placed) */
+          const enter = o.enter !== false ? ctx.entering.filter(e => { if (ctx.floats && ctx.floats(e)) return false; const r = e.getBoundingClientRect(); at.set(e, [r.left, r.top]); kept.push([e, r]); return onScreen(r); }).slice(0, MAX) : [];
           const hidden = ctx.words.filter(([host]) => !inView(host));   /* marked words out of the viewport: plain text at once */
           const box = target.getBoundingClientRect(), bs = getComputedStyle(target);
           const extra = bs.boxSizing === 'border-box' ? 0 : ['paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth'].reduce((v, k) => v + (parseFloat(bs[k]) || 0), 0);
@@ -346,6 +375,7 @@
             ctx.moves.forEach((f, e) => {
               if (!e.isConnected || !e.animate) return;
               const l = e.getBoundingClientRect();
+              kept.push([e, l]);
               /* where it went: by the side of it that stayed (the least of the moves of its two edges and its middle). One that only grew or shrank
                  (a name that got longer at the right of a bar, a box that got taller) did not go anywhere: it does not glide; one that moved, moved all of it */
               if (!f.box) return raw.set(e, [least(f.left - l.left, f.right - l.right, (f.left + f.right - l.left - l.right) / 2), least(f.top - l.top, f.bottom - l.bottom, (f.top + f.bottom - l.top - l.bottom) / 2), l, onScreen(f)]);
@@ -374,9 +404,10 @@
           }
           /* where each row that goes is drawn: in its parent, where it stood in it (the parent may have moved with the update), as the new ones are read */
           ctx.ghosts.forEach(g => { const p = g[1]; if (!p.isConnected) return; const pr = p.getBoundingClientRect(); g[7] = pr.left + p.clientLeft - p.scrollLeft + g[2]; g[8] = pr.top + p.clientTop - p.scrollTop + g[3]; });
+          /* and the parents the ghosts go back into, with what is in them (their columns, their gaps) */
+          new Set(ctx.ghosts.map(g => g[1])).forEach(p => { if (!p.isConnected) return; kept.push([p, p.getBoundingClientRect()]); [...p.children].slice(0, MAX).forEach(c => kept.push([c, c.getBoundingClientRect()])); });
           if (ctx.onRead) ctx.onRead();   /* a watched box reads where all of it stands now, against this same layout */
           /* what moves and what comes in finish together: one end for all, the later of the glide and the last staggered entry */
-          scope.forEach(s => s.removeAttribute('data-g-measure'));   /* the reads are done: what is out of the viewport is skipped again in the next frame */
           const lag = Math.min(enter.length - 1, 9) * T.stagger, end = Math.max(enter.length ? T.enter + lag : 0, ctx.moves.size && o.move !== false ? T.move : 0) || T.move;
           ctx.end = end; ctx.fade = Math.max(T.leave, end * .75); ctx.until = Math.max(T.leave, end) + 50;   /* what leaves: faded a little before the rest settles, taken away after it */
           /* When each one starts. A place is where something changes: the row that goes and the row that comes in there are one place and start
@@ -391,6 +422,9 @@
           ctx.wave = (x, y) => Math.round(((line.get(Math.round(y)) || 0) + (col.get(Math.round(x)) || 0)) * step);
           ctx.run = d => Math.max(60, ctx.fade - d, (end - d) * .6);   /* how long a row that goes fades out: before the new one of its place is in */
           const waveOf = e => { const p = at.get(e); return p ? ctx.wave(p[0], p[1]) : 0; };
+          if (ctx.ghosts.length) placed(ghost(ctx.ghosts, ctx.run, ctx.until, ctx.wave), kept);
+          if (ctx.onWrite) ctx.onWrite();
+          scope.forEach(s => s.removeAttribute('data-g-measure'));   /* the reads are done: what is out of the viewport is skipped again in the next frame */
           hidden.forEach(([, finish]) => finish());
           /* the box takes its new height smoothly, so what is below it does not jump (overflow clipped along Y meanwhile; X stays visible for the slides) */
           const h1 = box.height;
@@ -482,8 +516,7 @@
         gone.forEach(e => { const p = e.parentNode; if (p) { p.removeChild(e); if (!p.children.length) HOLLOW.add(p); } });
         reconcile(target, next, o, ctx);
         G = null; R = null;
-        if (play) ctx.flush();
-        if (ghosts.length) ghost(ghosts, ctx.run, ctx.until, ctx.wave, ctx.T.ease);
+        if (play) ctx.flush();   /* the ghosts go in there, after its reads */
         wrote(target, ctx.until || 0);
         resolve(true);
       });
@@ -801,9 +834,9 @@
         ctx.scope = [...sc].filter(n => n && n.isConnected);
         ctx.floats = e => { const p = getComputedStyle(e).position; return p === 'fixed' || (p === 'absolute' && e.parentElement === box); };
       }
-      ctx.onRead = () => { snapshot(W); boards.forEach(b => b._arm()); };
-      ctx.flush();
-      if (ghosts.length) ghost(ghosts, ctx.run, ctx.until, ctx.wave, T.ease);
+      ctx.onRead = () => snapshot(W);
+      ctx.onWrite = () => boards.forEach(b => b._arm());   /* the boards take their size after the reads (and after the ghosts are checked against them) */
+      ctx.flush();   /* the ghosts go in there, after its reads */
       W.mo.takeRecords();   /* the copies, the boards, the marked words: written here, not changes */
       W.busy = performance.now() + (ctx.until || 0) + 100;
       /* where all of it stands was read in the update (onRead: what glides or comes in moves by transform, the layout stays); read again when it is over

@@ -5,6 +5,9 @@
 <script defer src="../glass-ui.js"></script>
 <script defer src="../glass-morph.js"></script>
 <style>body { margin: 0; }
+  /* columns that follow whether a row has a chip (as on /balda): a ghost of the row with the chip would keep the wide columns until it goes */
+  #cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); width: 360px; margin: 0; padding: 0; list-style: none; }
+  #cols:has(.fc) { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
   /* the page's own: its tiles are links around a glass card; what comes in or goes is the link, the card fades itself (a link that fades would take its blur away) */
   #tiles > a.g-morph-enter, #tiles > a.g-morph-ghost { animation: none !important; }
   #tiles > a.g-morph-enter > article { animation: g-morph-in var(--g-morph-enter) ease-out var(--g-morph-d, 0ms) backwards; }
@@ -19,6 +22,7 @@
   <div id="tiles"><a href="#t1" data-key="t1"><article style="backdrop-filter: blur(4px); padding: 8px">tile one</article></a></div>
   <ol class="g-list" id="more"><li>m1</li><li hidden>m2</li></ol>
   <p style="text-align: right; width: 360px"><span id="rname">Green</span></p>
+  <ol id="cols"><li data-key="c1">one <b class="fc">!</b></li><li data-key="c2">two</li><li data-key="c3">three</li><li data-key="c4">four</li><li data-key="c5">five</li><li data-key="c6">six</li><li data-key="c7">seven</li></ol>
   <p id="below">below</p>
   <details id="shut"><summary>more</summary><div id="inside"><p>hidden text</p></div></details>
   <style id="st">#below { color: inherit }</style>
