@@ -17,7 +17,7 @@
  *   <div class="g-file" data-g-file>   -> file upload: dropzone with a file list (add class g-file--field for a compact one-row version; data-max-size="10" in MB; `multiple` on the input accumulates files across picks, data-max-files caps the count)
  *   Glass.fileProgress('#uploader', fileOrIndex, 0..100)  -> show per-file upload progress (bar turns green at 100)
  *   Glass.morph('#result', html)       -> swaps the content of a box for new content and animates the difference: rows that are gone fade out while new ones slide in and the rest glides, a changed text lights up, a changed number turns its digits like an odometer (returns a Promise; see below)
- *   <div data-g-morph>                 -> whatever a script, a framework or the page changes in it is animated as Glass.morph does (rows go, come in, glide, a number turns); its new nodes stay the page's. Glass.watch(el) for a box made later by hand
+ *   <div data-g-morph>                 -> whatever a script, a framework or the page changes in it is animated as Glass.morph does (rows go, come in, glide, a number turns); its new nodes stay the page's. Glass.watch(el) for a box made later by hand. <body data-g-morph>: the whole page (not while it loads; data-g-no-morph leaves a part out)
  *   <button data-g-menu="#m" data-g-align="end"> + <div role="menu" id="m"> -> dropdown menu: buttons or links, <hr>; arrow keys, Esc, outside click
  *   <div role="tablist"><button>…</button>…</div> <div role="tabpanel">…</div>…  -> tabs / segmented control; roles, ids, aria-controls and hidden are filled in
  *   <button command="show-modal" commandfor="dlg"> -> opens <dialog id="dlg" closedby="any"> (closedby="any": a click on the backdrop closes it)
@@ -1428,11 +1428,12 @@
              the ::after of what flashes, where the moved rows stand now */
           /* after the patch the browser has not yet told which [data-g-lazy] boxes are on the screen (it does so in the next frame) and lays out
              a new or changed one at a guessed or stale size: while these reads run, all of them are laid out as they are (data-g-measure, the kit's CSS) */
-          target.setAttribute('data-g-measure', '');
+          const scope = ctx.scope || [target];   /* the watched page: only where it changed */
+          scope.forEach(s => s.setAttribute('data-g-measure', ''));
           /* the columns of a [data-g-fit] take the width of the new words first (else they would after this, and the rows would not end where they are read) */
-          [...$$('[data-g-fit]', target), target.closest('[data-g-fit]')].forEach(b => { if (b) { if (b._gFit) b._gFit(); else mount1(b, ['[data-g-fit]', initFit]); } });
+          new Set(scope.flatMap(s => [...$$('[data-g-fit]', s), s.closest('[data-g-fit]')])).forEach(b => { if (b) { if (b._gFit) b._gFit(); else mount1(b, ['[data-g-fit]', initFit]); } });
           const at = new Map();   /* where in the viewport each element that is animated starts: the wave reaches it from there */
-          const enter = o.enter !== false ? ctx.entering.filter(e => { const r = e.getBoundingClientRect(); at.set(e, [r.left, r.top]); return onScreen(r); }).slice(0, MAX) : [];
+          const enter = o.enter !== false ? ctx.entering.filter(e => { if (ctx.floats && ctx.floats(e)) return false; const r = e.getBoundingClientRect(); at.set(e, [r.left, r.top]); return onScreen(r); }).slice(0, MAX) : [];
           const hidden = ctx.words.filter(([host]) => !inView(host));   /* marked words out of the viewport: plain text at once */
           const box = target.getBoundingClientRect(), bs = getComputedStyle(target);
           const extra = bs.boxSizing === 'border-box' ? 0 : ['paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth'].reduce((v, k) => v + (parseFloat(bs[k]) || 0), 0);
@@ -1469,7 +1470,7 @@
           ctx.ghosts.forEach(g => { const p = g[1]; if (!p.isConnected) return; const pr = p.getBoundingClientRect(); g[7] = pr.left + p.clientLeft - p.scrollLeft + g[2]; g[8] = pr.top + p.clientTop - p.scrollTop + g[3]; });
           if (ctx.onRead) ctx.onRead();   /* a watched box reads where all of it stands now, against this same layout */
           /* what moves and what comes in finish together: one end for all, the later of the glide and the last staggered entry */
-          target.removeAttribute('data-g-measure');   /* the reads are done: what is out of the viewport is skipped again in the next frame */
+          scope.forEach(s => s.removeAttribute('data-g-measure'));   /* the reads are done: what is out of the viewport is skipped again in the next frame */
           const lag = Math.min(enter.length - 1, 9) * T.stagger, end = Math.max(enter.length ? T.enter + lag : 0, ctx.moves.size && o.move !== false ? T.move : 0) || T.move;
           ctx.end = end; ctx.fade = Math.max(T.leave, end * .75); ctx.until = Math.max(T.leave, end) + 50;   /* what leaves: faded a little before the rest settles, taken away after it */
           /* When each one starts. A place is where something changes: the row that goes and the row that comes in there are one place and start
@@ -1586,31 +1587,32 @@
        animates: the rows that go fade out where they stood, the new ones come in, the rest glide, a number turns. Its nodes are not touched: the new
        ones are the page's and are only animated from where the old ones stood. A MutationObserver tells what was taken out and what was put in after
        the fact, before the frame is drawn; where things stood is not in the page any more then, so it is read beforehand and kept (W.cache): when the
-       box has settled after an update, a scroll, a resize, and against the layout of each update. */
+       box has settled after an update, a scroll, a resize, and against the layout of each update.
+       <body data-g-morph> watches the whole page. A box watched by itself in it animates its own changes (the innermost box does); the page is not
+       animated while it loads, only what changes once it is loaded and drawn; an element that changes again and again (a clock, a running counter)
+       and a page that changes on every frame (a game, a live chart) are left as they are while they run; what is not content (ASIDE) never is. */
     const WATCHED = new Map();   /* box -> watcher */
     const OWN = /(^|\s)(g-busy-bar|g-busy-lines|g-morph-ghost|g-reel|g-morph-word)(\s|$)/;   /* the kit's own passing parts: their coming and going is not a change */
     const OWN_IN = '.g-reel, .g-morph-word, .g-morph-ghost, .g-busy-bar, .g-busy-lines';
-    /* a record of what the kit wrote itself: in one of its passing parts, or only its passing parts came or went (text nodes with them: a board that is a number again) */
+    /* Not the page's content: the kit's parts that run by themselves (a select, a toast, a tooltip, the "more" button, a pager, the ruler, the cross
+       of a field, a liquid background, ...), what floats over the page (popover, dialog), graphics (svg), what the user edits, decoration
+       (aria-hidden) and what the page marked data-g-no-morph. A change in it, or one that only puts it in or takes it out, is no change */
+    const ASIDE = '.g-select, .g-tooltip, .g-toasts, .g-more, .g-clamp__btn, .g-ruler, .g-input-wrap, [data-g-pager], [data-g-file], [data-g-nav-auto], [data-g-liquid], ' +
+      '[data-g-anim-loop], [data-g-anim-random], [role="alert"], [popover], dialog, svg, [contenteditable]:not([contenteditable="false"]), select, textarea, ' +
+      '[aria-hidden="true"], [data-g-no-morph]';
+    const INERT = 'script, style, template, noscript, link, meta, datalist';   /* not drawn: a <style> whose text a script sets is no text to light up */
+    const NOT_MINE = OWN_IN + ', ' + ASIDE + ', ' + INERT, NOT_SHOWN = ASIDE + ', ' + INERT;
+    /* a record of what the kit wrote itself or of what is not content: in one of those, or only those came or went (text nodes with them: a board that is a number again) */
     function ownRecord(r) {
       const t = r.target.nodeType === 1 ? r.target : r.target.parentElement;
-      if (t && t.closest(OWN_IN)) return true;
+      if (t && t.closest(NOT_MINE)) return true;
       if (r.type !== 'childList') return false;
       const els = [...r.addedNodes, ...r.removedNodes].filter(n => n.nodeType === 1);
-      return els.length > 0 && els.every(n => OWN.test(n.className));
+      return els.length > 0 && els.every(n => OWN.test(n.className) || n.matches(NOT_SHOWN));
     }
-    /* what is kept of a box: its children down to 3 levels, and the rows (li, data-key, id) at any depth, not inside a row; at most 2000 */
-    function tracked(box) {
-      const out = [];
-      (function walk(n, depth) {
-        for (const c of n.children) {
-          if (out.length >= 2000) return;
-          if (SKIP.has(c.tagName) || OWN.test(c.className)) continue;
-          if (depth < 3 || c.tagName === 'LI' || c.id || c.hasAttribute('data-key')) out.push(c);
-          if (c.tagName !== 'LI' && !FORM.has(c.tagName)) walk(c, depth + 1);
-        }
-      })(box, 0);
-      return out;
-    }
+    const elOf = n => n.nodeType === 1 ? n : n.parentElement;
+    /* the watched box a node is in: the innermost one */
+    const owner = n => { for (let e = n && elOf(n); e; e = e.parentElement) if (WATCHED.has(e)) return e; return null; };
     /* the text of an element that holds only text (a board that turns or marked words of the kit are its text, at their end): else null */
     function plain(e) {
       if (!e.children.length) return e.textContent;
@@ -1623,30 +1625,73 @@
       }
       return t;
     }
+    /* the text the nodes taken out of an element held (a board that turned is its number, marked words their text); null if one was another element */
+    function textOfNodes(ns) {
+      let t = '';
+      for (const n of ns) {
+        if (n.nodeType === 3) t += n.nodeValue;
+        else if (n.nodeType === 1 && n.classList.contains('g-reel')) t += n.getAttribute('aria-label') || '';
+        else if (n.nodeType === 1 && n.classList.contains('g-morph-word')) t += n.textContent;
+        else if (n.nodeType !== 8) return null;
+      }
+      return t;
+    }
     /* where all of it stands now (page coordinates: a scroll of the page does not make them old), and the text of what holds only text */
     /* the scroll of the page, kept as it scrolls: read in a change it would lay the changed page out at once (the reads of an update come later, all in one) */
     let PX = 0, PY = 0;
     /* what a row that goes needs of the parent it goes back into: its border, its scroll, whether it is positioned (static: made relative for the ghosts) */
-    const frame = e => ({ cl: e.clientLeft, ct: e.clientTop, sl: e.scrollLeft, st: e.scrollTop, flat: getComputedStyle(e).position === 'static' });
+    const frame = (e, pos) => ({ cl: e.clientLeft, ct: e.clientTop, sl: e.scrollLeft, st: e.scrollTop, flat: (pos || getComputedStyle(e).position) === 'static' });
+    /* What is kept of a box: its children down to 3 levels, and the rows (li, data-key, id) at any depth, not inside a row; at most 2000. On the
+       page the levels count again from <main> and from each element with an id (a place the page writes into). A box watched by itself is kept,
+       not what is in it. What is not drawn (display: none, what a closed <details> holds besides its summary, content-visibility: hidden) is not
+       gone into: the browser has not worked its styles out, a read would make it work out all of them (~80 ms for a closed <details> with a
+       few thousand elements in it) */
     function snapshot(W) {
       if (!W.box.isConnected) return;
       PX = scrollX; PY = scrollY;
-      const sx = PX, sy = PY, skipped = skipper(), cache = new Map(), lazy = new Map(), b = W.box.getBoundingClientRect();
+      const sx = PX, sy = PY, cache = new Map(), lazy = new Map(), b = W.box.getBoundingClientRect(), stuck = new Set(), page = W.page;
       W.at = Object.assign({ x: b.left + sx, y: b.top + sy, h: b.height, seen: onScreen(b) }, frame(W.box));
       W.text = plain(W.box);   /* a box that is only text (a status line): its text is kept too */
       W.T = timings(W.box);
-      tracked(W.box).forEach(e => {
-        const s = skipped(e);   /* in a content-visibility box out of the viewport: not laid out, its box stands for it */
-        if (s) { if (!lazy.has(s[0])) lazy.set(s[0], { x: s[1].left + sx, y: s[1].top + sy, w: s[1].width, h: s[1].height }); cache.set(e, { lazy: s[0] }); return; }
-        const r = e.getBoundingClientRect();
-        const c = { x: r.left + sx, y: r.top + sy, w: r.width, h: r.height, text: plain(e) };
-        if (e.tagName !== 'LI' && e.firstElementChild) Object.assign(c, frame(e));   /* a box rows may go back into (not a row: nothing goes back into a row) */
-        cache.set(e, c);
-      });
+      /* in a content-visibility box out of the viewport (s: [box, its rect]): not laid out, its box stands for it */
+      (function walk(n, depth, s) {
+        const shut = n.tagName === 'DETAILS' && !n.open;
+        for (const e of n.children) {
+          if (cache.size >= 2000) return;
+          if (SKIP.has(e.tagName) || OWN.test(e.className) || (page && e.matches(INERT)) || (shut && e.tagName !== 'SUMMARY')) continue;
+          const own = WATCHED.has(e), mark = page && (e.id || e.tagName === 'MAIN');
+          const keep = own || mark || depth < 3 || e.tagName === 'LI' || e.id || e.hasAttribute('data-key');
+          let inner = s;
+          if (s) { if (keep) { if (!lazy.has(s[0])) lazy.set(s[0], { x: s[1].left + sx, y: s[1].top + sy, w: s[1].width, h: s[1].height }); cache.set(e, { lazy: s[0] }); } }
+          else {
+            const rs = e.getClientRects();
+            if (!rs.length) continue;   /* not drawn, nor anything in it */
+            if (keep) {
+              const r = e.getBoundingClientRect(), holds = e.tagName !== 'LI' && e.firstElementChild;   /* a box rows may go back into (not a row: nothing goes back into a row) */
+              const c = { x: r.left + sx, y: r.top + sy, w: r.width, h: r.height, text: plain(e) };
+              const pos = page || holds ? getComputedStyle(e).position : null;
+              if (holds) Object.assign(c, frame(e, pos));
+              /* on the page: what stays in the window as the page scrolls (fixed, sticky, or in one of them) is kept where it is in the window; what
+                 floats over the page (fixed, or absolute right in it) neither glides nor fades out */
+              if (page) {
+                let fx = pos === 'fixed' || pos === 'sticky';
+                if (!fx && stuck.size) for (let p = e.parentElement; !fx && p && p !== W.box; p = p.parentElement) fx = stuck.has(p);
+                if (fx) { stuck.add(e); c.x = r.left; c.y = r.top; c.fx = 1; }
+                if (pos === 'fixed' || (pos === 'absolute' && e.parentElement === W.box)) c.out = 1;
+              }
+              cache.set(e, c);
+            }
+            if (e.firstElementChild) { const cv = getComputedStyle(e).contentVisibility; if (cv === 'hidden') continue; if (cv === 'auto') { const r = e.getBoundingClientRect(); if (!onScreen(r)) inner = [e, r]; } }
+          }
+          if (own || e.tagName === 'LI' || FORM.has(e.tagName) || (page && e.matches(ASIDE))) continue;
+          walk(e, mark ? 0 : depth + 1, inner);
+        }
+      })(W.box, 0, skipper()(W.box));
       W.cache = cache; W.lazy = lazy;
     }
     /* read again when the box has settled: after what runs in it now, after the next frame (the layout is there then, the reads cost nothing) */
     function settle(W, ms) {
+      if (!W.live) return;   /* the page still loading: read once it is idle */
       clearTimeout(W.timer);
       W.timer = setTimeout(() => {
         const wait = W.busy - performance.now();
@@ -1654,6 +1699,8 @@
         requestAnimationFrame(() => setTimeout(() => snapshot(W)));
       }, ms || 0);
     }
+    /* it changed where nothing is animated (the kit's parts, what runs, what shows or hides): read again soon, not on every such change */
+    function stale(W) { if (!W.soon) W.soon = setTimeout(() => { W.soon = 0; settle(W, 0); }, 150); }
     let listening = false;
     function listen() {
       if (listening) return;
@@ -1674,32 +1721,61 @@
       });
     }
     const textOf = list => list.map(e => e.textContent).join('').replace(/[\d\s.,%]/g, '');
+    const HOT = new WeakMap();   /* element -> [when it changed last, how many times in a row it changed again right after that] */
     function changed(W, recs) {
       const box = W.box;
       if (!box.isConnected) return;
+      recs = recs.filter(r => owner(r.target) === box);   /* a box watched by itself in this one animates its own */
+      const mine = recs.length;
       recs = recs.filter(r => !ownRecord(r));
-      if (!recs.length) return;
-      const fits = () => $$('[data-g-fit]', box).forEach(b => mount1(b, ['[data-g-fit]', initFit]));   /* what fitLate left to the update */
+      if (recs.length < mine) stale(W);   /* the kit's parts may have moved what is around them */
+      /* a row that was hidden and is shown (Show more) comes in; anything else that shows or hides only moves things */
+      const shownRows = [];
+      recs = recs.filter(r => {
+        if (r.type !== 'attributes') return true;
+        if (r.attributeName === 'hidden' && r.oldValue !== null && !r.target.hidden && r.target.matches('.g-list > li')) shownRows.push(r.target);
+        else stale(W);
+        return false;
+      });
+      if (!recs.length && !shownRows.length) return;
+      const added = [];
+      recs.forEach(r => r.addedNodes.forEach(n => { if (n.nodeType === 1 && n.isConnected) added.push(n); }));
+      const fits = () => (W.page ? added.flatMap(n => [n, ...$$('[data-g-fit]', n)]).filter(n => n.matches('[data-g-fit]')) : $$('[data-g-fit]', box))
+        .forEach(b => mount1(b, ['[data-g-fit]', initFit]));   /* what fitLate left to the update */
       if (quiet()) { fits(); settle(W, 0); return; }   /* a hidden page draws nothing: only where things stand is read again */
-      /* what went (top of each subtree taken out, with the parent it was in), what came (top of each subtree put in), whose text changed */
-      const gone = [], came = new Set(), texts = new Set();
+      if (W.page) {
+        if (!W.live) { fits(); stale(W); return; }   /* the page is still loading: it is being built, not changed */
+        /* an element that changed twice right before (within 80 ms each time) runs (a clock, a counter, a game): left as it is until it pauses.
+           The page changing on every frame (many elements, each once in a while) is left as it is too */
+        const now = performance.now(), hot = new Set();
+        new Set(recs.map(r => elOf(r.target))).forEach(t => { if (!t) return; const h = HOT.get(t) || [-1e9, 0]; h[1] = now - h[0] < 80 ? h[1] + 1 : 0; h[0] = now; HOT.set(t, h); if (h[1] >= 2) hot.add(t); });
+        if (hot.size) recs = recs.filter(r => !hot.has(elOf(r.target)));
+        if (recs.length || shownRows.length) { W.rush = now - W.last < 60 ? W.rush + 1 : 0; W.last = now; }
+        if ((!recs.length && !shownRows.length) || W.rush >= 3) { fits(); stale(W); return; }
+      }
+      /* what went (top of each subtree taken out, with the parent it was in), what came (top of each subtree put in), whose text changed and what it was */
+      const gone = [], came = new Set(), texts = new Set(), olds = new Map();
       recs.forEach(r => {
-        if (r.type === 'characterData') { if (r.target.parentElement) texts.add(r.target.parentElement); return; }
+        if (r.type === 'characterData') { const p = r.target.parentElement; if (p) { texts.add(p); if (!olds.has(p) && p.childNodes.length === 1) olds.set(p, r.oldValue); } return; }
         let els = 0;
         r.removedNodes.forEach(n => { if (n.nodeType !== 1 || OWN.test(n.className)) return; els++; if (!box.contains(n)) gone.push([n, r.target]); });
         r.addedNodes.forEach(n => { if (n.nodeType !== 1 || OWN.test(n.className)) return; els++; if (box.contains(n)) came.add(n); });
-        if (!els && r.target.nodeType === 1) texts.add(r.target);   /* only its text nodes: a new text */
+        if (!els && r.target.nodeType === 1) {   /* only its text nodes: a new text; the one it had is what was taken out, when that was all of it */
+          texts.add(r.target);
+          if (!olds.has(r.target) && !r.previousSibling && !r.nextSibling) { const t = textOfNodes(r.removedNodes); if (t != null) olds.set(r.target, t); }
+        }
       });
       const fresh = [...came].filter(n => !W.cache.has(n));   /* one that only moved is not new: its place is kept */
-      const was = e => e === box ? W.text : (W.cache.get(e) || {}).text;   /* the text it had */
+      const was = e => olds.has(e) ? olds.get(e) : e === box ? W.text : (W.cache.get(e) || {}).text;   /* the text it had */
       const retext = [...texts].filter(e => { const t = was(e); return box.contains(e) && !e.children.length && t != null && t !== e.textContent; });
-      if (!gone.length && !fresh.length && !retext.length && ![...came].some(n => W.cache.has(n))) { fits(); return; }   /* nothing that shows (a text that is the same again) */
+      if (!gone.length && !fresh.length && !retext.length && !shownRows.length && ![...came].some(n => W.cache.has(n))) { fits(); stale(W); return; }   /* nothing that shows (a text that is the same again) */
       let o = {};
       if (calm()) o = { leave: false, move: false, reel: false, height: false };
+      if (W.page) o.height = false;   /* the page has no box to grow: what is below a change glides */
       const T = W.T || timings(box), ctx = stage(box, o, T, true);   /* its tuning as read when it settled: read now, after the page's write, it would work the styles out once more */
-      /* what was passing from the last update is over now */
-      $$('.g-reel, .g-morph-word', box).forEach(b => { if (b._finish) b._finish(); });
-      $$('.g-morph-ghost', box).forEach(e => { if (e._done) e._done(); else e.remove(); });
+      /* what was passing from the last update is over now (not what a box watched by itself in it still plays) */
+      $$('.g-reel, .g-morph-word', box).forEach(b => { if (b._finish && owner(b) === box) b._finish(); });
+      $$('.g-morph-ghost', box).forEach(e => { if (owner(e) !== box) return; if (e._done) e._done(); else e.remove(); });
       /* the height it had: its own, or where its last height animation is (a style read, no layout); that one is let go */
       if (box._hAnim) { const an = box._hAnim, k = an.effect.getComputedTiming().progress; ctx.h0 = k == null ? (W.at ? W.at.h : null) : box._hFrom + (box._hTo - box._hFrom) * k; box._hDone(); an.cancel(); }
       else if (W.at) ctx.h0 = W.at.h;
@@ -1727,8 +1803,11 @@
       g.map.forEach((e, n) => { if (!pairs.has(n)) pair(e, n); });   /* a keyed row that went to a parent of its own */
       /* a new text in a place that stays (the same node, or the new one of a pair): a number turns, new words light up (writes, before the reads) */
       const sx = PX, sy = PY, moving = performance.now() < W.busy;   /* no layout is read before the reads of flush(): the writes here would lay it out again */
-      const view = c => ({ left: c.x - sx, top: c.y - sy, width: c.w, height: c.h, right: c.x - sx + c.w, bottom: c.y - sy + c.h });
-      const shown = e => { const c = W.cache.get(e) || W.cache.get(pairs.get(e)); return !!c && !c.lazy && onScreen(view(c)); };
+      const view = c => c.fx ? { left: c.x, top: c.y, width: c.w, height: c.h, right: c.x + c.w, bottom: c.y + c.h }
+        : { left: c.x - sx, top: c.y - sy, width: c.w, height: c.h, right: c.x - sx + c.w, bottom: c.y - sy + c.h };
+      /* where it stood: its own place or the old one's it is, else the place of what holds it */
+      const near = e => { for (let p = e; p && p !== box; p = p.parentElement) { const c = W.cache.get(p) || W.cache.get(pairs.get(p)); if (c) return c; } return null; };
+      const shown = e => { const c = near(e); return !!c && !c.lazy && onScreen(view(c)); };
       const boards = [];
       const jobs = retext.map(e => [e, was(e)]);
       pairs.forEach((a, b) => { if (!a.children.length && !b.children.length && a.textContent !== b.textContent) jobs.push([b, a.textContent]); });
@@ -1741,7 +1820,7 @@
       /* where each one stood: its own place, or the place of the old one it is (page coordinates to the viewport; a glide that still runs is where it is now) */
       const from = e => {
         const c = W.cache.get(e) || (pairs.has(e) ? W.cache.get(pairs.get(e)) : null);
-        if (!c) return null;
+        if (!c || c.out) return null;
         if (c.lazy) { const L = W.lazy.get(c.lazy); return L ? { box: c.lazy, at: view(L) } : null; }
         const v = view(c);
         if (moving && W.cache.has(e) && e.getAnimations && e.getAnimations().length) {   /* still gliding from the last update */
@@ -1750,20 +1829,27 @@
         }
         return v;
       };
-      if (o.move !== false) tracked(box).forEach(e => { const f = from(e); if (f) ctx.moves.set(e, f); });
+      /* what may have moved: each element whose place is kept, or the new one of it (in this box, not in a box watched by itself) */
+      const force = new Set(shownRows);
+      if (o.move !== false) W.cache.forEach((c, e) => {
+        const n = e.isConnected && box.contains(e) ? e : back.get(e);
+        if (!n || force.has(n) || ctx.moves.has(n) || owner(n.parentElement) !== box) return;
+        const f = from(n); if (f) ctx.moves.set(n, f);
+      });
       /* what comes in: the top of what is new, but a new box that holds old rows does not come in itself (they glide to it), only its new rows do */
       const carry = new Set();
       pairs.forEach((a, b) => { for (let p = b.parentElement; p && p !== box && !carry.has(p); p = p.parentElement) carry.add(p); });
       W.cache.forEach((c, e) => { if (e.isConnected) for (let p = e.parentElement; p && p !== box && !carry.has(p); p = p.parentElement) carry.add(p); });
-      const into = n => { if (OWN.test(n.className)) return; if (pairs.has(n) || W.cache.has(n) || carry.has(n)) kids(n).forEach(into); else ctx.entering.push(n); };   /* a board that turns or marked words are the kit's, not new content */
+      const into = n => { if (OWN.test(n.className)) return; if (!force.has(n) && (pairs.has(n) || W.cache.has(n) || carry.has(n))) kids(n).forEach(into); else ctx.entering.push(n); };   /* a board that turns or marked words are the kit's, not new content */
       fresh.forEach(into);
+      shownRows.forEach(n => { if (!ctx.entering.includes(n)) ctx.entering.push(n); });
       /* what goes: fades out where it stood, in the place of its parent (the parent, or the new one of it); a box that held rows that live on does not */
       const ghosts = [];
       const hasPaired = e => [...e.querySelectorAll('*')].some(d => back.has(d));
       const leave = (e, p, oldParent) => {
-        if (ghosts.length >= MAX || !p || !p.isConnected) return;
+        if (ghosts.length >= MAX || !p || !p.isConnected || (W.page && p === box)) return;   /* what goes right out of <body> floated over the page */
         const c = W.cache.get(e), pc = oldParent === box ? W.at : W.cache.get(oldParent);
-        if (!c || c.lazy || !pc || pc.lazy || pc.cl == null || !onScreen(view(c))) return;
+        if (!c || c.lazy || c.out || !pc || pc.lazy || pc.cl == null || !onScreen(view(c))) return;
         const copy = e.cloneNode(true);   /* a copy: the node that went stays the page's */
         [copy, ...copy.querySelectorAll('[id]')].forEach(x => x.removeAttribute('id'));
         copy.querySelectorAll('input, select, textarea, button').forEach(x => { x.disabled = true; });
@@ -1777,26 +1863,40 @@
       if (o.leave !== false) gone.forEach(([e, p]) => out(e, p, p));
       /* play it: the same as Glass.morph from here; the reads of flush() are where all of it is read again (the cache) */
       ctx.ghosts = ghosts;
+      if (W.page) {   /* on the page, only where it changed is measured; what floats over the page (fixed, or absolute right in it) does not come in */
+        const sc = new Set();
+        gone.forEach(g => sc.add(g[1])); came.forEach(n => sc.add(n.parentElement)); retext.forEach(e => sc.add(e)); shownRows.forEach(e => sc.add(e.parentElement));
+        ctx.scope = [...sc].filter(n => n && n.isConnected);
+        ctx.floats = e => { const p = getComputedStyle(e).position; return p === 'fixed' || (p === 'absolute' && e.parentElement === box); };
+      }
       ctx.onRead = () => { snapshot(W); boards.forEach(b => b._arm()); };
       ctx.flush();
       if (ghosts.length) ghost(ghosts, ctx.run, ctx.until, ctx.wave, T.ease);
       W.mo.takeRecords();   /* the copies, the boards, the marked words: written here, not changes */
       W.busy = performance.now() + (ctx.until || 0) + 100;
       settle(W, 0);
+      /* the boxes it is in: what is below it moves as it grows, they read where all of it stands when it is over */
+      WATCHED.forEach(V => { if (V !== W && V.box.contains(box)) { V.busy = Math.max(V.busy, W.busy); settle(V, 0); } });
     }
     function watch(box) {
       if (typeof box === 'string') box = document.querySelector(box);
       if (!box || !window.MutationObserver) return null;
       if (WATCHED.has(box)) return WATCHED.get(box).stop;
-      const W = { box, cache: new Map(), lazy: new Map(), at: null, busy: 0, timer: 0 };
+      const page = box === document.body || box === document.documentElement;
+      const W = { box, page, cache: new Map(), lazy: new Map(), at: null, busy: 0, timer: 0, soon: 0, live: !page, rush: 0, last: 0 };
       W.mo = new MutationObserver(recs => changed(W, recs));
-      W.mo.observe(box, { childList: true, subtree: true, characterData: true });
+      W.mo.observe(box, { childList: true, subtree: true, characterData: true, characterDataOldValue: true, attributes: true, attributeFilter: ['hidden', 'open'], attributeOldValue: true });
       if (window.ResizeObserver) { W.ro = new ResizeObserver(() => settle(W, 50)); W.ro.observe(box); }
       if (!box.hasAttribute('data-g-no-enter')) box.setAttribute('data-g-no-enter', '');   /* its rows come in here, not by the generic entrance of new rows */
-      W.stop = () => { W.mo.disconnect(); if (W.ro) W.ro.disconnect(); clearTimeout(W.timer); WATCHED.delete(box); };
+      W.stop = () => { W.mo.disconnect(); if (W.ro) W.ro.disconnect(); clearTimeout(W.timer); clearTimeout(W.soon); WATCHED.delete(box); };
       WATCHED.set(box, W);
       listen();
-      snapshot(W);
+      if (!page) snapshot(W);
+      else {   /* the page as it loads is built, not changed: it is read and animated once it is loaded and the browser is idle (what the page
+                  still draws in its first moments, a background, an icon, would make every read of the layout work out all its styles again) */
+        const go = () => (window.requestIdleCallback ? f => requestIdleCallback(f, { timeout: 1500 }) : f => setTimeout(f, 200))(() => settled(() => setTimeout(() => { W.live = true; snapshot(W); })));
+        if (document.readyState === 'complete') go(); else addEventListener('load', go, { once: true });
+      }
       return W.stop;
     }
     morph.watch = watch;

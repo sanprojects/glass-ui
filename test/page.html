@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Watched page</title>
+<link rel="stylesheet" href="../glass-ui.css">
+<script defer src="../glass-ui.js"></script>
+<style>body { margin: 0; } #bar { position: sticky; top: 0; height: 40px; } main { width: 400px; }</style>
+</head>
+<body class="g-root" data-g-morph>
+<nav id="bar"><b id="clock">0</b></nav>
+<main>
+  <p>Found: <b id="count">3</b> <span id="deep"><i>5</i></span></p>
+  <div id="res"><ol class="g-list"><li>alpha</li><li>beta</li><li>gamma</li></ol></div>
+  <div id="own" data-g-morph><ol class="g-list"><li>one</li><li>two</li></ol></div>
+  <ol class="g-list" id="more"><li>m1</li><li hidden>m2</li></ol>
+  <p id="below">below</p>
+  <details id="shut"><summary>more</summary><div id="inside"><p>hidden text</p></div></details>
+  <style id="st">#below { color: inherit }</style>
+  <img src="slow.gif" alt="" width="1" height="1">
+  <iframe id="slow" hidden></iframe>
+</main>
+<script>
+  /* after the kit has started, before the page is loaded (slow.gif, served late by the test, holds the load back): built, not animated */
+  document.addEventListener('DOMContentLoaded', () => setTimeout(() => {
+    const li = document.createElement('li'); li.id = 'early'; li.textContent = 'early'; document.querySelector('#res ol').appendChild(li);
+    const state = document.readyState;
+    setTimeout(() => { window.__early = { state, animated: li.classList.contains('g-morph-enter') || !!document.querySelector('.g-morph-ghost') }; }, 30);
+  }));
+</script>
+</body></html>
