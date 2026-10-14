@@ -218,3 +218,11 @@ test('watch: a second change while the first one still moves ends in the state o
     setTimeout(() => { box.querySelector('ol').innerHTML = '<li>c1</li><li>a3</li>'; }, 90);`, 200);
   assert.deepEqual(r.after, { ghosts: 0, anims: 0, reels: 0, text: 'c1 a3' });
 });
+
+test('list: a click on the empty edge of a linked row opens its link (the stretched link is made for the row under the mouse)', async () => {
+  await page.evaluate(() => { const box = document.createElement('div'); box.id = 'edge-box'; box.innerHTML = '<ol class="g-list"><li><a href="#row-edge">word</a></li><li><a href="#other">other</a></li></ol>'; box.style.cssText = 'position:fixed;top:8px;left:8px;width:300px;z-index:9999'; document.body.appendChild(box); location.hash = ''; });
+  const r = await page.evaluate(() => { const li = document.querySelector('#edge-box li'), rr = li.getBoundingClientRect(), a = li.querySelector('a').getBoundingClientRect(); return { x: rr.right - 3, y: rr.top + rr.height / 2, onText: a.right > rr.right - 3, rows: [...document.querySelectorAll('#edge-box li')].filter(e => getComputedStyle(e.querySelector('a'), '::after').content !== 'none').length }; });
+  await page.mouse.move(r.x, r.y); await page.waitForTimeout(50); await page.mouse.click(r.x, r.y);
+  const out = await page.evaluate(() => { const h = location.hash; document.getElementById('edge-box').remove(); return h; });
+  assert.deepEqual({ onText: r.onText, stretchedBeforeHover: r.rows, opened: out }, { onText: false, stretchedBeforeHover: 0, opened: '#row-edge' });
+});

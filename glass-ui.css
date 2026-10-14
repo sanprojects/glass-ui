@@ -759,12 +759,13 @@ span.g-input-end { right: var(--g-inset); width: var(--g-icon-md); height: var(-
  * 9 characters, instead of 200px (a list of short words gets narrow columns and more of them); the numbering, padding and gap are added to it. */
 .g-list { list-style: none; margin: 0; padding: 0; min-width: 0; max-width: 100%; display: grid; --g-col-min: var(--g-col-w, 200px); grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--g-col-min)), 1fr)); justify-content: stretch; grid-auto-rows: 1fr; column-gap: var(--g-gap); row-gap: 0; counter-reset: g-n; font-size: var(--g-fs-subhead); }
 .g-list { --g-col-w: calc(var(--g-text-w, calc(var(--g-chars) * 1.1ch)) + 2.4ch + var(--g-inset) + 2 * var(--g-gap-inner)); }   /* --g-text-w (px, data-g-fit measures it) or --g-chars (a count you know); undefined without both: the 200px default applies */
-.g-list > li { counter-increment: g-n; display: flex; align-items: center; gap: var(--g-gap-inner); min-height: var(--g-list-row-h); padding: 0 var(--g-gap-inner) 0 var(--g-inset); border-radius: var(--g-radius-field); font-size: var(--g-fs-subhead); color: var(--g-text); transition: background var(--g-dur); }
+.g-list > li { counter-increment: g-n; position: relative; display: flex; align-items: center; gap: var(--g-gap-inner); min-height: var(--g-list-row-h); padding: 0 var(--g-gap-inner) 0 var(--g-inset); border-radius: var(--g-radius-field); font-size: var(--g-fs-subhead); color: var(--g-text); transition: background var(--g-dur); }
 .g-list > li[hidden] { display: none; }
 .g-list > li > :is(span, a) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .g-list > li > a { color: inherit; text-decoration: none; }
-.g-list > li:has(a) { position: relative; }
-.g-list > li a::after { content: ""; position: absolute; inset: 0; }   /* a linked row looks like a plain one and the whole row is the target: no link colour or underline, the link stretches over the row */
+/* a linked row looks like a plain one and the whole row is the target: no link colour or underline, the link stretches over the row. With a mouse it is made on the row under it only (a mouse is over a row before it clicks): 500 rows are not 500 boxes more */
+@media not all and (hover: hover) and (pointer: fine) { .g-list > li a::after { content: ""; position: absolute; inset: 0; } }
+@media (hover: hover) and (pointer: fine) { .g-list > li:hover a::after { content: ""; position: absolute; inset: 0; } }
 .g-list > li data { flex: none; }
 /* A switch row: <li><label><span>Name</span><input type="checkbox" role="switch"></label></li>. The name on the left, the switch at the right end; the label is the whole row, so a click anywhere on it toggles.
    Put it in <ul class="g-list" data-plain style="--g-chars: 26"> for the hairline between rows; a box around it of 28rem keeps it one column, without the box the list makes columns like any other. */
