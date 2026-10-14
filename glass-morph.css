@@ -7,22 +7,19 @@
  * !important: a row that is still entering has the rules of .g-list rows (and of the site) with a higher specificity. */
 :root { --g-morph-leave: 180ms; --g-morph-enter: 250ms; --g-morph-stagger: 20ms; --g-morph-reel: 320ms; --g-morph-reel-stagger: 35ms; --g-morph-move: 320ms; }
 @keyframes g-morph-out { to { opacity: 0; transform: translateX(-24px); } }
-@keyframes g-morph-in { from { opacity: 0; transform: translateX(-24px); } }
+/* what comes in is whole early (opacity at 40% of the run) and slides on to its place till the end: a half-transparent thing reads as a hole */
+@keyframes g-morph-in { 0% { opacity: 0; transform: translateX(-24px); } 40% { opacity: 1; } 100% { opacity: 1; transform: none; } }
 @keyframes g-morph-fade { from { opacity: 0; } }
 @keyframes g-morph-flash { from { background: var(--g-fill-strong, rgba(128,128,128,.28)); } }
 .g-morph-leave { animation: g-morph-out var(--g-morph-leave) ease-in forwards !important; pointer-events: none; }
 .g-morph-enter { animation: g-morph-in var(--g-morph-enter) var(--g-ease, cubic-bezier(.3,.7,.25,1)) backwards !important; animation-delay: var(--g-morph-d, calc(var(--g-morph-i, 0) * var(--g-morph-stagger))) !important; }   /* --g-morph-d: the script's wave */
-/* Glass that comes in (backdrop-filter: the script puts the class on the glass itself, not on a wrapper of it) is drawn without its blur until it is in:
-   every blur is a pass of the GPU in every frame, and a grid of glass tiles coming in at once drops frames (the home page of sanstv: 37 of 107 frames
-   over 25 ms with the blur, none without it). When the entrance is over the class goes and the blur is back */
-.g-morph-enter { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 .g-morph-flash { animation: g-morph-flash 1s ease-out !important; }   /* the highlight of the kit (g-anim-highlight) is used when the element's ::after is free */
 /* A changed text: only its new words light up, they come in out of a soft blur on a tint that fades (--g-morph-word, read by the script too) */
 :root { --g-morph-word: 1200ms; }
 @keyframes g-morph-word { 0% { background-color: var(--g-fill-strong, rgba(128,128,128,.28)); opacity: .25; filter: blur(2px); } 22% { opacity: 1; filter: none; } 100% { background-color: transparent; } }
 @keyframes g-morph-word-calm { from { background-color: var(--g-fill-strong, rgba(128,128,128,.28)); } }
 .g-morph-word { border-radius: 3px; -webkit-box-decoration-break: clone; box-decoration-break: clone; animation: g-morph-word var(--g-morph-word) ease-out; }
-.g-morph-ghost { z-index: 0; }   /* the old content of a swapped box fading out where it stood (the script places it) */
+.g-morph-ghost { z-index: -1; }   /* the old content fading out where it stood (the script places it), under what comes in at its place */
 /* Glass.morph measures the patched box at once, before the browser has told which of them are on the screen: for those reads they are all laid out
    (else a new or changed one stands at a guessed size, and what glides would aim wrong). Only [data-g-lazy] is named: switching it touches nothing else */
 [data-g-measure] [data-g-lazy] { content-visibility: visible; }

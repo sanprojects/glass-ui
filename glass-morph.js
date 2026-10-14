@@ -297,18 +297,20 @@
       return ch.length && !ownText(e) && ch.some(glassy) ? ch : [e];
     }
     function ghost(list, run, until, wave, ease) {
-      const held = new Map(), all = [];   /* parent -> how many ghosts it still holds; a static parent is positioned for them meanwhile */
+      /* parent -> [how many ghosts it still holds, static, its own isolation]. Meanwhile a static parent is positioned for them, and isolated: the
+         ghosts stand under its content (z-index -1), what comes in at their place covers them, and they stay over its background */
+      const held = new Map(), all = [];
       list.forEach(([e, p, x, y, w, h, flat, vx, vy]) => {
         if (!p.isConnected) return;
-        if (!held.has(p)) held.set(p, [0, flat]);
+        if (!held.has(p)) { held.set(p, [0, flat, p.style.isolation]); p.style.isolation = 'isolate'; }
         const hp = held.get(p); hp[0]++;
         if (hp[1]) p.style.position = 'relative';
         e.classList.remove('g-morph-leave', 'g-morph-enter'); e.removeAttribute('data-g-new'); e.style.animationDelay = '';   /* a row that was still coming in (newRows) only goes now */
         e.querySelectorAll('.g-morph-enter').forEach(c => c.classList.remove('g-morph-enter'));   /* the glass of a wrapper that was still coming in */
-        Object.assign(e.style, { position: 'absolute', left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px', margin: '0', pointerEvents: 'none', boxSizing: 'border-box', counterIncrement: 'none', counterSet: 'none', counterReset: 'none', zIndex: '0' });
+        Object.assign(e.style, { position: 'absolute', left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px', margin: '0', pointerEvents: 'none', boxSizing: 'border-box', counterIncrement: 'none', counterSet: 'none', counterReset: 'none', zIndex: '-1' });
         e.classList.add('g-morph-ghost'); e.setAttribute('aria-hidden', 'true'); e.inert = true;
         p.appendChild(e);
-        e._done = () => { if (!e.parentNode) return; e.remove(); if (!--hp[0] && hp[1]) p.style.position = ''; };
+        e._done = () => { if (!e.parentNode) return; e.remove(); if (!--hp[0]) { if (hp[1]) p.style.position = ''; p.style.isolation = hp[2]; } };
         all.push([e, wave(vx, vy)]);   /* with the new one of its place */
       });
       const what = all.map(([e]) => fades(e));   /* read once all of them are in: one pass of styles */
@@ -383,11 +385,11 @@
              together. The places are counted in lines (top to bottom) and in columns (left to right), only the lines and columns where something
              changes, and one more line or column is one step of the stagger later: the next place starts a little after its neighbour, however far the
              rows that changed stand apart. Many places: a shorter step. The end of all stays where it was (a later start, a shorter run), and the
-             last ones still run half of --g-morph-enter. */
+             last ones still run three quarters of --g-morph-enter. */
           const ranks = (vs, near) => { const m = new Map(); let from = null, i = -1; [...new Set(vs.map(Math.round))].sort((a, b) => a - b).forEach(v => { if (from === null || v - from > near) { from = v; i++; } m.set(v, i); }); return [m, Math.max(i, 0)]; };
           const places = [...enter, ...glide.map(g => g[0]), ...away.map(g => g[0])].map(e => at.get(e)).filter(Boolean).concat(ctx.ghosts.map(g => [g[7], g[8]]));
           const [line, lines] = ranks(places.map(p => p[1]), 12), [col, cols] = ranks(places.map(p => p[0]), 30);
-          const step = lines + cols ? Math.min(T.stagger, Math.max(0, end - T.enter / 2) / (lines + cols)) : 0;
+          const step = lines + cols ? Math.min(T.stagger, Math.max(0, end - T.enter * .75) / (lines + cols)) : 0;
           ctx.wave = (x, y) => Math.round(((line.get(Math.round(y)) || 0) + (col.get(Math.round(x)) || 0)) * step);
           ctx.run = d => Math.max(60, ctx.fade - d, (end - d) * .6);   /* how long a row that goes fades out: before the new one of its place is in */
           const waveOf = e => { const p = at.get(e); return p ? ctx.wave(p[0], p[1]) : 0; };

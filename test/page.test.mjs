@@ -116,12 +116,12 @@ test('glass-morph.js alone (no glass-ui.js): a watched box and Glass.morph anima
   assert.deepEqual({ ...r, errs }, { watched: { ghosts: 'alpha', entering: 'gamma', reels: 1 }, done: true, api: 'morph,watch', errs: [] });
 });
 
-test('page: glass in a wrapper (<a><article>) fades itself, without its blur until it is in (a wrapper that fades would take the blur away)', async () => {
+test('page: glass in a wrapper (<a><article>) fades itself and keeps its blur (a wrapper that fades would take the blur away)', async () => {
   const r = await change(`document.getElementById('tiles').innerHTML += '<a href="#t2"><article style="backdrop-filter: blur(4px); padding: 8px">tile two</article></a>';
     await new Promise(r => setTimeout(r, 20)); const a = document.querySelector('#tiles a[href="#t2"]'), art = a.firstElementChild;
     out.on = { a: a.classList.contains('g-morph-enter'), article: art.classList.contains('g-morph-enter'), blur: getComputedStyle(art).backdropFilter };`);
   assert.deepEqual({ on: r.on, after: await page.evaluate(() => getComputedStyle(document.querySelector('#tiles a[href="#t2"] article')).backdropFilter) },
-    { on: { a: false, article: true, blur: 'none' }, after: 'blur(4px)' });
+    { on: { a: false, article: true, blur: 'blur(4px)' }, after: 'blur(4px)' });
 });
 
 test('page: the page still runs without script errors', () => { assert.deepEqual(errors, []); });
