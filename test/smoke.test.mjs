@@ -169,6 +169,7 @@ const watched = async (html, change, wait = 40) => page.evaluate(async ([html, c
     entering: li.filter(e => e.classList.contains('g-morph-enter')).map(e => e.textContent.trim()).join(),
     gliding: li.filter(e => e.getAnimations().some(a => !(a instanceof CSSAnimation) && a.effect.getKeyframes().some(k => k.transform && k.transform !== 'none'))).map(e => e.textContent.trim()).join(),
     reels: box.querySelectorAll('.g-reel__strip').length,
+    boardSlides: !!box.querySelector('.g-reel.g-morph-enter, .g-morph-word.g-morph-enter'),   // the kit's own parts are not new content: a board turns in place
   });
   await new Promise(r => setTimeout(r, 1300));   // all over: plain again, and nothing moves on by itself (the kit's own writes are no change)
   if (out.keep) { out.kept = out.keep.isConnected && box.contains(out.keep); delete out.keep; }   // the node the page put in is the one on the page
@@ -180,8 +181,8 @@ const watched = async (html, change, wait = 40) => page.evaluate(async ([html, c
 test('watch: innerHTML written by a script: the row that went fades out, the new one comes in, the rest glide, the number turns', async () => {
   const r = await watched('<p>Found: <b>3</b></p><ol class="g-list"><li>alpha</li><li>beta</li><li>gamma</li></ol>',
     `box.innerHTML = '<p>Found: <b>4</b></p><ol class="g-list"><li>beta</li><li>gamma</li><li>delta</li><li>omega</li></ol>'; out.keep = box.querySelector('li');`);
-  assert.deepEqual({ ghosts: r.ghosts, entering: r.entering, gliding: r.gliding, reels: r.reels > 0, kept: r.kept, after: r.after },
-    { ghosts: 'alpha', entering: 'delta,omega', gliding: 'beta,gamma', reels: true, kept: true, after: { ghosts: 0, anims: 0, reels: 0, text: 'Found: 4 beta gamma delta omega' } });
+  assert.deepEqual({ ghosts: r.ghosts, entering: r.entering, gliding: r.gliding, reels: r.reels > 0, boardSlides: r.boardSlides, kept: r.kept, after: r.after },
+    { ghosts: 'alpha', entering: 'delta,omega', gliding: 'beta,gamma', reels: true, boardSlides: false, kept: true, after: { ghosts: 0, anims: 0, reels: 0, text: 'Found: 4 beta gamma delta omega' } });
 });
 
 test('watch: rows taken out and put in one by one (as a framework does), and a row moved: only those animate, the moved one glides', async () => {
@@ -196,7 +197,7 @@ test('watch: rows taken out and put in one by one (as a framework does), and a r
 
 test('watch: a counter whose text a script sets turns its digits', async () => {
   const r = await watched('<p>Online: <b id="n">5</b></p>', `box.querySelector('#n').textContent = '17';`);
-  assert.deepEqual({ reels: r.reels > 0, after: r.after }, { reels: true, after: { ghosts: 0, anims: 0, reels: 0, text: 'Online: 17' } });
+  assert.deepEqual({ reels: r.reels > 0, boardSlides: r.boardSlides, after: r.after }, { reels: true, boardSlides: false, after: { ghosts: 0, anims: 0, reels: 0, text: 'Online: 17' } });
 });
 
 test('watch: Glass.morph into a watched box is animated once, not twice', async () => {

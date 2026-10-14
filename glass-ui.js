@@ -1284,7 +1284,7 @@
     const el = (cls, text) => { const e = document.createElement('span'); e.className = cls; if (text != null) e.textContent = text; return e; };
     /* Replaces the text node `t` (a number) with a board of reels that shows `to` at the end. The characters are aligned to the right and a reel runs only
        where the digit changed. When it is over, the board is a plain text node again. */
-    function reel(t, to, T) {
+    function reel(t, to, T, late) {   /* late: the height of a line is read when it is armed, with the other reads (a read here, among the writes, would work the styles out again) */
       blurFilters();
       const from = t.nodeValue, n = Math.max(from.length, to.length), a = from.padStart(n, '\0'), b = to.padStart(n, '\0');
       const up = parseFloat(to.replace(/[^\d.]/g, '')) >= parseFloat(from.replace(/[^\d.]/g, ''));   /* the number grew: the reels run up */
@@ -1306,9 +1306,12 @@
         } else { size.style.visibility = 'visible'; size.textContent = c || o; }   /* the same character, or a separator that appeared / went away */
         board.insertBefore(cell, board.firstChild);
       }
-      const cs = t.parentElement ? getComputedStyle(t.parentElement) : null;   /* a cell is as tall as a line of its host */
-      board.style.setProperty('--g-reel-h', (cs && parseFloat(cs.lineHeight) || (cs ? parseFloat(cs.fontSize) : 16) * 1.25) + 'px');
-      board._arm = () => $$('.g-reel__cell--new, .g-reel__cell--gone', board).forEach(c => { c.style.setProperty('--g-reel-w', c.firstChild.getBoundingClientRect().width + 'px'); });   /* once it is in the DOM */
+      const lineOf = host => { const cs = host ? getComputedStyle(host) : null; board.style.setProperty('--g-reel-h', (cs && parseFloat(cs.lineHeight) || (cs ? parseFloat(cs.fontSize) : 16) * 1.25) + 'px'); };   /* a cell is as tall as a line of its host */
+      if (!late) lineOf(t.parentElement);
+      board._arm = () => {   /* once it is in the DOM */
+        if (late) lineOf(board.parentElement);
+        $$('.g-reel__cell--new, .g-reel__cell--gone', board).forEach(c => { c.style.setProperty('--g-reel-w', c.firstChild.getBoundingClientRect().width + 'px'); });
+      };
       board._finish = () => { clearTimeout(board._timer); if (board.parentNode) board.parentNode.replaceChild(document.createTextNode(to), board); };
       settled(() => { if (board.parentNode) board._timer = setTimeout(board._finish, T.reel + Math.max(changed - 1, 0) * T.reelStagger + 60); });
       return board;
@@ -1518,7 +1521,7 @@
     let batch = null;
     function afterPaint(run) {
       if (batch) return batch.push(run);
-      const b = batch = [run], go = () => { if (batch !== b) return; batch = null; b.forEach(f => f()); };
+      const b = batch = [run], go = () => { if (batch !== b) return; batch = null; b.forEach(f => { if (f.pre) f.pre(); }); b.forEach(f => f()); };   /* what each one reads first is read for all before any of them writes */
       requestAnimationFrame(() => setTimeout(go));
       setTimeout(go, 100);   /* a page that draws no frames */
     }
@@ -1526,9 +1529,10 @@
       if (typeof target === 'string') target = document.querySelector(target);
       if (!target) return Promise.resolve(false);
       if (quiet()) return patch(target, next, opts);
-      return new Promise((resolve, reject) => afterPaint(() => { try { patch(target, next, opts).then(resolve, reject); } catch (e) { reject(e); } }));
+      let T = null;
+      return new Promise((resolve, reject) => afterPaint(Object.assign(() => { try { patch(target, next, opts, T).then(resolve, reject); } catch (e) { reject(e); } }, { pre: () => { T = timings(target); } })));
     }
-    function patch(target, next, opts) {
+    function patch(target, next, opts, tuned) {
       let o = opts || {};
       if (calm()) o = Object.assign({}, o, { leave: false, move: false, reel: false, height: false });   /* reduced motion: patched at once, the new and the changed fade in */
       if (typeof next === 'string') { const tmp = target.cloneNode(false); tmp.innerHTML = next; next = tmp; }
@@ -1537,7 +1541,7 @@
       $$('.g-morph-ghost', target).forEach(e => { if (e._done) e._done(); else e.remove(); });   /* what was fading out of the last update is gone now */   /* a board that still turns is the plain number now, marked words plain text */
       const prev = target._morph;
       if (prev) { clearTimeout(prev.timer); prev.leaving.forEach(e => { e.classList.remove('g-morph-leave'); e.style.animationDelay = ''; }); prev.resolve(false); target._morph = null; }
-      const T = timings(target), play = !quiet();
+      const T = tuned || timings(target), play = !quiet();
       const ctx = stage(target, o, T, play);
       return new Promise(resolve => {
         const gone = [], moved = new Set(), g = globalPairs(target, next, o), roots = { old: target, next };
@@ -1630,6 +1634,7 @@
       const sx = PX, sy = PY, skipped = skipper(), cache = new Map(), lazy = new Map(), b = W.box.getBoundingClientRect();
       W.at = Object.assign({ x: b.left + sx, y: b.top + sy, h: b.height, seen: onScreen(b) }, frame(W.box));
       W.text = plain(W.box);   /* a box that is only text (a status line): its text is kept too */
+      W.T = timings(W.box);
       tracked(W.box).forEach(e => {
         const s = skipped(e);   /* in a content-visibility box out of the viewport: not laid out, its box stands for it */
         if (s) { if (!lazy.has(s[0])) lazy.set(s[0], { x: s[1].left + sx, y: s[1].top + sy, w: s[1].width, h: s[1].height }); cache.set(e, { lazy: s[0] }); return; }
@@ -1691,7 +1696,7 @@
       if (!gone.length && !fresh.length && !retext.length && ![...came].some(n => W.cache.has(n))) { fits(); return; }   /* nothing that shows (a text that is the same again) */
       let o = {};
       if (calm()) o = { leave: false, move: false, reel: false, height: false };
-      const T = timings(box), ctx = stage(box, o, T, true);
+      const T = W.T || timings(box), ctx = stage(box, o, T, true);   /* its tuning as read when it settled: read now, after the page's write, it would work the styles out once more */
       /* what was passing from the last update is over now */
       $$('.g-reel, .g-morph-word', box).forEach(b => { if (b._finish) b._finish(); });
       $$('.g-morph-ghost', box).forEach(e => { if (e._done) e._done(); else e.remove(); });
@@ -1730,7 +1735,7 @@
       jobs.forEach(([e, from]) => {
         const t = e.firstChild, to = t && t.nodeValue;
         if (!t || t.nodeType !== 3 || e.childNodes.length !== 1 || from === to) return;
-        if (o.reel !== false && NUM.test(from) && NUM.test(to) && shown(e)) { t.nodeValue = from; const board = reel(t, to, T); t.replaceWith(board); boards.push(board); }   /* measured with the reads of the update */
+        if (o.reel !== false && NUM.test(from) && NUM.test(to) && shown(e)) { t.nodeValue = from; const board = reel(t, to, T, true); t.replaceWith(board); boards.push(board); }   /* measured with the reads of the update */
         else if (o.flash !== false) { t.nodeValue = from; const f = words(t, to, ctx); if (f) t.replaceWith(f); else t.nodeValue = to; }
       });
       /* where each one stood: its own place, or the place of the old one it is (page coordinates to the viewport; a glide that still runs is where it is now) */
@@ -1750,7 +1755,7 @@
       const carry = new Set();
       pairs.forEach((a, b) => { for (let p = b.parentElement; p && p !== box && !carry.has(p); p = p.parentElement) carry.add(p); });
       W.cache.forEach((c, e) => { if (e.isConnected) for (let p = e.parentElement; p && p !== box && !carry.has(p); p = p.parentElement) carry.add(p); });
-      const into = n => { if (pairs.has(n) || W.cache.has(n) || carry.has(n)) kids(n).forEach(into); else ctx.entering.push(n); };
+      const into = n => { if (OWN.test(n.className)) return; if (pairs.has(n) || W.cache.has(n) || carry.has(n)) kids(n).forEach(into); else ctx.entering.push(n); };   /* a board that turns or marked words are the kit's, not new content */
       fresh.forEach(into);
       /* what goes: fades out where it stood, in the place of its parent (the parent, or the new one of it); a box that held rows that live on does not */
       const ghosts = [];
