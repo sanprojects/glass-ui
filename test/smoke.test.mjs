@@ -69,8 +69,8 @@ test('morph: a row that stays is the same node, a gone one slides out, a new one
     const box = document.createElement('div'); box.innerHTML = '<p><b>199</b> words</p><ol class="g-list"><li data-key="a">a</li><li data-key="b">b</li></ol>'; box.style.cssText = 'position:fixed;top:8px;left:8px;z-index:9999'; document.body.appendChild(box);   // in the viewport: only what is on the screen is animated
     const a = box.querySelector('[data-key=a]'), out = {};
     const p = Glass.morph(box, '<p><b>203</b> words</p><ol class="g-list"><li data-key="a">a</li><li data-key="c">c</li></ol>');
-    await new Promise(r => setTimeout(r, 40)); out.leaving = box.querySelectorAll('li.g-morph-ghost').length;   // the gone row fades out where it stood
-    await p; await new Promise(r => setTimeout(r, 40));
+    await p; out.leaving = box.querySelectorAll('li.g-morph-ghost').length;   // the gone row fades out where it stood (the morph runs after the next frame: waited for, not timed)
+    await new Promise(r => setTimeout(r, 40));
     out.keys = [...box.querySelectorAll('li:not(.g-morph-ghost)')].map(l => l.dataset.key).join(); out.same = box.querySelector('[data-key=a]') === a;
     out.entering = box.querySelector('[data-key=c]').classList.contains('g-morph-enter'); out.reel = box.querySelectorAll('.g-reel__strip').length;
     await new Promise(r => setTimeout(r, 900)); out.plain = box.querySelector('b').textContent; out.ghosts = box.querySelectorAll('.g-morph-ghost').length; box.remove();
@@ -152,4 +152,68 @@ test('morph: an update that comes while the box still grows from the last one: t
     return out;
   });
   assert.deepEqual(r, { endsAtReal: true, overflow: '' });
+});
+
+/* A watched box (data-g-morph): whoever changes it, the change is animated; the new nodes stay the page's */
+const watched = async (html, change, wait = 40) => page.evaluate(async ([html, change, wait]) => {
+  const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const box = document.createElement('div'); box.setAttribute('data-g-morph', ''); box.innerHTML = html;
+  box.style.cssText = 'position:fixed;top:8px;left:8px;width:300px;z-index:9999'; document.body.appendChild(box);
+  await frame(); await new Promise(r => setTimeout(r, 50));
+  const out = {}, fn = new Function('box', 'out', change);
+  fn(box, out);
+  await new Promise(r => setTimeout(r, wait));
+  const li = [...box.querySelectorAll('li:not(.g-morph-ghost)')];
+  Object.assign(out, {
+    ghosts: [...box.querySelectorAll('.g-morph-ghost')].map(e => e.textContent.trim()).join(),
+    entering: li.filter(e => e.classList.contains('g-morph-enter')).map(e => e.textContent.trim()).join(),
+    gliding: li.filter(e => e.getAnimations().some(a => !(a instanceof CSSAnimation) && a.effect.getKeyframes().some(k => k.transform && k.transform !== 'none'))).map(e => e.textContent.trim()).join(),
+    reels: box.querySelectorAll('.g-reel__strip').length,
+  });
+  await new Promise(r => setTimeout(r, 1300));   // all over: plain again, and nothing moves on by itself (the kit's own writes are no change)
+  if (out.keep) { out.kept = out.keep.isConnected && box.contains(out.keep); delete out.keep; }   // the node the page put in is the one on the page
+  out.after = { ghosts: box.querySelectorAll('.g-morph-ghost').length, anims: [...box.querySelectorAll('*')].filter(e => e.getAnimations().length).length, reels: box.querySelectorAll('.g-reel').length, text: [...box.querySelectorAll('p, li')].map(e => e.textContent.trim()).join(' ') };
+  box.remove();
+  return out;
+}, [html, change, wait]);
+
+test('watch: innerHTML written by a script: the row that went fades out, the new one comes in, the rest glide, the number turns', async () => {
+  const r = await watched('<p>Found: <b>3</b></p><ol class="g-list"><li>alpha</li><li>beta</li><li>gamma</li></ol>',
+    `box.innerHTML = '<p>Found: <b>4</b></p><ol class="g-list"><li>beta</li><li>gamma</li><li>delta</li><li>omega</li></ol>'; out.keep = box.querySelector('li');`);
+  assert.deepEqual({ ghosts: r.ghosts, entering: r.entering, gliding: r.gliding, reels: r.reels > 0, kept: r.kept, after: r.after },
+    { ghosts: 'alpha', entering: 'delta,omega', gliding: 'beta,gamma', reels: true, kept: true, after: { ghosts: 0, anims: 0, reels: 0, text: 'Found: 4 beta gamma delta omega' } });
+});
+
+test('watch: rows taken out and put in one by one (as a framework does), and a row moved: only those animate, the moved one glides', async () => {
+  const r = await watched('<ul class="g-list"><li data-key="1">one</li><li data-key="2">two</li><li data-key="3">three</li></ul>', `
+    const ul = box.querySelector('ul'), li = n => ul.querySelector('[data-key="' + n + '"]');
+    ul.removeChild(li(1));
+    const four = document.createElement('li'); four.dataset.key = '4'; four.textContent = 'four'; ul.appendChild(four);
+    ul.insertBefore(li(3), li(2));`);   // three, two, four: two keeps its place
+  assert.deepEqual({ ghosts: r.ghosts, entering: r.entering, gliding: r.gliding, after: r.after },
+    { ghosts: 'one', entering: 'four', gliding: 'three', after: { ghosts: 0, anims: 0, reels: 0, text: 'three two four' } });
+});
+
+test('watch: a counter whose text a script sets turns its digits', async () => {
+  const r = await watched('<p>Online: <b id="n">5</b></p>', `box.querySelector('#n').textContent = '17';`);
+  assert.deepEqual({ reels: r.reels > 0, after: r.after }, { reels: true, after: { ghosts: 0, anims: 0, reels: 0, text: 'Online: 17' } });
+});
+
+test('watch: Glass.morph into a watched box is animated once, not twice', async () => {
+  const r = await watched('<ol class="g-list"><li>alpha</li><li>beta</li></ol>', `out.p = Glass.morph(box, '<ol class="g-list"><li>beta</li><li>delta</li></ol>');`, 120);
+  assert.deepEqual({ ghosts: r.ghosts, entering: r.entering, after: r.after }, { ghosts: 'alpha', entering: 'delta', after: { ghosts: 0, anims: 0, reels: 0, text: 'beta delta' } });
+});
+
+test('watch: a word that went to another list (all written anew) glides there, it does not go and come', async () => {
+  const r = await watched('<ol class="g-list"><li>alpha</li><li>beta</li></ol><ol class="g-list"><li>gamma</li></ol>',
+    `box.innerHTML = '<ol class="g-list"><li>alpha</li></ol><ol class="g-list"><li>beta</li><li>gamma</li></ol>';`);
+  assert.deepEqual({ ghosts: r.ghosts, entering: r.entering, gliding: r.gliding.split(',').includes('beta'), after: r.after },
+    { ghosts: '', entering: '', gliding: true, after: { ghosts: 0, anims: 0, reels: 0, text: 'alpha beta gamma' } });
+});
+
+test('watch: a second change while the first one still moves ends in the state of the second, with nothing left over', async () => {
+  const r = await watched('<ol class="g-list"><li>a1</li><li>a2</li><li>a3</li></ol>', `
+    box.querySelector('ol').innerHTML = '<li>a2</li><li>b1</li><li>a3</li><li>b2</li>';
+    setTimeout(() => { box.querySelector('ol').innerHTML = '<li>c1</li><li>a3</li>'; }, 90);`, 200);
+  assert.deepEqual(r.after, { ghosts: 0, anims: 0, reels: 0, text: 'c1 a3' });
 });
