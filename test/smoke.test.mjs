@@ -119,3 +119,37 @@ test('morph: a row that fades out is not measured by data-g-fit, the columns tak
   });
   assert.deepEqual(r, { ghosts: 1, narrower: true });
 });
+
+test('morph: the row that goes and the row that comes in at one place start together, the next place a step later, all end together', async () => {
+  const r = await page.evaluate(async () => {
+    const list = (p, n) => '<ol class="g-list">' + Array.from({ length: n }, (_, i) => `<li data-key="${p}${i}">${p} ${i}</li>`).join('') + '</ol>';
+    const box = document.createElement('div'); box.innerHTML = '<p>head</p>' + list('old', 12); box.style.cssText = 'position:fixed;top:8px;left:8px;width:300px;z-index:9999'; document.body.appendChild(box);
+    await new Promise(r => setTimeout(r, 50));
+    await Glass.morph(box, '<p>head<br>two<br>three</p>' + list('new', 12));   // the text above grows: the list, and the rows that go with it, move down
+    const timing = e => { const t = e.getAnimations()[0].effect.getTiming(); return { y: Math.round(e.getBoundingClientRect().top), d: t.delay, end: t.delay + t.duration }; };
+    const gone = [...box.querySelectorAll('li.g-morph-ghost')].map(timing), came = [...box.querySelectorAll('li.g-morph-enter')].map(timing).sort((a, b) => a.y - b.y);
+    const apart = gone.map(g => { const n = came.find(c => Math.abs(c.y - g.y) < 2); return n ? Math.abs(n.d - g.d) : Infinity; });
+    const out = { pairs: apart.length, together: Math.max(...apart) <= 2, lowerLater: came.every((c, i) => !i || c.d - came[i - 1].d >= 15), spread: came[came.length - 1].d - came[0].d > 50,
+      noBatch: came.filter(c => c.d === came[came.length - 1].d).length < came.length / 2, oneEnd: new Set(came.map(c => Math.round(c.end))).size === 1 };
+    box.remove();
+    return out;
+  });
+  assert.deepEqual(r, { pairs: 12, together: true, lowerLater: true, spread: true, noBatch: true, oneEnd: true });
+});
+
+test('morph: an update that comes while the box still grows from the last one: the box ends at its real height and gets its overflow back', async () => {
+  const r = await page.evaluate(async () => {
+    const list = (p, n) => '<ol class="g-list">' + Array.from({ length: n }, (_, i) => `<li data-key="${p}${i}">${p} ${i}</li>`).join('') + '</ol>';
+    const box = document.createElement('div'); box.innerHTML = list('a', 2); box.style.cssText = 'position:fixed;top:8px;left:8px;width:300px;z-index:9999'; document.body.appendChild(box);
+    await new Promise(r => setTimeout(r, 50));
+    await Glass.morph(box, list('b', 10));
+    await new Promise(r => setTimeout(r, 80));   // the box is halfway
+    await Glass.morph(box, list('c', 6));
+    const to = parseFloat(box.getAnimations().find(a => a.effect.getKeyframes().some(k => k.height)).effect.getKeyframes()[1].height);
+    await new Promise(r => setTimeout(r, 900));
+    const out = { endsAtReal: Math.abs(to - box.getBoundingClientRect().height) < 1, overflow: box.style.overflowY };
+    box.remove();
+    return out;
+  });
+  assert.deepEqual(r, { endsAtReal: true, overflow: '' });
+});

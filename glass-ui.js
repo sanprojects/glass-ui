@@ -1213,6 +1213,9 @@
       fresh.forEach((n, k) => { const e = old.get(k); if (n && e) { g.map.set(n, e); g.claimed.add(e); } });
       return g;
     }
+    /* the boxes whose content was all taken out before the patch (what leaves goes first): still boxes, not leaves, when they are paired */
+    let HOLLOW = new WeakSet();
+    const box = e => e.children.length > 0 || HOLLOW.has(e);
     /* pairs of indexes [old, new] and the unpaired of both sides */
     function match(oldL, newL, o, nums) {   /* nums: a function, asked only when there are numbers left to pair (it reads the text of the whole box) */
       const ok = keys(oldL, o, R && R.old), nk = keys(newL, o, R && R.next), byKey = {}, usedO = {}, usedN = {}, pairs = [], groups = {};
@@ -1231,7 +1234,7 @@
       oldL.forEach((el, i) => { if (!usedO[i] && !ok.explicit[i] && !FORM.has(el.tagName)) grp(el).o.push(i); });
       newL.forEach((el, j) => { if (!usedN[j] && !nk.explicit[j] && !FORM.has(el.tagName)) grp(el).n.push(j); });
       Object.keys(groups).forEach(tag => {
-        const g = groups[tag], oc = g.o.filter(i => oldL[i].children.length), nc = g.n.filter(j => newL[j].children.length);
+        const g = groups[tag], oc = g.o.filter(i => box(oldL[i])), nc = g.n.filter(j => newL[j].children.length);
         /* boxes are walked into in order, but only a box of the same kind (its first class): a list does not turn into the "nothing found" card */
         const kind = e => e.classList[0] || '', queue = {};
         /* a list row is its text: a row with other words is another row (it slides in, the old one out), not this one with a new text; only its numbers may change (a counter) */
@@ -1382,19 +1385,21 @@
     /* What leaves does not hold the update up: it is put back where it stood, in its own parent but out of the flow (it pushes nothing),
        and fades out while the new content comes in and the rest glides. list: [element, parent, x, y, width, height, the parent is static] (all read before the patch:
        a read here, after the writes of the update, would make the page work out its styles once more). They fade out in `ms` and are taken away, all at once,
-       at `until`: taking one away lays the page out, so they go when nothing moves any more, and in one go. */
-    function ghost(list, ms, until) {
+       at `until`: taking one away lays the page out, so they go when nothing moves any more, and in one go. Each starts with the new one of the
+       place it stood (wave: viewport x, y -> ms of delay), on the same curve (ease) and the same way (to the right), and fades out in run(delay) ms. */
+    function ghost(list, run, until, wave, ease) {
       const held = new Map(), all = [];   /* parent -> how many ghosts it still holds; a static parent is positioned for them meanwhile */
-      list.forEach(([e, p, x, y, w, h, flat]) => {
+      list.forEach(([e, p, x, y, w, h, flat, vx, vy]) => {
         if (!p.isConnected) return;
         if (!held.has(p)) held.set(p, [0, flat]);
         const hp = held.get(p); hp[0]++;
         if (hp[1]) p.style.position = 'relative';
-        e.classList.remove('g-morph-leave', 'g-morph-enter'); e.style.animationDelay = '';
+        e.classList.remove('g-morph-leave', 'g-morph-enter'); e.removeAttribute('data-g-new'); e.style.animationDelay = '';   /* a row that was still coming in (newRows) only goes now */
         Object.assign(e.style, { position: 'absolute', left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px', margin: '0', pointerEvents: 'none', boxSizing: 'border-box', counterIncrement: 'none', counterSet: 'none', counterReset: 'none', zIndex: '0' });
         e.classList.add('g-morph-ghost'); e.setAttribute('aria-hidden', 'true'); e.inert = true;
         p.appendChild(e);
-        e.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(-24px)' }], { duration: ms, easing: 'ease-in', fill: 'forwards' });
+        const d = wave(vx, vy);   /* with the new one of its place */
+        e.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(24px)' }], { duration: run(d), delay: d, easing: ease, fill: 'both' });
         e._done = () => { if (!e.parentNode) return; e.remove(); if (!--hp[0] && hp[1]) p.style.position = ''; };
         all.push(e);
       });
@@ -1438,7 +1443,8 @@
           target.setAttribute('data-g-measure', '');
           /* the columns of a [data-g-fit] take the width of the new words first (else they would after this, and the rows would not end where they are read) */
           [...$$('[data-g-fit]', target), target.closest('[data-g-fit]')].forEach(b => { if (b) { if (b._gFit) b._gFit(); else mount1(b, ['[data-g-fit]', initFit]); } });
-          const enter = o.enter !== false ? ctx.entering.filter(inView).slice(0, MAX) : [];
+          const at = new Map();   /* where in the viewport each element that is animated starts: the wave reaches it from there */
+          const enter = o.enter !== false ? ctx.entering.filter(e => { const r = e.getBoundingClientRect(); at.set(e, [r.left, r.top]); return onScreen(r); }).slice(0, MAX) : [];
           const hidden = ctx.words.filter(([host]) => !inView(host));   /* marked words out of the viewport: plain text at once */
           const box = target.getBoundingClientRect(), bs = getComputedStyle(target);
           const extra = bs.boxSizing === 'border-box' ? 0 : ['paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth'].reduce((v, k) => v + (parseFloat(bs[k]) || 0), 0);
@@ -1464,16 +1470,31 @@
               const on = onScreen(l);
               /* only what is on the screen before and after glides: one that comes from out of the viewport comes in as a new one does, one that goes
                  out of it fades out where it stood (a glide over thousands of pixels would only flash across the screen) */
+              at.set(e, on && !seen ? [l.left, l.top] : [l.left + r[0], l.top + r[1]]);   /* one that comes in: where it ends; one that glides or goes: where it stood */
               if (on && !seen && o.enter !== false) { came.add(e); enter.push(e); }
               else if (on) { gliding.set(e, [r[0], r[1]]); glide.push([e, dx, dy]); }
               else if (seen) { gliding.set(e, [r[0], r[1]]); away.push([e, dx, dy]); }
             });
             if (came.size) enter.sort((x, y) => x.compareDocumentPosition(y) & 4 ? -1 : 1).splice(MAX);
           }
+          /* where each row that goes is drawn: in its parent, where it stood in it (the parent may have moved with the update), as the new ones are read */
+          ctx.ghosts.forEach(g => { const p = g[1]; if (!p.isConnected) return; const pr = p.getBoundingClientRect(); g[7] = pr.left + p.clientLeft - p.scrollLeft + g[2]; g[8] = pr.top + p.clientTop - p.scrollTop + g[3]; });
           /* what moves and what comes in finish together: one end for all, the later of the glide and the last staggered entry */
           target.removeAttribute('data-g-measure');   /* the reads are done: what is out of the viewport is skipped again in the next frame */
           const lag = Math.min(enter.length - 1, 9) * T.stagger, end = Math.max(enter.length ? T.enter + lag : 0, ctx.moves.size && o.move !== false ? T.move : 0) || T.move;
           ctx.end = end; ctx.fade = Math.max(T.leave, end * .75); ctx.until = Math.max(T.leave, end) + 50;   /* what leaves: faded a little before the rest settles, taken away after it */
+          /* When each one starts. A place is where something changes: the row that goes and the row that comes in there are one place and start
+             together. The places are counted in lines (top to bottom) and in columns (left to right), only the lines and columns where something
+             changes, and one more line or column is one step of the stagger later: the next place starts a little after its neighbour, however far the
+             rows that changed stand apart. Many places: a shorter step. The end of all stays where it was (a later start, a shorter run), and the
+             last ones still run half of --g-morph-enter. */
+          const ranks = (vs, near) => { const m = new Map(); let from = null, i = -1; [...new Set(vs.map(Math.round))].sort((a, b) => a - b).forEach(v => { if (from === null || v - from > near) { from = v; i++; } m.set(v, i); }); return [m, Math.max(i, 0)]; };
+          const places = [...enter, ...glide.map(g => g[0]), ...away.map(g => g[0])].map(e => at.get(e)).filter(Boolean).concat(ctx.ghosts.map(g => [g[7], g[8]]));
+          const [line, lines] = ranks(places.map(p => p[1]), 12), [col, cols] = ranks(places.map(p => p[0]), 30);
+          const step = lines + cols ? Math.min(T.stagger, Math.max(0, end - T.enter / 2) / (lines + cols)) : 0;
+          ctx.wave = (x, y) => Math.round(((line.get(Math.round(y)) || 0) + (col.get(Math.round(x)) || 0)) * step);
+          ctx.run = d => Math.max(60, ctx.fade - d, (end - d) * .6);   /* how long a row that goes fades out: before the new one of its place is in */
+          const waveOf = e => { const p = at.get(e); return p ? ctx.wave(p[0], p[1]) : 0; };
           hidden.forEach(([, finish]) => finish());
           /* the box takes its new height smoothly, so what is below it does not jump (overflow clipped along Y meanwhile; X stays visible for the slides) */
           const h1 = box.height;
@@ -1482,23 +1503,24 @@
             const was = target.style.overflowY;
             target.style.overflowY = 'clip';
             const an = target._hAnim = target.animate([{ height: ctx.h0 - extra + 'px' }, { height: h1 - extra + 'px' }], { duration: end, easing: T.ease });
-            const done = () => { if (target._hAnim === an) { target._hAnim = null; target.style.overflowY = was; } };
+            const done = target._hDone = () => { if (target._hAnim === an) { target._hAnim = null; target.style.overflowY = was; } };
             an.onfinish = done; an.oncancel = done;
           }
-          enter.forEach((e, i) => {
-            e.classList.add('g-morph-enter'); e.style.setProperty('--g-morph-i', Math.min(i, 9)); e.style.setProperty('--g-morph-enter', (end - Math.min(i, 9) * T.stagger) + 'ms');   /* a later start, a shorter run: all end at once */
+          enter.forEach(e => {
+            const d = waveOf(e);
+            e.classList.add('g-morph-enter'); e.style.setProperty('--g-morph-d', d + 'ms'); e.style.setProperty('--g-morph-enter', (end - d) + 'ms');   /* a later start, a shorter run: all end at once */
           });
-          if (enter.length) settled(() => enter.forEach(e => later(e, 'g-morph-enter', end + 50, () => e.style.removeProperty('--g-morph-enter'))));
+          if (enter.length) settled(() => enter.forEach(e => later(e, 'g-morph-enter', end + 50, () => { e.style.removeProperty('--g-morph-enter'); e.style.removeProperty('--g-morph-d'); })));
           const again = flash.filter(([e, own]) => !own && e.classList.contains('g-morph-flash'));   /* a flash that still runs starts over: one reflow for all of them */
           if (again.length) { again.forEach(([e]) => e.classList.remove('g-morph-flash')); void again[0][0].offsetWidth; }
           flash.forEach(([e, own]) => {
             if (own) { animate(e, 'highlight'); later(e, 'g-anim-highlight', 1600); }
             else { e.classList.add('g-morph-flash'); later(e, 'g-morph-flash', 1050); }
           });
-          glide.forEach(([e, dx, dy]) => e.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { duration: end, easing: T.ease }));
+          glide.forEach(([e, dx, dy]) => { const d = waveOf(e); e.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { duration: end - d, delay: d, easing: T.ease, fill: 'backwards' }); });   /* all in place at once */
           /* gone out of the viewport: held where it stood, it fades out as a ghost does; then it is in its new place, out of sight */
-          away.forEach(([e, dx, dy]) => { const at = `translate(${dx}px, ${dy}px)`, to = `translate(${dx - 24}px, ${dy}px)`;
-            e.animate([{ transform: at, opacity: 1, easing: 'ease-in' }, { transform: to, opacity: 0, offset: ctx.fade / ctx.until }, { transform: to, opacity: 0 }], { duration: ctx.until }); });
+          away.forEach(([e, dx, dy]) => { const d = waveOf(e), from = `translate(${dx}px, ${dy}px)`, to = `translate(${dx + 24}px, ${dy}px)`, run = ctx.until - d;
+            e.animate([{ transform: from, opacity: 1, easing: T.ease }, { transform: to, opacity: 0, offset: Math.min(1, ctx.run(d) / run) }, { transform: to, opacity: 0 }], { duration: run, delay: d, fill: 'backwards' }); });
           ctx.entering = []; ctx.flashing = []; ctx.moves = new Map(); ctx.pre = new Map(); ctx.words = []; ctx.h0 = null;
         }
       };
@@ -1523,14 +1545,19 @@
             moved.forEach(e => { if (!ctx.moves.has(e) && e.isConnected) ctx.pre.set(e, at(e)); });
           }
           const flat = new Map(), isFlat = p => { if (!flat.has(p)) flat.set(p, getComputedStyle(p).position === 'static'); return flat.get(p); };
-          ghosts = leaving.slice(0, MAX).map(e => { const p = e.parentElement; if (!p || skipped(e)) return null; const r = e.getBoundingClientRect(); if (!onScreen(r)) return null; const pr = p.getBoundingClientRect(); return [e, p, r.left - pr.left - p.clientLeft + p.scrollLeft, r.top - pr.top - p.clientTop + p.scrollTop, r.width, r.height, isFlat(p)]; }).filter(Boolean);
+          ghosts = leaving.slice(0, MAX).map(e => { const p = e.parentElement; if (!p || skipped(e)) return null; const r = e.getBoundingClientRect(); if (!onScreen(r)) return null; const pr = p.getBoundingClientRect(); return [e, p, r.left - pr.left - p.clientLeft + p.scrollLeft, r.top - pr.top - p.clientTop + p.scrollTop, r.width, r.height, isFlat(p), r.left, r.top]; }).filter(Boolean);
         }
+        /* the height of the last update, if it still runs, is let go now (it was read as where this one starts): the new height is then read as it
+           is, not halfway, and the box gets its own overflow back at once (an event later, the next height would take the clip for its own) */
+        if (target._hAnim) { const an = target._hAnim; target._hDone(); an.cancel(); }
+        ctx.ghosts = ghosts;   /* counted into the wave */
         busy(target, false);
-        gone.forEach(e => { if (e.parentNode) e.parentNode.removeChild(e); });
+        HOLLOW = new WeakSet();
+        gone.forEach(e => { const p = e.parentNode; if (p) { p.removeChild(e); if (!p.children.length) HOLLOW.add(p); } });
         reconcile(target, next, o, ctx);
         G = null; R = null;
         if (play) ctx.flush();
-        if (ghosts.length) ghost(ghosts, ctx.fade, ctx.until);
+        if (ghosts.length) ghost(ghosts, ctx.run, ctx.until, ctx.wave, ctx.T.ease);
         resolve(true);
       });
     }

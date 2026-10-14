@@ -1019,7 +1019,7 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> i
 @keyframes g-slide-out { to { opacity: 0; transform: translateX(-24px); } }
 @keyframes g-morph-flash { from { background: var(--g-fill-strong); } }
 .g-morph-leave { animation: g-slide-out var(--g-morph-leave) ease-in forwards !important; pointer-events: none; }
-.g-morph-enter { animation: g-slide-in var(--g-morph-enter) var(--g-ease) backwards !important; animation-delay: calc(var(--g-morph-i, 0) * var(--g-morph-stagger)) !important; }
+.g-morph-enter { animation: g-slide-in var(--g-morph-enter) var(--g-ease) backwards !important; animation-delay: var(--g-morph-d, calc(var(--g-morph-i, 0) * var(--g-morph-stagger))) !important; }   /* --g-morph-d: the script's wave */
 .g-morph-flash { animation: g-morph-flash 1s ease-out !important; }   /* the highlight of the kit (g-anim-highlight) is used when the element's ::after is free */
 /* A changed text: only its new words light up, they come in out of a soft blur on a tint that fades (--g-morph-word, read by the script too) */
 :root { --g-morph-word: 1200ms; }
