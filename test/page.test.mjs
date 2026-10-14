@@ -100,4 +100,20 @@ test('page: what a closed <details> holds is not read (the browser has not worke
   assert.equal(await page.evaluate(() => window.__touched), 0);
 });
 
+test('glass-morph.js alone (no glass-ui.js): a watched box and Glass.morph animate, with no errors', async () => {
+  const p2 = await browser.newPage({ viewport: { width: 900, height: 700 } }), errs = [];
+  p2.on('pageerror', e => errs.push(e.message));
+  await p2.goto(page_url.replace('page.html', 'alone.html')); await p2.waitForTimeout(300);
+  const r = await p2.evaluate(async () => {
+    const box = document.getElementById('box');
+    box.innerHTML = '<p>Found: <b>4</b></p><ul><li>beta</li><li>gamma</li></ul>';
+    await new Promise(r => setTimeout(r, 40));
+    const watched = { ghosts: [...box.querySelectorAll('.g-morph-ghost')].map(e => e.textContent).join(), entering: [...box.querySelectorAll('.g-morph-enter')].map(e => e.textContent).join(), reels: box.querySelectorAll('.g-reel').length };
+    const done = await Glass.morph('#other', '<ul><li>two</li><li>three</li></ul>');
+    return { watched, done, api: Object.keys(Glass).sort().join() };
+  });
+  await p2.close();
+  assert.deepEqual({ ...r, errs }, { watched: { ghosts: 'alpha', entering: 'gamma', reels: 1 }, done: true, api: 'morph,watch', errs: [] });
+});
+
 test('page: the page still runs without script errors', () => { assert.deepEqual(errors, []); });

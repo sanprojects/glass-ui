@@ -28,7 +28,7 @@ function render(u, fetchMode) {
 </main>`;
   const head = `<title>${esc(word)} · ${dict}</title><link rel="canonical" href="${ORIGIN}/find/${encodeURIComponent(word)}">`;
   return fetchMode ? `<!doctype html><html><head>${head}</head><body>${main}</body></html>`
-    : `<!doctype html><html><head>${head}<link rel="stylesheet" href="/glass-ui.css"><script defer src="/glass-ui.js"></script></head><body class="g-root">${main}</body></html>`;
+    : `<!doctype html><html><head>${head}<link rel="stylesheet" href="/glass-ui.css"><link rel="stylesheet" href="/glass-morph.css"><script defer src="/glass-ui.js"></script><script defer src="/glass-morph.js"></script></head><body class="g-root">${main}</body></html>`;
 }
 
 before(async () => {
@@ -42,7 +42,7 @@ beforeEach(async () => {
   page.on('pageerror', e => errors.push(e.message));
   await page.route(ORIGIN + '/**', async route => {
     const r = route.request(), u = new URL(r.url());
-    if (u.pathname === '/glass-ui.js' || u.pathname === '/glass-ui.css') return route.fulfill({ body: readFileSync(path.join(root, u.pathname.slice(1))), contentType: u.pathname.endsWith('.js') ? 'text/javascript' : 'text/css' });
+    if (['/glass-ui.js', '/glass-ui.css', '/glass-morph.js', '/glass-morph.css'].includes(u.pathname)) return route.fulfill({ body: readFileSync(path.join(root, u.pathname.slice(1))), contentType: u.pathname.endsWith('.js') ? 'text/javascript' : 'text/css' });
     const fetchMode = r.headers()['x-g-fetch'] === '1';
     requests.push({ url: u.pathname + u.search, fetchMode });
     const wait = slow.get(decodeURIComponent(u.pathname));
@@ -166,7 +166,7 @@ test('g:navigate comes once the answer is on the page', async () => {
 });
 
 test('data-g-url="off" leaves a form alone', async () => {
-  await page.route(ORIGIN + '/off', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><script defer src="/glass-ui.js"></script><main><form method="get" action="/off" data-g-url="off"><input name="q"></form></main>' }));
+  await page.route(ORIGIN + '/off', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><script defer src="/glass-ui.js"></script><script defer src="/glass-morph.js"></script><main><form method="get" action="/off" data-g-url="off"><input name="q"></form></main>' }));
   await page.goto(ORIGIN + '/off');
   await page.waitForFunction(() => window.Glass);
   await page.fill('input[name=q]', 'x');
@@ -174,7 +174,7 @@ test('data-g-url="off" leaves a form alone', async () => {
 });
 
 test('a form with a submit button waits for it', async () => {
-  const ping = host => `<!doctype html><title>ping ${esc(host)}</title><script defer src="/glass-ui.js"></script><main id="m"><form method="get" action="/ping/{host}"><input name="host" value="${esc(host)}"><label><input type="checkbox" name="v6" value="1"> v6</label><button>Ping</button></form><pre id="out">${esc(host) || '-'}</pre></main>`;
+  const ping = host => `<!doctype html><title>ping ${esc(host)}</title><script defer src="/glass-ui.js"></script><script defer src="/glass-morph.js"></script><main id="m"><form method="get" action="/ping/{host}"><input name="host" value="${esc(host)}"><label><input type="checkbox" name="v6" value="1"> v6</label><button>Ping</button></form><pre id="out">${esc(host) || '-'}</pre></main>`;
   await page.route(ORIGIN + '/ping**', route => { const u = new URL(route.request().url()); requests.push({ url: u.pathname, fetchMode: route.request().headers()['x-g-fetch'] === '1' }); return route.fulfill({ contentType: 'text/html', body: ping(decodeURIComponent(u.pathname.split('/')[2] || '')) }); });
   await page.goto(ORIGIN + '/ping');
   await page.waitForFunction(() => window.Glass);
@@ -208,7 +208,7 @@ test('the clear cross is one more button: the answer with that field empty comes
   await page.waitForTimeout(300);
   assert.match(await result(), /^-nouns-1/);
   // a form with a submit button: the cross sends it, as its button does
-  const ping = host => `<!doctype html><title>ping ${esc(host)}</title><script defer src="/glass-ui.js"></script><main id="m"><form method="get" action="/ping/{host}"><input name="host" value="${esc(host)}"><button>Ping</button></form><pre id="out">${esc(host) || '-'}</pre></main>`;
+  const ping = host => `<!doctype html><title>ping ${esc(host)}</title><script defer src="/glass-ui.js"></script><script defer src="/glass-morph.js"></script><main id="m"><form method="get" action="/ping/{host}"><input name="host" value="${esc(host)}"><button>Ping</button></form><pre id="out">${esc(host) || '-'}</pre></main>`;
   await page.route(ORIGIN + '/ping**', route => { const u = new URL(route.request().url()); requests.push({ url: u.pathname, fetchMode: route.request().headers()['x-g-fetch'] === '1' }); return route.fulfill({ contentType: 'text/html', body: ping(decodeURIComponent(u.pathname.split('/')[2] || '')) }); });
   await page.goto(ORIGIN + '/ping/example.org');
   await page.waitForFunction(() => window.Glass);
@@ -221,7 +221,7 @@ test('the clear cross is one more button: the answer with that field empty comes
 });
 
 test('a box in the header whose answer the page works out itself: the address is the form\'s, nothing is asked', async () => {
-  const home = q => `<!doctype html><title>home</title><script defer src="/glass-ui.js"></script><nav><form action="/"><input name="q" type="search" value="${esc(q)}"></form></nav><main id="m"><p id="shown"></p><a id="page" href="/about">about</a></main><script>
+  const home = q => `<!doctype html><title>home</title><script defer src="/glass-ui.js"></script><script defer src="/glass-morph.js"></script><nav><form action="/"><input name="q" type="search" value="${esc(q)}"></form></nav><main id="m"><p id="shown"></p><a id="page" href="/about">about</a></main><script>
     const f = document.querySelector('form'), shown = document.getElementById('shown'), show = () => { shown.textContent = f.q.value; };
     show();
     f.addEventListener('g:answer', e => { e.preventDefault(); show(); });
@@ -253,7 +253,7 @@ test('a box in the header whose answer the page works out itself: the address is
 });
 
 test('a form with no action, or whose submit the page cancels, is the page\'s', async () => {
-  const own = '<!doctype html><script defer src="/glass-ui.js"></script><main><form id="a" method="get"><input name="q"></form>'
+  const own = '<!doctype html><script defer src="/glass-ui.js"></script><script defer src="/glass-morph.js"></script><main><form id="a" method="get"><input name="q"></form>'
     + '<form id="b" method="get" action="/own"><input name="w"><button>Go</button></form><p id="out"></p></main>'
     + '<script>document.getElementById("b").addEventListener("submit", e => { e.preventDefault(); out.textContent += "page:" + e.target.w.value + ";"; });</script>';
   await page.route(ORIGIN + '/own**', route => { requests.push({ url: new URL(route.request().url()).pathname, fetchMode: route.request().headers()['x-g-fetch'] === '1' }); return route.fulfill({ contentType: 'text/html', body: own }); });
@@ -274,7 +274,7 @@ test('a form with no action, or whose submit the page cancels, is the page\'s', 
 
 test('a POST form of the page is sent in the background: the focus and what is typed stay, the address stays', async () => {
   const posted = [];
-  const page2 = (text, extra) => `<!doctype html><title>stat</title><script defer src="/glass-ui.js"></script><main id="m"><aside><form id="p" method="post" action="/stat"><textarea name="t">${esc(text)}</textarea><input name="u"></form></aside>${extra || ''}<section id="out">${text ? 'words: ' + esc(text).split(/\s+/).length : 'nothing'}</section></main>`;
+  const page2 = (text, extra) => `<!doctype html><title>stat</title><script defer src="/glass-ui.js"></script><script defer src="/glass-morph.js"></script><main id="m"><aside><form id="p" method="post" action="/stat"><textarea name="t">${esc(text)}</textarea><input name="u"></form></aside>${extra || ''}<section id="out">${text ? 'words: ' + esc(text).split(/\s+/).length : 'nothing'}</section></main>`;
   await page.route(ORIGIN + '/stat**', async route => {
     const r = route.request();
     if (r.method() === 'POST') {

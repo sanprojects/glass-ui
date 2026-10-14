@@ -24,6 +24,8 @@ npm i glass-ui-css
 <link rel="stylesheet" href="glass-icons.min.css">
 <link rel="stylesheet" href="glass-ui-light.min.css"> <!-- optional light theme -->
 <script src="glass-ui.min.js" defer></script>
+<link rel="stylesheet" href="glass-morph.min.css"> <!-- optional: Glass.morph, data-g-morph -->
+<script src="glass-morph.min.js" defer></script>
 
 <body class="g-root g-scene">
   <button data-variant="primary" data-icon="play">Play</button>
@@ -86,7 +88,7 @@ Seven effects you add with a single class: appear, shimmer, ripple, pulse, highl
 
 <img src="docs/motion.webp" alt="Motion effects" width="100%">
 
-**Morph.** `Glass.morph('#result', html)` swaps the content of a box for new content and animates only the difference: rows that are gone slide out, new rows slide in (the ones on the screen only), a changed text lights up, and a number that changed turns its digits like an odometer. It works for any elements, not only lists. Elements that are in both versions stay the same nodes, so focus, scroll and typed values survive. Pair rows with `data-key` (a list row of words: `<li data-key="word">`); without it an element is paired by its text. Returns a Promise. Tune it with `--g-morph-leave`, `--g-morph-enter`, `--g-morph-stagger`, `--g-morph-reel`.
+**Morph** is a library of its own: `glass-morph.js` + `glass-morph.css`, no dependencies, with or without the kit (with the kit it also measures `[data-g-fit]` columns in an update, highlights with the kit's effect and ends the kit's busy line; the kit's in-place form answers need it). `Glass.morph('#result', html)` swaps the content of a box for new content and animates only the difference: rows that are gone slide out, new rows slide in (the ones on the screen only), a changed text lights up, and a number that changed turns its digits like an odometer. It works for any elements, not only lists. Elements that are in both versions stay the same nodes, so focus, scroll and typed values survive. Pair rows with `data-key` (a list row of words: `<li data-key="word">`); without it an element is paired by its text. Returns a Promise. Tune it with `--g-morph-leave`, `--g-morph-enter`, `--g-morph-stagger`, `--g-morph-reel`.
 
 **Watched box.** `<div data-g-morph>` animates whatever changes in it, whoever changed it: a script that writes `innerHTML`, a framework that adds, removes and moves rows, `textContent` of a counter. A `MutationObserver` tells what went and what came; where things stood is kept beforehand (read when the box settles), so the rows that went fade out where they stood, the new ones come in, the rest glide from their old places, a word that went to another list glides there, and a number turns. Pairs are found as `Glass.morph` finds them (`data-key`, `id`, the text of a row). Its nodes are not replaced: the new ones are the page's, so the page's references and listeners stay valid; what went is shown by a copy. `Glass.watch(el)` watches a box made later (a box with `data-g-morph` added later is found by itself); it returns a function that stops watching. `Glass.morph` into a watched box is animated once. Use `Glass.morph` where the box holds what the user is doing (a form being typed in): it keeps the old nodes; in a watched box the page's own write has replaced them already.
 
@@ -124,6 +126,7 @@ Also in the demo, without screenshots here:
 | File | Purpose |
 |---|---|
 | `glass-ui.css` / `.js` | the kit |
+| `glass-morph.css` / `.js` | Morph: `Glass.morph`, `Glass.watch`, `data-g-morph` (works on its own too) |
 | `glass-icons.css` | icon pack, used as `data-icon="name"` |
 | `glass-ui-light.css` | light theme: `Glass.setTheme('light' \| 'dark' \| 'auto')` |
 | `glass-ui-liquid.js` | optional animated background |
