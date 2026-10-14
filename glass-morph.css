@@ -44,10 +44,10 @@
 .g-reel { display: inline-block; white-space: pre; font-variant-numeric: tabular-nums; }
 .g-reel__cell { position: relative; display: inline-block; vertical-align: top; height: var(--g-reel-h); line-height: var(--g-reel-h); overflow: hidden; }
 .g-reel__size { visibility: hidden; }
-.g-reel__strip { position: absolute; inset: 0 0 auto; text-align: center; animation-duration: var(--g-morph-reel); animation-timing-function: cubic-bezier(.12,.75,.25,1), linear; animation-fill-mode: both; animation-delay: var(--g-reel-d); }
+.g-reel__strip { position: absolute; inset: 0 0 auto; text-align: center; animation-duration: var(--g-morph-reel); animation-timing-function: cubic-bezier(.12,.75,.25,1), linear; animation-fill-mode: both; animation-delay: calc(var(--g-reel-d, 0ms) + var(--g-reel-shift, 0ms)); }
 .g-reel__strip > i { display: block; height: var(--g-reel-h); font-style: normal; }
 .g-reel__strip--up { animation-name: g-reel-up, g-reel-blur; }
 .g-reel__strip--down { animation-name: g-reel-down, g-reel-blur; }
-.g-reel__cell--new, .g-reel__cell--gone { animation-duration: var(--g-morph-reel); animation-timing-function: cubic-bezier(.12,.75,.25,1); animation-fill-mode: both; animation-delay: var(--g-reel-d, 0ms); }
+.g-reel__cell--new, .g-reel__cell--gone { animation-duration: var(--g-morph-reel); animation-timing-function: cubic-bezier(.12,.75,.25,1); animation-fill-mode: both; animation-delay: calc(var(--g-reel-d, 0ms) + var(--g-reel-shift, 0ms)); }
 .g-reel__cell--new { animation-name: g-reel-grow; }
 .g-reel__cell--gone { animation-name: g-reel-shrink; }

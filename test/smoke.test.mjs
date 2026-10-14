@@ -160,8 +160,8 @@ const watched = async (html, change, wait = 40) => page.evaluate(async ([html, c
   const box = document.createElement('div'); box.setAttribute('data-g-morph', ''); box.innerHTML = html;
   box.style.cssText = 'position:fixed;top:8px;left:8px;width:300px;z-index:9999'; document.body.appendChild(box);
   await frame(); await new Promise(r => setTimeout(r, 50));
-  const out = {}, fn = new Function('box', 'out', change);
-  fn(box, out);
+  const out = {}, fn = new Function('box', 'out', 'return (async () => {' + change + '})()');
+  await fn(box, out);
   await new Promise(r => setTimeout(r, wait));
   const li = [...box.querySelectorAll('li:not(.g-morph-ghost)')];
   Object.assign(out, {
@@ -205,11 +205,13 @@ test('watch: Glass.morph into a watched box is animated once, not twice', async 
   assert.deepEqual({ ghosts: r.ghosts, entering: r.entering, after: r.after }, { ghosts: 'alpha', entering: 'delta', after: { ghosts: 0, anims: 0, reels: 0, text: 'beta delta' } });
 });
 
-test('watch: a word that went to another list (all written anew) glides there, it does not go and come', async () => {
+test('watch: a word that went to another list (all written anew) is the same word: it does not go and come, and it does not jump', async () => {
   const r = await watched('<ol class="g-list"><li>alpha</li><li>beta</li></ol><ol class="g-list"><li>gamma</li></ol>',
-    `box.innerHTML = '<ol class="g-list"><li>alpha</li></ol><ol class="g-list"><li>beta</li><li>gamma</li></ol>';`);
-  assert.deepEqual({ ghosts: r.ghosts, entering: r.entering, gliding: r.gliding.split(',').includes('beta'), after: r.after },
-    { ghosts: '', entering: '', gliding: true, after: { ghosts: 0, anims: 0, reels: 0, text: 'alpha beta gamma' } });
+    `const was = [...box.querySelectorAll('li')].find(e => e.textContent === 'beta').getBoundingClientRect().top;
+     box.innerHTML = '<ol class="g-list"><li>alpha</li></ol><ol class="g-list"><li>beta</li><li>gamma</li></ol>';
+     await null; out.jump = Math.round([...box.querySelectorAll('li')].find(e => e.textContent === 'beta').getBoundingClientRect().top - was);`);
+  assert.deepEqual({ ghosts: r.ghosts, entering: r.entering, jump: r.jump, after: r.after },
+    { ghosts: '', entering: '', jump: 0, after: { ghosts: 0, anims: 0, reels: 0, text: 'alpha beta gamma' } });
 });
 
 test('watch: a second change while the first one still moves ends in the state of the second, with nothing left over', async () => {

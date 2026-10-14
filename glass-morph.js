@@ -206,7 +206,7 @@
         if (late) lineOf(board.parentElement);
         $$('.g-reel__cell--new, .g-reel__cell--gone', board).forEach(c => { c.style.setProperty('--g-reel-w', c.firstChild.getBoundingClientRect().width + 'px'); });
       };
-      board._finish = () => { clearTimeout(board._timer); if (board.parentNode) { const p = board.parentNode; p.replaceChild(document.createTextNode(to), board); unseen(p); } };
+      board._finish = () => { clearTimeout(board._timer); if (board.parentNode) { const p = board.parentNode; p._gRun = null; p.replaceChild(document.createTextNode(to), board); unseen(p); } };
       settled(() => { if (board.parentNode) board._timer = setTimeout(board._finish, T.reel + Math.max(changed - 1, 0) * T.reelStagger + 60); });
       return board;
     }
@@ -231,7 +231,7 @@
       b.forEach((x, j) => { if (fresh[j] !== on) { out(); on = fresh[j]; } run += x; });
       out();
       const host = t.parentElement;
-      const finish = () => { clearTimeout(timer); spans.forEach(s => { if (s.parentNode) s.replaceWith(s.firstChild || ''); }); if (host.isConnected) { host.normalize(); unseen(host); } };   /* plain text again, one node */
+      const finish = () => { clearTimeout(timer); host._gRun = null; spans.forEach(s => { if (s.parentNode) s.replaceWith(s.firstChild || ''); }); if (host.isConnected) { host.normalize(); unseen(host); } };   /* plain text again, one node */
       const timer = setTimeout(finish, ctx.T.word + 60);
       spans.forEach(s => { s._finish = finish; });
       ctx.words.push([host, finish]);
@@ -313,6 +313,7 @@
       });
       if (all.length) settled(() => setTimeout(() => all.forEach(e => e._done()), until));   /* a timer, not the end of the animation: one in a hidden pane does not finish */
     }
+    const least = (...v) => v.reduce((m, x) => Math.abs(x) < Math.abs(m) ? x : m);   /* the value nearest to 0 */
     /* the tuning of a box (its custom properties, in ms), read once per update: a style read among the writes of the update would make the page work out its styles again */
     function timings(target) {
       const cs = getComputedStyle(target), css = (name, def) => parseFloat(cs.getPropertyValue(name)) || def;
@@ -345,7 +346,9 @@
             ctx.moves.forEach((f, e) => {
               if (!e.isConnected || !e.animate) return;
               const l = e.getBoundingClientRect();
-              if (!f.box) return raw.set(e, [f.left - l.left, f.top - l.top, l, onScreen(f)]);
+              /* where it went: by the side of it that stayed (the least of the moves of its two edges and its middle). One that only grew or shrank
+                 (a name that got longer at the right of a bar, a box that got taller) did not go anywhere: it does not glide; one that moved, moved all of it */
+              if (!f.box) return raw.set(e, [least(f.left - l.left, f.right - l.right, (f.left + f.right - l.left - l.right) / 2), least(f.top - l.top, f.bottom - l.bottom, (f.top + f.bottom - l.top - l.bottom) / 2), l, onScreen(f)]);
               /* it was in a box out of the viewport (not measured): it goes the way its box went, or, in another box now, comes from where that box stood */
               if (e.parentElement === f.box && f.box.isConnected) { const b = f.box.getBoundingClientRect(); raw.set(e, [f.at.left - b.left, f.at.top - b.top, l, false]); }
               else raw.set(e, [0, f.at.top - l.top, l, false]);
@@ -515,7 +518,8 @@
       if (t) { let v = seen.get(t); if (v === undefined) seen.set(t, v = !!t.closest(NOT_MINE)); if (v) return true; }   /* looked up once per target */
       if (r.type !== 'childList') return false;
       const els = [...r.addedNodes, ...r.removedNodes].filter(n => n.nodeType === 1);
-      return els.length > 0 && els.every(n => OWN.test(n.className) || n.matches(NOT_SHOWN));
+      /* a text put in is the page's (the kit puts its text back unseen): the page wrote over a board or marked words */
+      return els.length > 0 && els.every(n => OWN.test(n.className) || n.matches(NOT_SHOWN)) && ![...r.addedNodes].some(n => n.nodeType === 3 && n.nodeValue.trim());
     }
     const elOf = n => n.nodeType === 1 ? n : n.parentElement;
     /* the watched box a node is in: the innermost one */
@@ -676,6 +680,16 @@
           if (!olds.has(r.target) && !r.previousSibling && !r.nextSibling) { const t = textOfNodes(r.removedNodes); if (t != null) olds.set(r.target, t); }
         }
       });
+      /* The page wrote the same text again while it still turns or lights up (a second write of one click): the animation goes back in, as far as it
+         got (a negative delay), instead of being cut */
+      texts.forEach(e => {
+        const run = e._gRun, t = e.firstChild;
+        if (!run || !t || t.nodeType !== 3 || e.childNodes.length !== 1 || t.nodeValue !== run.to) return;
+        const late = -Math.round(performance.now() - run.at) + 'ms';
+        run.nodes.forEach(n => { if (n.nodeType !== 1) return; if (n.classList.contains('g-reel')) n.style.setProperty('--g-reel-shift', late); else n.style.animationDelay = late; });
+        t.replaceWith(...run.nodes);
+        texts.delete(e);
+      });
       const fresh = [...came].filter(n => !W.cache.has(n));   /* one that only moved is not new: its place is kept */
       const was = e => olds.has(e) ? olds.get(e) : e === box ? W.text : undefined;   /* the text it had: what the records took out of it */
       const retext = [...texts].filter(e => { const t = was(e); return box.contains(e) && !e.children.length && t != null && t !== e.textContent; });
@@ -684,9 +698,10 @@
       if (calm()) o = { leave: false, move: false, reel: false, height: false };
       if (W.page) o.height = false;   /* the page has no box to grow: what is below a change glides */
       const T = W.T || timings(box), ctx = stage(box, o, T, true);   /* its tuning as read when it settled: read now, after the page's write, it would work the styles out once more */
-      /* what was passing from the last update is over now (not what a box watched by itself in it still plays) */
-      $$('.g-reel, .g-morph-word', box).forEach(b => { if (b._finish && owner(b) === box) b._finish(); });
-      $$('.g-morph-ghost', box).forEach(e => { if (owner(e) !== box) return; if (e._done) e._done(); else e.remove(); });
+      /* what was passing from the last update where this one changes is over now: the text of an element whose text changes, what fades out of a
+         parent that changes (a change elsewhere does not cut what plays there) */
+      texts.forEach(e => $$('.g-reel, .g-morph-word', e).forEach(b => { if (b._finish) b._finish(); }));
+      new Set([...gone.map(g => g[1]), ...[...came].map(n => n.parentElement)]).forEach(p => { if (p) [...p.children].forEach(e => { if (AUX.test(e.className)) { if (e._done) e._done(); else e.remove(); } }); });
       /* the height it had: its own, or where its last height animation is (a style read, no layout); that one is let go */
       if (box._hAnim) { const an = box._hAnim, k = an.effect.getComputedTiming().progress; ctx.h0 = k == null ? (W.at ? W.at.h : null) : box._hFrom + (box._hTo - box._hFrom) * k; box._hDone(); an.cancel(); }
       else if (W.at) ctx.h0 = W.at.h;
@@ -730,8 +745,8 @@
       jobs.forEach(([e, from]) => {
         const t = e.firstChild, to = t && t.nodeValue;
         if (!t || t.nodeType !== 3 || e.childNodes.length !== 1 || from === to) return;
-        if (o.reel !== false && NUM.test(from) && NUM.test(to) && shown(e)) { t.nodeValue = from; const board = reel(t, to, T, true); t.replaceWith(board); boards.push(board); }   /* measured with the reads of the update */
-        else if (o.flash !== false) { t.nodeValue = from; const f = words(t, to, ctx); if (f) t.replaceWith(f); else t.nodeValue = to; }
+        if (o.reel !== false && NUM.test(from) && NUM.test(to) && shown(e)) { t.nodeValue = from; const board = reel(t, to, T, true); t.replaceWith(board); boards.push(board); e._gRun = { to, nodes: [board], at: performance.now() }; }   /* measured with the reads of the update */
+        else if (o.flash !== false) { t.nodeValue = from; const f = words(t, to, ctx); if (f) { const nodes = [...f.childNodes]; t.replaceWith(f); e._gRun = { to, nodes, at: performance.now() }; } else t.nodeValue = to; }
       });
       /* where each one stood: its own place, or the place of the old one it is (page coordinates to the viewport; a glide that still runs is where it is now) */
       const from = e => {

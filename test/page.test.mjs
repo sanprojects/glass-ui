@@ -126,6 +126,20 @@ test('page: a page moves the fade to a part of what comes in or goes, in its own
   assert.deepEqual(r.on, { link: true, linkRuns: '', cardRuns: 'g-morph-in', ghostRuns: '', ghostCardRuns: 'g-morph-away' });
 });
 
+test('page: a name that only got longer (its right edge stays) lights up its new word and does not slide; what moved still glides', async () => {
+  const r = await change(`document.getElementById('rname').textContent = 'Green Lizard'; await new Promise(r => setTimeout(r, 20));
+    const n = document.getElementById('rname'); out.slides = n.getAnimations().filter(a => !(a instanceof CSSAnimation)).length; out.words = n.querySelectorAll('.g-morph-word').length;`);
+  assert.deepEqual({ slides: r.slides, words: r.words }, { slides: 0, words: 1 });
+});
+
+test('page: the same text written again while its words light up (two writes of one click) keeps them lighting up, from where they were', async () => {
+  const r = await change(`const n = document.getElementById('rname'); n.textContent = 'French Violet'; await new Promise(r => setTimeout(r, 60));
+    n.textContent = 'French Violet'; await new Promise(r => setTimeout(r, 20));
+    const w = n.querySelectorAll('.g-morph-word'); out.kept = w.length; out.delay = w[0] ? w[0].style.animationDelay : '';`, 0, 1600);
+  assert.deepEqual({ kept: r.kept, late: /^-\d+ms$/.test(r.delay), text: await page.evaluate(() => [document.getElementById('rname').childNodes.length, document.getElementById('rname').textContent]) },
+    { kept: 2, late: true, text: [1, 'French Violet'] });
+});
+
 test('page: new words light up once (putting the text back is no change: it used to light them up again and again)', async () => {
   await page.evaluate(() => { document.getElementById('below').textContent = 'Воды минеральные'; });
   await page.waitForTimeout(1600);
