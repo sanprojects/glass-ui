@@ -253,6 +253,21 @@ test('morph: what the kit built into the markup (a select made a combobox, a tab
   assert.deepEqual(r, { wrapped: true, trigger: 'book', hidden: ['-1', 'true', false], disabled: true, same: true, tabs: true, selected: '7', ready: true, after: 0 });
 });
 
+test('morph: its timing written in seconds (as a minifier writes 250ms: .25s) is the same timing as in ms', async () => {
+  const r = await page.evaluate(async () => {
+    const run = async t => {
+      const box = document.createElement('div'); box.style.cssText = `position:fixed;top:8px;left:8px;width:300px;z-index:9999;--g-morph-enter:${t};--g-morph-move:${t};--g-morph-leave:${t}`;
+      box.innerHTML = '<ol class="g-list"><li data-key="a">a</li></ol>'; document.body.appendChild(box);
+      await Glass.morph(box, '<ol class="g-list"><li data-key="a">a</li><li data-key="b">b</li><li data-key="c">c</li></ol>');
+      const d = box.querySelectorAll('.g-morph-enter').length ? Math.max(...box.querySelector('.g-morph-enter').getAnimations().map(a => a.effect.getComputedTiming().endTime)) : 0;
+      box.remove(); return Math.round(d);
+    };
+    return { ms: await run('600ms'), s: await run('.6s') };
+  });
+  assert.ok(r.ms >= 300, JSON.stringify(r));   // it is the 600 ms of the box, not the default
+  assert.equal(r.s, r.ms);
+});
+
 test('list: a click on the empty edge of a linked row opens its link (the stretched link is made for the row under the mouse)', async () => {
   await page.evaluate(() => { const box = document.createElement('div'); box.id = 'edge-box'; box.innerHTML = '<ol class="g-list"><li><a href="#row-edge">word</a></li><li><a href="#other">other</a></li></ol>'; box.style.cssText = 'position:fixed;top:8px;left:8px;width:300px;z-index:9999'; document.body.appendChild(box); location.hash = ''; });
   const r = await page.evaluate(() => { const li = document.querySelector('#edge-box li'), rr = li.getBoundingClientRect(), a = li.querySelector('a').getBoundingClientRect(); return { x: rr.right - 3, y: rr.top + rr.height / 2, onText: a.right > rr.right - 3, rows: [...document.querySelectorAll('#edge-box li')].filter(e => getComputedStyle(e.querySelector('a'), '::after').content !== 'none').length }; });

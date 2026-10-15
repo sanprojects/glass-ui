@@ -3,7 +3,7 @@
  *
  * Glass.morph(target, next) swaps the content of a box for new content and animates the difference; a box (or <body>) with data-g-morph animates whatever changes in it.
  * At once: a row that is gone fades out where it stood, a new one slides in, the rest glides, new words of a text light up, a number turns its digits.
- * The tuning is custom properties; set them on the box: <div id="result" style="--g-morph-leave: 120ms"> (the script reads them in ms).
+ * The tuning is custom properties; set them on the box: <div id="result" style="--g-morph-leave: 120ms"> (the script reads them in ms; ms or s, as a minifier may write them).
  * !important: a row that is still entering has the rules of .g-list rows (and of the site) with a higher specificity. */
 :root { --g-morph-leave: 180ms; --g-morph-enter: 250ms; --g-morph-stagger: 20ms; --g-morph-reel: 320ms; --g-morph-reel-stagger: 35ms; --g-morph-move: 320ms; }
 @keyframes g-morph-out { to { opacity: 0; transform: translateX(-24px); } }

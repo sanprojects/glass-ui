@@ -360,8 +360,10 @@
     }
     const least = (...v) => v.reduce((m, x) => Math.abs(x) < Math.abs(m) ? x : m);   /* the value nearest to 0 */
     /* the tuning of a box (its custom properties, in ms), read once per update: a style read among the writes of the update would make the page work out its styles again */
+    /* a CSS time in ms: 180ms, .18s (what a minifier makes of 180ms: esbuild, cssnano), a bare number is ms; NaN when it is not a time */
+    const time = v => { const m = /^\s*([-+]?(?:\d+\.?\d*|\.\d+))(ms|s)?\s*$/i.exec(v || ''); return m ? parseFloat(m[1]) * (/^s$/i.test(m[2] || '') ? 1000 : 1) : NaN; };
     function timings(target) {
-      const cs = getComputedStyle(target), css = (name, def) => parseFloat(cs.getPropertyValue(name)) || def;
+      const cs = getComputedStyle(target), css = (name, def) => time(cs.getPropertyValue(name)) || def;
       return { leave: css('--g-morph-leave', 180), enter: css('--g-morph-enter', 250), stagger: css('--g-morph-stagger', 20), reel: css('--g-morph-reel', 320), reelStagger: css('--g-morph-reel-stagger', 35), move: css('--g-morph-move', 320), word: css('--g-morph-word', 1200), ease: cs.getPropertyValue('--g-ease').trim() || 'ease-out' };
     }
     /* What an update of `target` animates and how: filled while the update is read (entering, moves, words, ...), played by flush() once the DOM is in its
