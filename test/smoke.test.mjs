@@ -235,6 +235,24 @@ test('morph: an element whose id a script gave (tabs of a UI kit) is still paire
   assert.deepEqual(r, { same: 3, ghosts: 0, selected: '9' });
 });
 
+test('morph: what the kit built into the markup (a select made a combobox, a tab list) stays when the box is morphed with the markup as the server draws it', async () => {
+  const r = await page.evaluate(async () => {
+    const raw = (icon, size, off) => `<div class="g-field"><label for="mx-sel">Dict</label><select id="mx-sel" name="d" data-g-select data-icon="${icon}"${off ? ' disabled' : ''}><option value="a">A</option><option value="b">B</option></select></div>`
+      + `<div role="tablist">${[5, 7].map(n => `<button type="button" role="tab" data-size="${n}"${n === size ? ' aria-selected="true"' : ''}>${n}</button>`).join('')}</div>`;
+    const box = document.createElement('div'); box.className = 'g-root'; box.style.cssText = 'position:fixed;top:8px;left:8px;width:300px;z-index:9999';
+    box.innerHTML = raw('book', 5); document.body.appendChild(box); Glass.init(box);
+    const sel = box.querySelector('select'), wrap = sel.parentNode, trigger = box.querySelector('.g-select__trigger'), tabs = [...box.querySelectorAll('[role=tab]')];
+    await Glass.morph(box, raw('book', 7, true));   /* the server's markup: no combobox, another tab, the select disabled */
+    const out = { wrapped: sel.parentNode === wrap && wrap.isConnected && wrap.classList.contains('g-select'), trigger: trigger.isConnected && trigger.getAttribute('data-icon'),
+      hidden: [sel.getAttribute('tabindex'), sel.getAttribute('aria-hidden'), sel.hasAttribute('data-icon')], disabled: sel.disabled, same: box.querySelector('select') === sel,
+      tabs: tabs.every(t => t.isConnected && !!t.id), selected: tabs.filter(t => t.getAttribute('aria-selected') === 'true').map(t => t.textContent).join(), ready: box.querySelector('[role=tablist]').hasAttribute('data-g-ready') };
+    await Glass.morph(box, '<p>gone</p>');   /* the select is gone: its combobox goes with it */
+    out.after = [...box.querySelectorAll('.g-select, select, [role=tab]')].filter(e => !e.closest('.g-morph-ghost')).length;   /* what fades out is not there */
+    box.remove(); return out;
+  });
+  assert.deepEqual(r, { wrapped: true, trigger: 'book', hidden: ['-1', 'true', false], disabled: true, same: true, tabs: true, selected: '7', ready: true, after: 0 });
+});
+
 test('list: a click on the empty edge of a linked row opens its link (the stretched link is made for the row under the mouse)', async () => {
   await page.evaluate(() => { const box = document.createElement('div'); box.id = 'edge-box'; box.innerHTML = '<ol class="g-list"><li><a href="#row-edge">word</a></li><li><a href="#other">other</a></li></ol>'; box.style.cssText = 'position:fixed;top:8px;left:8px;width:300px;z-index:9999'; document.body.appendChild(box); location.hash = ''; });
   const r = await page.evaluate(() => { const li = document.querySelector('#edge-box li'), rr = li.getBoundingClientRect(), a = li.querySelector('a').getBoundingClientRect(); return { x: rr.right - 3, y: rr.top + rr.height / 2, onText: a.right > rr.right - 3, rows: [...document.querySelectorAll('#edge-box li')].filter(e => getComputedStyle(e.querySelector('a'), '::after').content !== 'none').length }; });

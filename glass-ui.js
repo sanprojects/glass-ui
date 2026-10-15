@@ -55,6 +55,11 @@
   }
   /* attrs(el, { name: value, … }): several attributes at once */
   function attrs(node, o) { for (const k in o) node.setAttribute(k, o[k]); return node; }
+  /* what the kit builds into the page's markup is not the page's: a morph of the page (glass-morph.js: the answer of a form, a framework's render)
+     leaves it as it is. part: an element the kit put in; wrap: a box it put around elements of the page; owns: attributes it set or took away */
+  function part(n) { n.setAttribute('data-g-part', ''); return n; }
+  function wrapper(n) { n.setAttribute('data-g-wrap', ''); return n; }
+  function owns(n, ...names) { const had = (n.getAttribute('data-g-attrs') || '').split(' ').filter(Boolean), add = names.filter(x => !had.includes(x)); if (add.length) n.setAttribute('data-g-attrs', had.concat(add).join(' ')); return n; }
   /* data(el, 'more-label', 'Show more'): the data-* attribute, or the default */
   function data(node, key, def) { return node.getAttribute('data-' + key) || def; }
   /* num(el, 'data-g-more', 5): an integer attribute, or the default */
@@ -156,12 +161,12 @@
   /* ---------- Select / combobox: initSelect builds the parts once (state lives in st); all events are delegated below ---------- */
   function selectParts(sel, id) {   // <div.g-select> around the <select>: a combobox button and a listbox panel (with a filter field when data-searchable)
     const wrap = el('div', 'g-select'), trigger = el('button', 'g-select__trigger', '<span class="g-select__value"></span>'), list = el('div'), holder = el('div');
-    sel.parentNode.insertBefore(wrap, sel); wrap.appendChild(sel);
-    sel.tabIndex = -1; aria(sel, 'hidden', true);
+    sel.parentNode.insertBefore(wrapper(wrap), sel); wrap.appendChild(sel);
+    sel.tabIndex = -1; aria(sel, 'hidden', true); owns(sel, 'tabindex', 'aria-hidden', 'data-icon'); part(trigger); part(list);
     attrs(trigger, { type: 'button', role: 'combobox', 'aria-haspopup': 'listbox', 'aria-controls': id, 'data-icon-end': 'chevron-down' }); aria(trigger, 'expanded', false);
     if (sel.hasAttribute('data-icon')) { trigger.setAttribute('data-icon', sel.getAttribute('data-icon')); sel.removeAttribute('data-icon'); }   /* <select data-icon="x"> puts an icon at the start of the trigger */
     const lab = sel.id && document.querySelector('label[for="' + sel.id + '"]');
-    if (lab) { lab.id ||= id + '-lbl'; trigger.setAttribute('aria-labelledby', lab.id); }
+    if (lab) { if (!lab.id) owns(lab, 'id').id = id + '-lbl'; trigger.setAttribute('aria-labelledby', lab.id); }
     attrs(list, { id, role: 'listbox' }); if (sel.multiple) list.setAttribute('aria-multiselectable', 'true');
     let search = null;
     if (sel.hasAttribute('data-searchable')) {
@@ -291,12 +296,14 @@
     const tabs = tabsOf(list), n = mem(list, 'n') || mem(list, 'n', ++uid);
     /* panels: role="tabpanel" siblings of the tablist, matched to the tabs by order (or by aria-controls when given) */
     const panels = [...list.parentNode.children].filter(c => c.getAttribute('role') === 'tabpanel');
+    owns(list, 'data-g-ready');
     tabs.forEach((t, i) => {
-      t.setAttribute('role', 'tab');
-      if (!t.id) t.id = 'g-tab-' + n + '-' + i;
+      if (t.getAttribute('role') !== 'tab') owns(t, 'role').setAttribute('role', 'tab');
+      owns(t, 'tabindex');
+      if (!t.id) owns(t, 'id').id = 'g-tab-' + n + '-' + i;
       const p = (t.getAttribute('aria-controls') && document.getElementById(t.getAttribute('aria-controls'))) || (panels.length === tabs.length ? panels[i] : null);
       mem(t, 'panel', p);
-      if (p) { if (!p.id) p.id = 'g-panel-' + n + '-' + i; t.setAttribute('aria-controls', p.id); p.setAttribute('aria-labelledby', t.id); }
+      if (p) { if (!p.id) owns(p, 'id').id = 'g-panel-' + n + '-' + i; owns(t, 'aria-controls').setAttribute('aria-controls', p.id); owns(p, 'aria-labelledby').setAttribute('aria-labelledby', t.id); }
     });
     selectTab(list, tabs.find(t => t.getAttribute('aria-selected') === 'true') || tabs[0], false, true);
     list.setAttribute('data-g-ready', '');   // from here on JS owns the panels (before: CSS shows the first one)
@@ -344,7 +351,7 @@
   if (!('closedBy' in HTMLDialogElement.prototype)) document.addEventListener('click', e => { const d = e.target; if (d.localName === 'dialog' && d.open && d.getAttribute('closedby') === 'any') d.close(); });
 
   /* ---------- Slider fill ---------- */
-  function initSlider(s) { const min = +s.min || 0, max = s.max === '' ? 100 : +s.max; s.style.setProperty('--p', ((s.value - min) / (max - min) * 100) + '%'); }
+  function initSlider(s) { const min = +s.min || 0, max = s.max === '' ? 100 : +s.max; owns(s, 'style').style.setProperty('--p', ((s.value - min) / (max - min) * 100) + '%'); }
   on('input', 'input[type="range"]', (e, s) => { initSlider(s); });
 
   /* ---------- Tooltip: one glass element in <body> (or the open <dialog> / popover), positioned next to the element ---------- */
@@ -442,8 +449,8 @@
   function initMore(list) {
     const n = num(list, 'data-g-more', 5);
     if (list.children.length <= n) return;
-    if (!list.id) list.id = 'g-list-' + (++uid);
-    const wrap = el('div', 'g-more'), btn = el('button'); btn.type = 'button'; btn.setAttribute('aria-controls', list.id);
+    if (!list.id) owns(list, 'id').id = 'g-list-' + (++uid);
+    const wrap = part(el('div', 'g-more')), btn = el('button'); btn.type = 'button'; btn.setAttribute('aria-controls', list.id);
     wrap.appendChild(btn); list.parentNode.insertBefore(wrap, list.nextSibling);
     moreSet(list, false);
   }
@@ -461,9 +468,9 @@
   }
   function initClamp(c) {
     const text = c.querySelector('.g-clamp__text'), btn = c.querySelector('.g-clamp__btn'); if (!text || !btn) return;
-    c.style.setProperty('--lines', num(c, 'data-g-clamp', 3));
-    if (!text.id) text.id = 'g-clamp-' + (++uid);
-    btn.setAttribute('aria-controls', text.id); aria(btn, 'expanded', false); btn.textContent = data(c, 'more-label', 'more');
+    owns(c, 'style').style.setProperty('--lines', num(c, 'data-g-clamp', 3));
+    if (!text.id) owns(text, 'id').id = 'g-clamp-' + (++uid);
+    owns(btn, 'aria-controls', 'aria-expanded'); btn.setAttribute('aria-controls', text.id); aria(btn, 'expanded', false); btn.textContent = data(c, 'more-label', 'more');
     if (clampRO) clampRO.observe(c); clampCheck(c);
   }
   on('click', '.g-clamp__btn', (e, btn) => {
@@ -501,7 +508,7 @@
     return sel;
   }
   function initTable(t) {   // idempotent (Glass.init runs it again for rows added later)
-    $$('tbody tr', t).forEach(r => { r.tabIndex = 0; if (!r.hasAttribute('aria-selected')) aria(r, 'selected', false); });
+    $$('tbody tr', t).forEach(r => { owns(r, 'tabindex').tabIndex = 0; if (!r.hasAttribute('aria-selected')) aria(r, 'selected', false); });
     tableSync(t);
   }
   function tableToggle(r) {
@@ -749,7 +756,7 @@
   /* colour field: swatch (native picker) + hex text input */
   function colorParts(n) { const w = n.closest && n.closest('[data-g-color]'); return w && { c: w.querySelector('input[type="color"]'), t: w.querySelector('input:not([type="color"])'), sw: w.querySelector('.g-color__swatch') }; }
   function colorNorm(v) { v = (v || '').trim(); if (v.charAt(0) !== '#') v = '#' + v; if (/^#[0-9a-f]{3}$/i.test(v)) v = '#' + v.slice(1).replace(/./g, '$&$&'); return /^#[0-9a-f]{6}$/i.test(v) ? v.toLowerCase() : null; }
-  function initColor(w) { const p = colorParts(w); if (p && p.c && p.t) { p.t.value = p.c.value.toUpperCase(); p.sw.style.setProperty('--c', p.c.value); } }
+  function initColor(w) { const p = colorParts(w); if (p && p.c && p.t) { p.t.value = p.c.value.toUpperCase(); owns(p.sw, 'style').style.setProperty('--c', p.c.value); } }
   document.addEventListener('input', e => {
     const p = colorParts(e.target); if (!p || !p.c || !p.t) return;
     if (e.target === p.c) { p.t.value = p.c.value.toUpperCase(); p.sw.style.setProperty('--c', p.c.value); p.t.removeAttribute('aria-invalid'); fire(p.t, 'input'); }
@@ -759,7 +766,7 @@
     const p = colorParts(e.target); if (!p || !p.c || e.target !== p.t) return;
     const v = colorNorm(p.t.value); p.t.value = (v || p.c.value).toUpperCase(); p.t.removeAttribute('aria-invalid'); p.sw.style.setProperty('--c', p.c.value);
   });
-  function initPassword(b) { aria(b, 'pressed', false); b.setAttribute('aria-label', b.getAttribute('aria-label') || 'Show password'); }
+  function initPassword(b) { owns(b, 'aria-pressed', 'aria-label'); aria(b, 'pressed', false); b.setAttribute('aria-label', b.getAttribute('aria-label') || 'Show password'); }
   on('click', '[data-g-password]', (e, b) => {
     const inp = b.parentNode.querySelector('input'); if (!inp) return;
     const show = inp.type === 'password'; inp.type = show ? 'text' : 'password';
@@ -768,7 +775,7 @@
   /* clear cross: <button class="g-input-end" data-icon="x" data-g-clear-input> next to the input; visible only while the field has a value */
   const clearInput = b => b.parentNode.querySelector('input, textarea');
   function clearSync(b) { const i = clearInput(b); b.hidden = !i || !i.value; }
-  function initClearInput(b) { if (!b.hasAttribute('type')) b.type = 'button'; if (!b.hasAttribute('aria-label')) b.setAttribute('aria-label', 'Clear'); clearSync(b); }
+  function initClearInput(b) { if (!b.hasAttribute('type')) owns(b, 'type').type = 'button'; if (!b.hasAttribute('aria-label')) owns(b, 'aria-label').setAttribute('aria-label', 'Clear'); clearSync(b); }
   on('input', '.g-input-wrap > :is(input, textarea)', (e, i) => { const b = i.parentNode.querySelector('[data-g-clear-input]'); if (b) clearSync(b); });
   on('change', '.g-input-wrap > :is(input, textarea)', (e, i) => { const b = i.parentNode.querySelector('[data-g-clear-input]'); if (b) clearSync(b); });
   /* a script that sets input.value does not fire `input`: the cross follows the property itself, so a field filled by code shows its cross at once */
@@ -786,10 +793,10 @@
     if (i.closest('[data-g-no-clear], [role="listbox"], [role="menu"]')) return;
     let w = i.parentNode; if (!w || !w.classList) return;
     if (w.classList.contains('g-input-wrap')) { if (w.querySelector('.g-input-end, [data-g-clear-input], [data-g-number], [data-g-color]') || w.matches('[data-g-number], [data-g-color]')) return; }
-    else if (w.classList.contains('g-field')) { const n = document.createElement('span'); n.className = 'g-input-wrap'; w.insertBefore(n, i); n.appendChild(i); w = n; }
+    else if (w.classList.contains('g-field')) { const n = wrapper(document.createElement('span')); n.className = 'g-input-wrap'; w.insertBefore(n, i); n.appendChild(i); w = n; }
     else return;
     const b = document.createElement('button'); b.type = 'button'; b.className = 'g-input-end'; b.setAttribute('data-icon', 'x'); b.setAttribute('data-g-clear-input', ''); b.setAttribute('aria-label', 'Clear');
-    i.after(b); initClearInput(b);
+    i.after(part(b)); initClearInput(b);
   }
   function initAnimRandom(w) { const max = +w.getAttribute('data-g-anim-random') || 800; [...w.children].forEach(c => { c.style.setProperty('--g-anim-delay', (Math.random() * max / 1000).toFixed(2) + 's'); }); }
 
@@ -1129,6 +1136,8 @@
    * of <main>, or else one elsewhere (the search box in the header):
    *   action="/find-words/{word}"  the field `word` is a path segment (/find-words/апельсин); every other field goes into the query, in the order of the form.
    *                                A field at its default is left out: an empty text, an unchecked box, the first option of a select, the first radio of a group.
+   *                                data-default="v" on a field (a select, a text, a hidden one) names its default when the server's is another: at v it is left out,
+   *                                and an address that does not name it puts v back.
    *   typing                       a form with no submit button answers as it is filled in: the address follows every keystroke (the first one of an edit adds
    *                                a history entry, the next ones replace it), a choice (select, box, a step of a number) is an entry of its own. A form with a
    *                                submit button (a slow or not idempotent action: ping, a random pick) waits for it: each submit is an entry and is asked
@@ -1193,6 +1202,8 @@
     }
     const ready = () => (form && form.isConnected) || bind();
     function atDefault(e) {
+      const d = e.getAttribute('data-default');   /* the server's default, when it is not the kit's (a select whose default is not its first option) */
+      if (d !== null && e.type !== 'checkbox' && e.type !== 'radio' && !e.multiple) return e.value === d;
       if (e.type === 'checkbox') return !e.checked;
       if (e.type === 'radio') return !e.checked || radios(e)[0] === e;
       if (e.tagName === 'SELECT') return e.selectedIndex <= 0;
@@ -1236,9 +1247,9 @@
         } else if (e.tagName === 'SELECT') {
           const opts = [...e.options];
           if (e.multiple) opts.forEach(o => { const on = vs.includes(o.value); if (o.selected !== on) { o.selected = on; changed.add(e); } });
-          else { const i = Math.max(0, opts.findIndex(o => o.value === vs[0])); if (e.selectedIndex !== i) { e.selectedIndex = i; changed.add(e); } }
+          else { const want = vs.length ? vs[0] : e.getAttribute('data-default'), i = Math.max(0, opts.findIndex(o => o.value === want)); if (e.selectedIndex !== i) { e.selectedIndex = i; changed.add(e); } }
         } else {
-          const n = seen.get(e.name) || 0, v = vs[n] !== undefined ? vs[n] : '';
+          const n = seen.get(e.name) || 0, v = vs[n] !== undefined ? vs[n] : (e.getAttribute('data-default') || '');
           seen.set(e.name, n + 1);
           if (e.value !== v) { e.value = v; changed.add(e); }
         }
@@ -1324,6 +1335,10 @@
         if (was) e.replaceWith(was.cloneNode(true));
         return e.id;
       });
+      /* the hidden fields of this form are the server's in a whole answer too (a morph leaves what a field holds to the user): a link to the bare
+         address empties them (a field the address does not name is at its default), the server's defaults come back with the answer */
+      const whole = form && form.id && !same.includes(form.id) && next.querySelector('form#' + CSS.escape(form.id));
+      if (whole) parts.push(...$$('input[type="hidden"][name]', whole).map(x => [form.id, x]));
       let out = [];
       if (!differ(snap, next, out)) { if (!sent) return false; out = [next]; }   /* a change in <main> outside every element with an id */
       const live = out.map(n => [n === next ? main : document.getElementById(n.id), n]);

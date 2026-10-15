@@ -22,6 +22,11 @@
  * Hidden tab: patched at once. Reduced motion: patched at once, what is new fades in and new words only tint.
  * opts: key(el) -> string | null; keep(el) -> true: an element (of the box) that is paired stays as it is, nothing in it is patched (the form being sent);
  * leave / enter / flash / reel / move / height: false switches a part off.
+ * What a script built into the page's markup (a UI kit's controls) is not the page's: the new markup does not have it, and it stays as it is.
+ *   data-g-part            an element a script put in (a button, a panel): left where it stands, nothing in it is patched;
+ *   data-g-wrap            a box a script put around elements of the page (a select in its combobox): left where it stands, and what of the
+ *                          page is in it (its children that are not parts) is paired and patched as if it stood in its place;
+ *   data-g-attrs="a b"     attributes of the element that a script owns (one it set, one it took away): left as they are.
  * Timing: --g-morph-leave, --g-morph-enter, --g-morph-stagger, --g-morph-reel, --g-morph-reel-stagger, --g-morph-move (CSS, on :root or on the target).
  *
  * <div data-g-morph>   whatever a script, a framework or the page changes in it is animated as Glass.morph does (rows go, come in, glide, a
@@ -42,7 +47,7 @@
   const morph = (() => {
     const SKIP = new Set(['SCRIPT', 'STYLE', 'TEMPLATE', 'NOSCRIPT']);   /* never paired, never animated */
     const FORM = new Set(['INPUT', 'TEXTAREA', 'SELECT']);               /* the user's value is not touched, they are not walked into */
-    const KEEP = new Set(['data-new', 'data-g-new']);                    /* entrance markers of the rows */
+    const KEEP = new Set(['data-new', 'data-g-new', 'data-g-attrs']);    /* entrance markers of the rows; what a script owns */
     const NUM = /^[\d\s., ]*\d[\d\s., ]*%?$/, MAX = 300;   /* a number, with a percent sign after it */
     /* the numbers of a box are the same things with new values only when nothing but digits differs in its text (another row of a list has other words) */
     const sameButDigits = (a, b) => a.textContent.replace(/[\d\s.,%]/g, '') === b.textContent.replace(/[\d\s.,%]/g, '');
@@ -50,7 +55,10 @@
     const reordered = ps => ps.slice().sort((a, b) => a[0] - b[0]).some((p, k, a) => k && p[1] < a[k - 1][1]);
     const isNum = e => !e.children.length && NUM.test(e.textContent);
     const AUX = /(^|\s)g-morph-ghost(\s|$)/;   /* what fades out of the last update: not content */
-    const kids = p => [...p.children].filter(c => !SKIP.has(c.tagName) && !AUX.test(c.className));
+    /* the children that are content; a script's part is not, the page's elements in a script's wrap stand in its place */
+    const kids = p => { const out = []; for (const c of p.children) { if (SKIP.has(c.tagName) || AUX.test(c.className) || c.hasAttribute('data-g-part')) continue; if (c.hasAttribute('data-g-wrap')) out.push(...kids(c)); else out.push(c); } return out; };
+    const part = n => !!n && n.nodeType === 1 && n.hasAttribute('data-g-part');
+    const up = e => { let p = e.parentElement; while (p && p.hasAttribute('data-g-wrap')) p = p.parentElement; return p; };   /* the parent, a script's wraps left out */
     const later = (el, cls, ms, then) => setTimeout(() => { el.classList.remove(cls); if (!el.className) el.removeAttribute('class'); if (then) then(); }, ms);
     /* the animations of an update start with the first frame drawn after it, up to ~100 ms after the update itself (a large one): what is cleared when they
        are over counts from there, so it neither cuts them short nor lays the page out while they still move */
@@ -85,7 +93,7 @@
     /* where the element stands, from the container (the box that is morphed) down: TAG[index among the children of its parent]/TAG[...]/... */
     function path(el, root) {
       const p = [];
-      for (let e = el; e && e !== root; e = e.parentElement) p.push(e.tagName + (e.parentElement ? kids(e.parentElement).indexOf(e) : ''));
+      for (let e = el; e && e !== root; e = up(e)) p.push(e.tagName + (up(e) ? kids(up(e)).indexOf(e) : ''));
       return p.reverse().join('/');
     }
     /* what an element with no text is told by: the tag, what it points at, and the full path to it, so that no two of them have one key */
@@ -164,10 +172,10 @@
       m.pairs.forEach(([i, j]) => { const a = m.oldL[i], b = m.newL[j]; if (!FORM.has(a.tagName) && !(o.keep && o.keep(a)) && !a.isEqualNode(b)) collect(a, b, o, out, moved); });
     }
     function syncAttrs(a, b) {
-      const form = FORM.has(a.tagName);
-      [...b.attributes].forEach(x => { if (!(form && /^(value|checked|selected)$/.test(x.name)) && a.getAttribute(x.name) !== x.value) a.setAttribute(x.name, x.value); });
+      const form = FORM.has(a.tagName), own = a.getAttribute('data-g-attrs'), mine = own ? own.split(/\s+/) : [];   /* a script's: left as they are */
+      [...b.attributes].forEach(x => { if (!(form && /^(value|checked|selected)$/.test(x.name)) && !mine.includes(x.name) && a.getAttribute(x.name) !== x.value) a.setAttribute(x.name, x.value); });
       [...a.attributes].forEach(x => {
-        if (b.hasAttribute(x.name) || KEEP.has(x.name) || (x.name === 'style' && a.classList.contains('g-morph-enter'))) return;
+        if (b.hasAttribute(x.name) || KEEP.has(x.name) || mine.includes(x.name) || (x.name === 'style' && a.classList.contains('g-morph-enter'))) return;
         if (x.name === 'style' && a.style.getPropertyValue('--g-text-w')) { const w = a.style.getPropertyValue('--g-text-w'); a.removeAttribute('style'); a.style.setProperty('--g-text-w', w); return; }   /* the measure of data-g-fit is the kit's own, it is not in the new markup and nothing would measure it again */
         a.removeAttribute(x.name);
       });
@@ -253,6 +261,9 @@
       /* what goes before the cursor is gathered in a fragment and put in with one insert: fewer mutations of the live tree (and fewer records for observers) */
       let cursor = op.firstChild, textChanged = false, batch = null;
       const put = () => { if (batch) { op.insertBefore(batch, cursor); batch = null; } };
+      /* an element of the page in a script's wrap: the wrap is what is put in place (once), the element stays in it */
+      const carrier = n => { for (let c = n; c.parentElement; c = c.parentElement) { if (c.parentElement === op) return c; if (!c.parentElement.hasAttribute('data-g-wrap')) return n; } return n; };
+      const placed = new Set();
       [...np.childNodes].forEach(nk => {   /* the new children are taken out of `np` as they are placed: a copy */
         let node = nk;
         if (nk.nodeType === 1 && !SKIP.has(nk.tagName)) {
@@ -281,12 +292,15 @@
             }
           } else if (nk.nodeValue.trim() && !op.children.length && !oldTexts.length && cursor) textChanged = true;
         }
-        if (node === cursor) { put(); cursor = cursor.nextSibling; }
-        else (batch || (batch = document.createDocumentFragment())).appendChild(node);
+        const at = node.nodeType === 1 ? carrier(node) : node;
+        if (at !== node) { if (placed.has(at)) return; placed.add(at); }
+        while (part(cursor)) cursor = cursor.nextSibling;   /* a script's part stays where it stands */
+        if (at === cursor) { put(); cursor = cursor.nextSibling; }
+        else (batch || (batch = document.createDocumentFragment())).appendChild(at);
         if (node._arm) { put(); node._arm(); }   /* a reel measures itself: it has to be in the page */
       });
       put();
-      while (cursor) { const next = cursor.nextSibling; op.removeChild(cursor); cursor = next; }
+      while (cursor) { const next = cursor.nextSibling; if (!part(cursor)) op.removeChild(cursor); cursor = next; }
       if (textChanged && ctx.play && o.flash !== false) ctx.flashing.push(op);
     }
     /* What leaves does not hold the update up: it is put back where it stood, in its own parent but out of the flow (it pushes nothing),

@@ -23,7 +23,7 @@ function render(u, fetchMode, form = '') {
   ${word === 'outside' ? '<p>a change outside every region</p>' : ''}
   <aside><form id="f" method="get" action="/find/{word}">
     <input name="word" type="search" value="${esc(word)}">
-    <select name="dict">${options}</select>
+    <select name="dict"${parts ? ' data-g-select data-icon="book-open"' : ''}>${options}</select>
     <label><input type="checkbox" name="repeat" value="1"${repeat ? ' checked' : ''}> repeat</label>
     ${parts ? formParts(word, dict) : ''}
   </form></aside>
@@ -359,4 +359,38 @@ test('the form the user changed is not sent again: only what the answer writes i
   assert.equal(await page.evaluate(() => document.querySelector('input[name=word]').value), 'дом');
   assert.equal(await page.evaluate(() => window.marker), undefined);   // a page loaded anew by goto: no marker; nothing reloaded since
   assert.deepEqual(errors, []);
+});
+
+test('what the kit built into the form (a select made a combobox) stays when the whole page answers after an answer without the form', async () => {
+  parts = true;
+  await page.goto(ORIGIN + '/find/' + encodeURIComponent('кот'));
+  await page.waitForFunction(() => window.Glass && document.querySelector('.g-select__trigger'));
+  await page.evaluate(() => { window.select0 = document.querySelector('select[name=dict]'); window.trigger0 = document.querySelector('.g-select__trigger'); });
+  const combo = () => page.evaluate(() => ({ same: document.querySelector('select[name=dict]') === window.select0 && document.querySelector('.g-select__trigger') === window.trigger0,
+    wrapped: !!window.select0.closest('.g-select'), icon: window.trigger0.getAttribute('data-icon'), shown: window.trigger0.textContent, dict: window.select0.value,
+    seed: document.querySelector('input[name=seed]').value }));
+  await page.click('.g-select__trigger'); await page.click('[role=option]:has-text("all")');   // the combobox of the kit
+  await settle();
+  assert.deepEqual(fetches().map(r => r.form), ['f']);   // its answer came without the form
+  assert.deepEqual(await combo(), { same: true, wrapped: true, icon: 'book-open', shown: 'all', dict: 'all', seed: 'all-3' });
+  await page.click('#next'); await settle();   // a link: the whole page, the form as the server draws it
+  assert.deepEqual(fetches().map(r => r.form), ['f', '']);
+  assert.match(await result(), /^дом-cities-1/);
+  assert.deepEqual(await combo(), { same: true, wrapped: true, icon: 'book-open', shown: 'cities', dict: 'cities', seed: 'cities-3' });   // a hidden field the link does not name: the server's
+  assert.deepEqual(errors, []);
+});
+
+test('data-default names the default of a field when the server\'s is not the first option: at it the field is left out, an address that does not name it puts it back', async () => {
+  const words = min => `<!doctype html><title>words</title><script defer src="/glass-ui.js"></script><script defer src="/glass-morph.js"></script><main id="m"><form id="w" method="get" action="/words"><select name="min" data-default="3">${['2', '3', '4'].map(v => `<option value="${v}"${v === min ? ' selected' : ''}>${v}</option>`).join('')}</select></form><p id="out">min ${min}</p><a id="bare" href="/words">words</a></main>`;
+  await page.route(ORIGIN + '/words**', route => { const u = new URL(route.request().url()); requests.push({ url: u.pathname + u.search, fetchMode: route.request().headers()['x-g-fetch'] === '1' }); return route.fulfill({ contentType: 'text/html', body: words(u.searchParams.get('min') || '3') }); });
+  await page.goto(ORIGIN + '/words');
+  await page.waitForFunction(() => window.Glass);
+  await page.selectOption('select[name=min]', '2'); await settle();
+  assert.equal(await path_(), '/words?min=2');   // the first option is not the default here: it is in the address
+  assert.equal(await page.textContent('#out'), 'min 2');
+  await page.selectOption('select[name=min]', '3'); await settle();
+  assert.equal(await path_(), '/words');   // the default is left out
+  await page.selectOption('select[name=min]', '4'); await settle();
+  await page.click('#bare'); await settle();   // an address that does not name it: the default, as the server has it
+  assert.deepEqual(await page.evaluate(() => [document.querySelector('select[name=min]').value, document.getElementById('out').textContent]), ['3', 'min 3']);
 });
