@@ -96,6 +96,14 @@ test('page: what changes in a layer that floats over the page (a cookie banner t
   assert.deepEqual([r.made.enter, r.ghosts, r.made.words, r.made.reels], ['', '', 0, 0]);
   await page.evaluate(() => document.getElementById('banner').remove());
   await page.waitForTimeout(300);
+  /* a layer put in before its stylesheet makes it fixed (another script's banner), then drawn: what is drawn in it does not come in either */
+  await page.evaluate(() => { const w = document.createElement('div'); w.id = 'card'; w.className = 'late'; w.style.cssText = 'right:20px;bottom:20px;width:200px'; document.body.appendChild(w); });
+  await page.waitForTimeout(1500);   /* read as it stands: in the flow (its own coming in, as a box of the flow, is over) */
+  const n = await change(`const st = document.createElement('style'); st.textContent = '.late { position: fixed }'; document.head.appendChild(st);
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); document.getElementById('card').innerHTML = '<p>cookies?</p><button><span>Yes</span></button>';`);
+  assert.deepEqual([n.made.enter.replace(/^card,?/, ''), n.ghosts], ['', '']);
+  await page.evaluate(() => { document.getElementById('card').remove(); [...document.head.querySelectorAll('style')].pop().remove(); });
+  await page.waitForTimeout(300);
 });
 
 test('page: a <style> whose text a script sets stays a style (nothing is lit up in it)', async () => {

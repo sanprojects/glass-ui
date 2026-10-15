@@ -870,7 +870,11 @@
         const sc = new Set();
         gone.forEach(g => sc.add(g[1])); came.forEach(n => sc.add(n.parentElement)); retext.forEach(e => sc.add(e)); shownRows.forEach(e => sc.add(e.parentElement));
         ctx.scope = [...sc].filter(n => n && n.isConnected);
-        ctx.floats = e => { const p = getComputedStyle(e).position; if (p === 'fixed' || (p === 'absolute' && e.parentElement === box)) return true; const c = e.parentElement && near(e.parentElement); return !!(c && c.out); };
+        /* it floats, or is in what floats - asked of the styles as they are now, not of what was read before: the layer of another script is often
+           put in before its stylesheet makes it fixed (a consent banner); one answer per element for the whole update */
+        const fl = new Map();
+        const floats = p => { if (!p || p === box) return false; if (fl.has(p)) return fl.get(p); const q = getComputedStyle(p).position, v = q === 'fixed' || (q === 'absolute' && p.parentElement === box) || floats(p.parentElement); fl.set(p, v); return v; };
+        ctx.floats = floats;
       }
       ctx.onRead = () => snapshot(W);
       ctx.onWrite = () => boards.forEach(b => b._arm());   /* the boards take their size after the reads (and after the ghosts are checked against them) */
