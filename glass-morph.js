@@ -66,7 +66,16 @@
     /* the animations of an update start with the first frame drawn after it, up to ~100 ms after the update itself (a large one): what is cleared when they
        are over counts from there, so it neither cuts them short nor lays the page out while they still move */
     const settled = f => requestAnimationFrame(() => requestAnimationFrame(f));
-    const quiet = () => document.hidden;
+    /* An inactive tab draws nothing, so nothing is animated in it: what changes then is patched at once, and what was moving when the tab went away
+       is put at its end at once (an animation in a hidden tab waits and would play when the tab is shown again). A tab only just shown is not active
+       yet either: what changed while it was away is not animated (nor in a hidden tab that a browser shows for a moment, to draw its thumbnail) */
+    let SHOWN = document.hidden ? Infinity : -1e9;
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) { SHOWN = performance.now(); return; }
+      SHOWN = Infinity;
+      document.getAnimations().forEach(a => { if (a.id === 'g-morph' || /^g-(morph|reel|a-highlight$)/.test(a.animationName || '')) try { a.finish(); } catch (e) { /* one that never ends */ } });
+    });
+    const quiet = () => document.hidden || performance.now() - SHOWN < 500;
     const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;   /* less motion: nothing slides, glides or turns; what is new or changed fades */
     /* in the viewport and with a size: one getBoundingClientRect per element, the reads go in a batch */
     const onScreen = r => !!(r.width || r.height) && r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth;
@@ -455,7 +464,7 @@
             if (target._hAnim) target._hAnim.cancel();
             const was = target.style.overflowY;
             target.style.overflowY = 'clip';
-            const an = target._hAnim = target.animate([{ height: ctx.h0 - extra + 'px' }, { height: h1 - extra + 'px' }], { duration: end, easing: T.ease });
+            const an = target._hAnim = target.animate([{ height: ctx.h0 - extra + 'px' }, { height: h1 - extra + 'px' }], { id: 'g-morph', duration: end, easing: T.ease });
             target._hFrom = ctx.h0; target._hTo = h1;   /* where it is at any time, without a layout: from + (to - from) * progress */
             const done = target._hDone = () => { if (target._hAnim === an) { target._hAnim = null; target.style.overflowY = was; } };
             an.onfinish = done; an.oncancel = done;
@@ -471,10 +480,10 @@
             if (own) { kit.animate(e, 'highlight'); later(e, 'g-anim-highlight', 1600); }
             else { e.classList.add('g-morph-flash'); later(e, 'g-morph-flash', 1050); }
           });
-          glide.forEach(([e, dx, dy]) => { const d = waveOf(e); e.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { duration: end - d, delay: d, easing: T.ease, fill: 'backwards' }); });   /* all in place at once */
+          glide.forEach(([e, dx, dy]) => { const d = waveOf(e); e.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { id: 'g-morph', duration: end - d, delay: d, easing: T.ease, fill: 'backwards' }); });   /* all in place at once */
           /* gone out of the viewport: held where it stood, it fades out as a ghost does; then it is in its new place, out of sight */
           away.forEach(([e, dx, dy]) => { const d = waveOf(e), from = `translate(${dx}px, ${dy}px)`, to = `translate(${dx + 24}px, ${dy}px)`, run = ctx.until - d;
-            e.animate([{ transform: from, opacity: 1, easing: T.ease }, { transform: to, opacity: 0, offset: Math.min(1, ctx.run(d) / run) }, { transform: to, opacity: 0 }], { duration: run, delay: d, fill: 'backwards' }); });
+            e.animate([{ transform: from, opacity: 1, easing: T.ease }, { transform: to, opacity: 0, offset: Math.min(1, ctx.run(d) / run) }, { transform: to, opacity: 0 }], { id: 'g-morph', duration: run, delay: d, fill: 'backwards' }); });
           ctx.entering = []; ctx.flashing = []; ctx.moves = new Map(); ctx.pre = new Map(); ctx.words = []; ctx.h0 = null;
         }
       };

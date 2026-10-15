@@ -283,6 +283,31 @@ test('morph: its timing written in seconds (as a minifier writes 250ms: .25s) is
   assert.equal(r.s, r.ms);
 });
 
+test('morph: nothing is animated in a tab that is not active - what moves when it goes away is put at its end, a tab just shown animates nothing yet', async () => {
+  const r = await page.evaluate(async () => {
+    const vis = h => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => h }); Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => h ? 'hidden' : 'visible' }); document.dispatchEvent(new Event('visibilitychange')); };
+    const box = document.createElement('div'); box.style.cssText = 'position:fixed;top:8px;left:8px;width:300px;z-index:9999';
+    box.setAttribute('data-g-no-enter', '');   /* its first row is not the kit's new row coming in (glass-ui.js): only the morph is looked at */
+    box.innerHTML = '<ol class="g-list"><li data-key="a">a</li></ol>'; document.body.appendChild(box);
+    const running = () => document.getAnimations().filter(a => a.playState === 'running' && box.contains(a.effect && a.effect.target)).length;
+    const out = {};
+    await Glass.morph(box, '<ol class="g-list"><li data-key="b">b</li><li data-key="a">a</li><li data-key="c">c</li></ol>');
+    out.moving = running() > 0;
+    vis(true); out.leftRunning = running();   /* the tab goes away: what moves is at its end */
+    await Glass.morph(box, '<ol class="g-list"><li data-key="a">a</li><li data-key="d">d</li></ol>');
+    out.hiddenEnter = +box.querySelector('[data-key=d]').classList.contains('g-morph-enter') + running();
+    vis(false);   /* shown again: what changed while it was away, or right now, is not animated */
+    await Glass.morph(box, '<ol class="g-list"><li data-key="a">a</li><li data-key="e">e</li></ol>');
+    out.justShown = +box.querySelector('[data-key=e]').classList.contains('g-morph-enter') + running();
+    await new Promise(r => setTimeout(r, 600));
+    await Glass.morph(box, '<ol class="g-list"><li data-key="a">a</li><li data-key="f">f</li></ol>');
+    out.later = box.querySelector('[data-key=f]').classList.contains('g-morph-enter');
+    delete document.hidden; delete document.visibilityState; box.remove();
+    return out;
+  });
+  assert.deepEqual(r, { moving: true, leftRunning: 0, hiddenEnter: 0, justShown: 0, later: true });
+});
+
 test('list: a click on the empty edge of a linked row opens its link (the stretched link is made for the row under the mouse)', async () => {
   await page.evaluate(() => { const box = document.createElement('div'); box.id = 'edge-box'; box.innerHTML = '<ol class="g-list"><li><a href="#row-edge">word</a></li><li><a href="#other">other</a></li></ol>'; box.style.cssText = 'position:fixed;top:8px;left:8px;width:300px;z-index:9999'; document.body.appendChild(box); location.hash = ''; });
   const r = await page.evaluate(() => { const li = document.querySelector('#edge-box li'), rr = li.getBoundingClientRect(), a = li.querySelector('a').getBoundingClientRect(); return { x: rr.right - 3, y: rr.top + rr.height / 2, onText: a.right > rr.right - 3, rows: [...document.querySelectorAll('#edge-box li')].filter(e => getComputedStyle(e.querySelector('a'), '::after').content !== 'none').length }; });
