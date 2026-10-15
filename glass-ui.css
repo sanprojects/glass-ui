@@ -154,8 +154,8 @@
 :where(:is(.g-root,[role="listbox"]) :is(em, i)) { font-style: italic; }
 /* a visited link keeps the colour of an unvisited one: the browser purple is not in the kit */
 :where(.g-root a:visited) { color: inherit; }
-:where(:is(.g-root,[role="listbox"]) :is(p, small, blockquote, dd, td, li:not(nav li, .g-list > li)) a:not([role], [class^="g-"], [class*=" g-"])) { color: var(--g-text); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: rgba(var(--g-ov),.5); transition: text-decoration-color var(--g-dur); }
-@media (hover: hover) { :where(:is(.g-root,[role="listbox"]) :is(p, small, blockquote, dd, td, li:not(nav li, .g-list > li)) a:not([role], [class^="g-"], [class*=" g-"]):hover) { text-decoration-color: currentColor; } }
+:where(:is(.g-root,[role="listbox"]) :is(p, small, blockquote, dd, td, label, li:not(nav li, .g-list > li)) a:not([role], [class^="g-"], [class*=" g-"])) { color: var(--g-text); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: rgba(var(--g-ov),.5); transition: text-decoration-color var(--g-dur); }
+@media (hover: hover) { :where(:is(.g-root,[role="listbox"]) :is(p, small, blockquote, dd, td, label, li:not(nav li, .g-list > li)) a:not([role], [class^="g-"], [class*=" g-"]):hover) { text-decoration-color: currentColor; } }
 /* A plain link straight inside an article (a card with a link line) reads like the links in its prose, never the browser's blue/purple */
 :where(:is(.g-root,[role="listbox"]) article > a:not([role], [class^="g-"], [class*=" g-"])) { color: var(--g-text); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: rgba(var(--g-ov),.5); transition: text-decoration-color var(--g-dur); }
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) article > a:not([role], [class^="g-"], [class*=" g-"]):hover) { text-decoration-color: currentColor; } }
@@ -709,8 +709,8 @@ span.g-input-end { right: var(--g-inset); width: var(--g-icon-md); height: var(-
 /* ---------- Table: <figure><table><thead/><tbody/><tfoot/></table></figure> ----------
  * Right-aligned cell: align="right". Muted cell: data-muted. Two-line rows: <table data-rows="two-line">. Sortable header: <th aria-sort="none"><button>Name</button></th>. */
 :where(:is(.g-root,[role="listbox"]) figure:has(> table)) { overflow: auto; min-height: 0; border-radius: var(--g-radius-card); }   /* what does not fit scrolls in the figure, both ways (in a column with a set height it shrinks to it) */
-:where(:is(.g-root,[role="listbox"]) table) { width: 100%; min-width: 520px; border-collapse: collapse; font-size: var(--g-fs-subhead); font-variant-numeric: tabular-nums; }
-:where(:is(.g-root,[role="listbox"]) th) { height: var(--g-h-md); padding: 0 var(--g-gap); text-align: left; font-size: var(--g-fs-caption); line-height: 1.33; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--g-text-3); white-space: nowrap; }
+:where(:is(.g-root,[role="listbox"]) table) { width: 100%; min-width: 0; border-collapse: collapse; font-size: var(--g-fs-subhead); font-variant-numeric: tabular-nums; }
+:where(:is(.g-root,[role="listbox"]) th) { height: var(--g-h-md); padding: 0 var(--g-gap); text-align: left; font-size: var(--g-fs-caption); line-height: 1.33; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--g-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }   /* a head cell ends with an ellipsis too; it has no max-width: 0 (as td has): the columns share the width by what the heads and the cells hold, not equally */
 /* Sticky header and footer: in the workspace of a tools panel (where a table scrolls inside its figure) and on any table marked data-sticky; data-no-sticky turns it off.
  * They are plain glass, a little stronger than a panel (--g-fill-sticky), with a blur: the rows that scroll under them show through, blurred. The blur sits on the thead / tfoot itself: it does not work on cells. */
 :where(:is(.g-root,[role="listbox"]) :is(.g-shell--tools > main table, table[data-sticky]):not([data-no-sticky], [data-scroll-body]) > :is(thead, tfoot)) { position: sticky; z-index: 2; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
@@ -730,7 +730,8 @@ span.g-input-end { right: var(--g-inset); width: var(--g-icon-md); height: var(-
 :is(.g-root,[role="listbox"]) table[data-scroll-body] :is(th, td)[colspan] { grid-column: 1 / -1; }   /* a cell with colspan (a footer line, a spacer row) takes the whole grid row */
 :is(.g-root,[role="listbox"]) table[data-scroll-body] th { height: auto; min-height: var(--g-h-md); padding-block: var(--g-gap-inner); white-space: nowrap; line-height: 1.25; align-self: end; }   /* a column name stays on one line (a long one ends with an ellipsis): shorten it or widen the column */
 :where(:is(.g-root,[role="listbox"]) td) { line-height: 1.33; height: var(--g-row-h); padding: 0 var(--g-gap); border-top: 1px solid var(--g-line); color: var(--g-text); }
-:where(:is(.g-root,[role="listbox"]) td:not([data-wrap], [data-wrap] td)) { max-width: var(--g-cell-max, 28ch); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }   /* a cell never wraps: what does not fit is cut with an ellipsis (its text shows as a tooltip); data-wrap on the cell or the table lets it wrap */
+:where(:is(.g-root,[role="listbox"]) td:not([data-wrap], [data-wrap] td)) { max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }   /* a table is as wide as its box and every column fits it: a cell never wraps, what does not fit is cut with an ellipsis (its text shows as a tooltip); data-wrap on the cell or the table lets it wrap. max-width: 0 is what lets an auto-layout column shrink under its text (a nowrap cell would keep its whole text as the least width of the column); the columns still share the width by their content, a short one stays short */
+:where(:is(.g-root,[role="listbox"]) table[data-scroll-body] :is(th, td)) { max-width: none; }   /* its rows are grids with their own columns: no cell is 0 wide */
 :where(:is(.g-root,[role="listbox"]) td[data-muted]) { color: var(--g-text-2); }
 :where(:is(.g-root,[role="listbox"]) :is(th, td)[align="right"]) { text-align: right; }
 :where(:is(.g-root,[role="listbox"]) table[data-rows="two-line"] td) { height: 56px; }
@@ -1121,21 +1122,21 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> i
 .g-cluster[data-align="end"] { justify-content: flex-end; }
 .g-cluster[data-align="between"] { justify-content: space-between; }
 
-/* ---------- Tools layout: <div class="g-shell g-shell--tools"><aside>…</aside><main>…</main></div>
+/* ---------- Tools layout: <div class="g-shell g-shell--tools"><aside>…</aside><main>…</main></div>   (or <div class="g-shell" data-fixed>: the same layout, the panel stays, the workspace scrolls)
  * A toolbar on the left, the workspace on the right; they touch (the workspace is the darker one) and each scrolls on its own.
  * Under 900px they stack. The panels pad and space their blocks with --g-gap; give the shell a height (or flex: 1 in a column). */
 /* The panel is 300px, or --g-shell-min when a page needs more (a row of fixed cells: set --g-shell-min on the shell to their width plus the panel's padding). */
-.g-shell--tools { --g-shell-side: max(300px, var(--g-shell-min, 0px)); grid-template-columns: var(--g-shell-side) minmax(0, 1fr); gap: 0; flex: 1 1 0; min-height: 0; }
-.g-shell--tools > aside, .g-shell--tools > main { min-height: 0; overflow: auto; overscroll-behavior: contain; }
-.g-shell.g-shell--tools > aside { gap: var(--g-gap); }
-.g-shell--tools:not(:has(> aside)) { grid-template-columns: minmax(0, 1fr); }   /* a workspace alone (a table on the whole width): no empty column for the panel */
-.g-shell--tools > main { display: flex; flex-direction: column; gap: var(--g-gap); place-items: initial; align-content: normal; }
-.g-shell--tools > main > article { flex: none; }   /* a card is clipped (overflow: hidden), so in a column it would shrink to its padding and cut its own text; the workspace scrolls instead */
-.g-shell--tools > aside:last-child { background: var(--g-fill); }
+:is(.g-shell--tools, .g-shell:where([data-fixed])) { --g-shell-side: max(300px, var(--g-shell-min, 0px)); grid-template-columns: var(--g-shell-side) minmax(0, 1fr); gap: 0; flex: 1 1 0; min-height: 0; }
+:is(.g-shell--tools, .g-shell:where([data-fixed])) > aside, :is(.g-shell--tools, .g-shell:where([data-fixed])) > main { min-height: 0; overflow: auto; overscroll-behavior: contain; }
+.g-shell:is(.g-shell--tools, :where([data-fixed])) > aside { gap: var(--g-gap); }
+:is(.g-shell--tools, .g-shell:where([data-fixed])):not(:has(> aside)) { grid-template-columns: minmax(0, 1fr); }   /* a workspace alone (a table on the whole width): no empty column for the panel */
+:is(.g-shell--tools, .g-shell:where([data-fixed])) > main { display: flex; flex-direction: column; gap: var(--g-gap); place-items: initial; align-content: normal; }
+:is(.g-shell--tools, .g-shell:where([data-fixed])) > main > article { flex: none; }   /* a card is clipped (overflow: hidden), so in a column it would shrink to its padding and cut its own text; the workspace scrolls instead */
+:is(.g-shell--tools, .g-shell:where([data-fixed])) > aside:last-child { background: var(--g-fill); }
 /* .g-shell--stack: the panel is always on top on the whole width (what the narrow screen does), whatever the width */
-.g-shell--tools.g-shell--stack { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
-.g-shell--tools.g-shell--stack > aside { max-height: 45dvh; }
-@media (max-width: 900px) { .g-shell--tools { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); } .g-shell--tools > aside { max-height: 45dvh; } }
+:is(.g-shell--tools, .g-shell:where([data-fixed])).g-shell--stack { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+:is(.g-shell--tools, .g-shell:where([data-fixed])).g-shell--stack > aside { max-height: 45dvh; }
+@media (max-width: 900px) { :is(.g-shell--tools, .g-shell:where([data-fixed])) { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); } :is(.g-shell--tools, .g-shell:where([data-fixed])) > aside { max-height: 45dvh; } }
 
 /* ---------- Ruler: a section index inside a scrolling box (data-g-ruler; Glass.ruler) ----------
    A hairline per section with its name under it, as tall as the section's share of the scroll height; the section in view is lit; a click jumps there. The browser's own scroll bar stays as it is.
