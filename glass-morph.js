@@ -623,7 +623,7 @@
       if (!W.box.isConnected) return;
       skips();
       PX = scrollX; PY = scrollY;
-      const sx = PX, sy = PY, cache = new Map(), lazy = new Map(), b = W.box.getBoundingClientRect(), stuck = new Set(), page = W.page;
+      const sx = PX, sy = PY, cache = new Map(), lazy = new Map(), b = W.box.getBoundingClientRect(), stuck = new Set(), floated = new Set(), page = W.page;
       W.at = Object.assign({ x: b.left + sx, y: b.top + sy, h: b.height, seen: onScreen(b) }, frame(W.box));
       W.text = plain(W.box);   /* a box that is only text (a status line): its text is kept too */
       W.T = timings(W.box);
@@ -646,12 +646,15 @@
               const pos = page || holds ? getComputedStyle(e).position : null;
               if (holds) Object.assign(c, frame(e, pos));
               /* on the page: what stays in the window as the page scrolls (fixed, sticky, or in one of them) is kept where it is in the window; what
-                 floats over the page (fixed, or absolute right in it) neither glides nor fades out */
+                 floats over the page (fixed, or absolute right in it) and what is in it neither glides nor fades out (a cookie banner, a chat, an anchored
+                 ad: another script's layer, not the page's content) */
               if (page) {
                 let fx = pos === 'fixed' || pos === 'sticky';
                 if (!fx && stuck.size) for (let p = e.parentElement; !fx && p && p !== W.box; p = p.parentElement) fx = stuck.has(p);
                 if (fx) { stuck.add(e); c.x = r.left; c.y = r.top; c.fx = 1; }
-                if (pos === 'fixed' || (pos === 'absolute' && e.parentElement === W.box)) c.out = 1;
+                let out = pos === 'fixed' || (pos === 'absolute' && e.parentElement === W.box);
+                if (!out && floated.size) for (let p = e.parentElement; !out && p && p !== W.box; p = p.parentElement) out = floated.has(p);
+                if (out) { floated.add(e); c.out = 1; }
               }
               cache.set(e, c);
             }
@@ -810,6 +813,7 @@
       const jobs = retext.map(e => [e, was(e)]);
       pairs.forEach((a, b) => { if (!a.children.length && !b.children.length && a.textContent !== b.textContent) jobs.push([b, a.textContent]); });
       jobs.forEach(([e, from]) => {
+        const at = near(e); if (at && at.out) return;   /* a text in what floats over the page is not lit up nor turned */
         const t = e.firstChild, to = t && t.nodeValue;
         if (!t || t.nodeType !== 3 || e.childNodes.length !== 1 || from === to) return;
         if (o.reel !== false && NUM.test(from) && NUM.test(to) && shown(e)) { t.nodeValue = from; const board = reel(t, to, T, true); t.replaceWith(board); boards.push(board); e._gRun = { to, nodes: [board], at: performance.now() }; }   /* measured with the reads of the update */
@@ -862,11 +866,11 @@
       if (o.leave !== false) gone.forEach(([e, p]) => out(e, p, p));
       /* play it: the same as Glass.morph from here; the reads of flush() are where all of it is read again (the cache) */
       ctx.ghosts = ghosts;
-      if (W.page) {   /* on the page, only where it changed is measured; what floats over the page (fixed, or absolute right in it) does not come in */
+      if (W.page) {   /* on the page, only where it changed is measured; what floats over the page (fixed, or absolute right in it), and what comes into it, does not come in */
         const sc = new Set();
         gone.forEach(g => sc.add(g[1])); came.forEach(n => sc.add(n.parentElement)); retext.forEach(e => sc.add(e)); shownRows.forEach(e => sc.add(e.parentElement));
         ctx.scope = [...sc].filter(n => n && n.isConnected);
-        ctx.floats = e => { const p = getComputedStyle(e).position; return p === 'fixed' || (p === 'absolute' && e.parentElement === box); };
+        ctx.floats = e => { const p = getComputedStyle(e).position; if (p === 'fixed' || (p === 'absolute' && e.parentElement === box)) return true; const c = e.parentElement && near(e.parentElement); return !!(c && c.out); };
       }
       ctx.onRead = () => snapshot(W);
       ctx.onWrite = () => boards.forEach(b => b._arm());   /* the boards take their size after the reads (and after the ghosts are checked against them) */

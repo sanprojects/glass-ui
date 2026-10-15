@@ -89,6 +89,15 @@ test('page: what floats over the page (a toast of the kit, a fixed layer of the 
   await page.evaluate(() => document.getElementById('layer').remove());
 });
 
+test('page: what changes in a layer that floats over the page (a cookie banner that another script draws, then draws again) is not animated', async () => {
+  await page.evaluate(() => { const d = document.createElement('div'); d.id = 'banner'; d.style.cssText = 'position:fixed;left:20px;bottom:20px;width:300px'; d.innerHTML = '<p>cookies?</p><div id="btns"><button>no</button></div>'; document.body.appendChild(d); });
+  await page.waitForTimeout(400);
+  const r = await change(`const b = document.getElementById('btns'); b.innerHTML = '<button><span>No</span></button><button><span>Yes</span></button>'; document.querySelector('#banner p').textContent = 'cookies, please?';`);
+  assert.deepEqual([r.made.enter, r.ghosts, r.made.words, r.made.reels], ['', '', 0, 0]);
+  await page.evaluate(() => document.getElementById('banner').remove());
+  await page.waitForTimeout(300);
+});
+
 test('page: a <style> whose text a script sets stays a style (nothing is lit up in it)', async () => {
   const r = await change(`const st = document.getElementById('st'); st.textContent = '#below { color: red }'; await new Promise(r => setTimeout(r)); out.inside = st.children.length;`);
   assert.deepEqual({ inside: r.inside, color: await page.evaluate(() => getComputedStyle(document.getElementById('below')).color) }, { inside: 0, color: 'rgb(255, 0, 0)' });
