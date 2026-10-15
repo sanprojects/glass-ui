@@ -253,6 +253,21 @@ test('morph: what the kit built into the markup (a select made a combobox, a tab
   assert.deepEqual(r, { wrapped: true, trigger: 'book', hidden: ['-1', 'true', false], disabled: true, same: true, tabs: true, selected: '7', ready: true, after: 0 });
 });
 
+test('morph: a script\'s part in new markup (an ad slot the server prints with every answer) is not put in again: the one on the page stays, alone', async () => {
+  const r = await page.evaluate(async () => {
+    const box = document.createElement('div'); box.style.cssText = 'position:fixed;top:8px;left:8px;width:300px;z-index:9999';
+    const slot = n => `<div class="slot" data-g-part><ins class="ad">${n}</ins><script type="text/x-ad">window.__pushed = (window.__pushed || 0) + 1</script></div>`;
+    const markup = (n, w) => `<div>${slot(n)}</div><ol class="g-list">${w.map(x => `<li>${x}</li>`).join('')}</ol>`;
+    box.innerHTML = markup('ad one', ['a', 'b']); document.body.appendChild(box);
+    const ad = box.querySelector('.slot'); ad.querySelector('ins').innerHTML = '<iframe></iframe>';   /* the ad script filled it */
+    await Glass.morph(box, markup('ad two', ['a', 'c']));
+    await Glass.morph(box, markup('ad three', ['c', 'd']));
+    const out = { slots: box.querySelectorAll('.slot').length, same: box.querySelector('.slot') === ad, filled: !!ad.querySelector('iframe'), rows: [...box.querySelectorAll('li:not(.g-morph-ghost)')].map(l => l.textContent).join() };
+    box.remove(); return out;
+  });
+  assert.deepEqual(r, { slots: 1, same: true, filled: true, rows: 'c,d' });
+});
+
 test('morph: its timing written in seconds (as a minifier writes 250ms: .25s) is the same timing as in ms', async () => {
   const r = await page.evaluate(async () => {
     const run = async t => {

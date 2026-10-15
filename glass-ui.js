@@ -1400,7 +1400,7 @@
       if (t) document.title = t.textContent;
       [['link[rel=canonical]', 'href'], ['meta[name=description]', 'content']].forEach(([s, a]) => { const o = document.head.querySelector(s), n = doc.querySelector(s); if (o && n) o.setAttribute(a, n.getAttribute(a)); });
       live.forEach(([l, n]) => {
-        const run = $$('script', n).filter(s => !s.type || /javascript|module/i.test(s.type));
+        const run = $$('script', n).filter(s => (!s.type || /javascript|module/i.test(s.type)) && !s.closest('[data-g-part]'));   /* a script's part is not put in (glass-morph): nor is its script run */
         morph(l, n, sent || same.length ? { keep: e => e === sent || (!!e.id && same.includes(e.id)) } : undefined).then(() => { init(l); return runScripts(run); });   /* a form sent back as it is stays as it is, inside a region that changes too */
       });
       let wrote = false;

@@ -24,7 +24,8 @@
  * leave / enter / flash / reel / move / height: false switches a part off.
  * What a script built into the page's markup (a UI kit's controls) is not the page's: the new markup does not have it, and it stays as it is.
  *   data-g-part            an element a script put in or runs (a button, a panel, an ad slot another script fills): left where it stands,
- *                          nothing in it is patched, and on a watched page what changes in it is not animated;
+ *                          nothing in it is patched, one in the new markup is not put in (the page's stays, alone), and on a watched page
+ *                          what changes in it is not animated;
  *   data-g-wrap            a box a script put around elements of the page (a select in its combobox): left where it stands, and what of the
  *                          page is in it (its children that are not parts) is paired and patched as if it stood in its place;
  *   data-g-attrs="a b"     attributes of the element that a script owns (one it set, one it took away): left as they are.
@@ -116,7 +117,7 @@
     let G = null;
     function globalPairs(target, next, o) {
       const key = e => { const k = explicitKey(e, o); if (k) return k; const t = e.tagName === 'LI' && sig(e); return t ? 'LI|' + t : null; };   /* a set key or id, else a list row is its text; what repeats is not paired */
-      const index = root => { const m = new Map(); root.querySelectorAll('ol > li, ul > li, [data-key], [id]').forEach(e => { const k = key(e); if (k != null) m.set(k, m.has(k) ? null : e); }); return m; };
+      const index = root => { const m = new Map(); root.querySelectorAll('ol > li, ul > li, [data-key], [id]').forEach(e => { const pt = e.closest('[data-g-part]'); if (pt && pt !== root && root.contains(pt)) return; const k = key(e); if (k != null) m.set(k, m.has(k) ? null : e); }); return m; };   /* what is in a script's part is the script's: not paired across the tree */
       const old = index(target), fresh = index(next), g = { map: new Map(), claimed: new Set() };
       fresh.forEach((n, k) => { const e = old.get(k); if (n && e) { g.map.set(n, e); g.claimed.add(e); } });
       return g;
@@ -267,6 +268,7 @@
       const carrier = n => { for (let c = n; c.parentElement; c = c.parentElement) { if (c.parentElement === op) return c; if (!c.parentElement.hasAttribute('data-g-wrap')) return n; } return n; };
       const placed = new Set();
       [...np.childNodes].forEach(nk => {   /* the new children are taken out of `np` as they are placed: a copy */
+        if (part(nk)) return;   /* a script's part in the new markup (an ad slot printed with every answer) is not put in: the one on the page is the script's */
         let node = nk;
         if (nk.nodeType === 1 && !SKIP.has(nk.tagName)) {
           if (pairOf.has(nk)) {
