@@ -736,6 +736,8 @@ span.g-input-end { right: var(--g-inset); width: var(--g-icon-md); height: var(-
 :where(:is(.g-root,[role="listbox"]) :is(th, td)[align="right"]) { text-align: right; }
 :where(:is(.g-root,[role="listbox"]) table[data-rows="two-line"] td) { height: 56px; }
 /* Sortable header (a button inside th, aria-sort set by glass-ui.js) */
+table[data-g-measure] { width: max-content !important; table-layout: auto !important; }   /* glass-ui.js measures the columns here (tableFit): as wide as the content asks */
+table[data-g-measure] :is(th, td) { max-width: none !important; }
 :where(:is(.g-root,[role="listbox"]) td[data-icon]) { display: table-cell; --g-icon-size: var(--g-icon-md); --g-icon-color: var(--g-text-3); }   /* <td data-icon="name">: a leading icon in the cell */
 :where(:is(.g-root,[role="listbox"]) td[data-icon])::before { display: inline-block; vertical-align: middle; margin-right: var(--g-gap-inner); }
 :where(:is(.g-root,[role="listbox"]) th > button) { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: var(--g-gap-inner); cursor: pointer; border-radius: var(--g-radius-sm); padding: 4px 0; transition: color var(--g-dur); }

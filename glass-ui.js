@@ -880,9 +880,59 @@
       if (x.firstElementChild) $$('[data-g-fit]', x).forEach(one);
     }))).observe(document.documentElement, { childList: true, subtree: true });
   }
+  /* Table columns fit their box (every table of a .g-root; data-no-fit, data-wrap and data-scroll-body leave it alone). A table that fits shows its columns as the browser sizes them.
+     One that is wider than its box is cut the fair way: a column that needs less than its equal share keeps all of its width (an address, a count, a flag),
+     the room that is left is shared between the wide columns (a URL, a title) in proportion to the width they ask for, and what does not fit ends with an ellipsis.
+     It is a <colgroup> with percentages and table-layout: fixed, so it follows the box; it is made again when the box is resized, rows come or go, the fonts load. */
+  const FIT_T = '.g-root table:not([data-scroll-body], [data-no-fit], [data-wrap])';
+  function tableFit(t) {
+    if (!t.isConnected || !t.parentElement || !t.tBodies[0] || t.closest('[data-no-fit], [data-wrap]')) return;
+    const row = [...t.tBodies[0].rows].find(r => r.cells.length > 1 && ![...r.cells].some(c => c.colSpan > 1)); if (!row) return;
+    const old = t.querySelector(':scope > colgroup[data-g-fit]'); if (old) old.remove();
+    t.style.tableLayout = '';
+    const cs = getComputedStyle(t.parentElement), avail = t.parentElement.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    if (avail <= 0) return;
+    t.setAttribute('data-g-measure', '');   /* CSS: as wide as the content asks, no cell is cut */
+    const w = [...row.cells].map(c => c.getBoundingClientRect().width);
+    t.removeAttribute('data-g-measure');
+    const need = w.reduce((a, b) => a + b, 0); if (need <= avail + 1) return;
+    const out = w.map(() => 0); let free = avail, rest = w.map((_, i) => i);
+    for (;;) {
+      const share = free / rest.length, small = rest.filter(i => w[i] <= share);
+      if (!small.length) break;
+      small.forEach(i => { out[i] = w[i]; free -= w[i]; }); rest = rest.filter(i => !small.includes(i));
+      if (!rest.length) break;
+    }
+    const sum = rest.reduce((a, i) => a + w[i], 0); rest.forEach(i => { out[i] = Math.max(free * w[i] / sum, 40); });
+    const cg = document.createElement('colgroup'); cg.setAttribute('data-g-fit', '');
+    const tot = out.reduce((a, b) => a + b, 0);
+    out.forEach(x => { const c = document.createElement('col'); c.style.width = (x / tot * 100).toFixed(3) + '%'; cg.appendChild(c); });
+    t.insertBefore(cg, t.firstChild); t.style.tableLayout = 'fixed';
+  }
+  function fitTables() {
+    const todo = new Set(); let raf = 0;
+    const later = t => { todo.add(t); if (!raf) raf = requestAnimationFrame(() => { raf = 0; const l = [...todo]; todo.clear(); l.forEach(tableFit); }); };
+    const ro = window.ResizeObserver ? new ResizeObserver(es => es.forEach(e => { const t = e.target.querySelector(':scope > table'); if (t) later(t); })) : null;
+    const seen = new WeakSet();
+    const one = t => {
+      if (!t.matches(FIT_T)) return;
+      if (!seen.has(t)) {
+        seen.add(t);
+        if (ro) ro.observe(t.parentElement);
+        if (window.MutationObserver) new MutationObserver(recs => { if (recs.some(r => ![...r.addedNodes, ...r.removedNodes].every(n => n.nodeName === 'COLGROUP'))) later(t); }).observe(t, { childList: true, subtree: true, characterData: true });
+      }
+      later(t);
+    };
+    $$('table').forEach(one);
+    if (window.MutationObserver) new MutationObserver(recs => recs.forEach(r => [...r.addedNodes].forEach(x => {
+      if (x.nodeType !== 1) return;
+      if (x.nodeName === 'TABLE') one(x); else if (x.firstElementChild) $$('table', x).forEach(one);
+    }))).observe(document.documentElement, { childList: true, subtree: true });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { $$('table').forEach(one); });
+  }
   function start() {
     addressForms();   /* first: its snapshot of <main> is the markup as it came, before anything here builds its parts */
-    fitLate(); newRows(); busyForms();
+    fitLate(); newRows(); busyForms(); fitTables();
     hints(document);   // the "?" markers take room in their elements: add them before the first paint, so nothing shifts when they would appear later
     ['pointerover', 'pointerdown', 'keydown', 'focusin', 'click'].forEach(t => { document.addEventListener(t, lazy, true); });
     requestAnimationFrame(() => {
