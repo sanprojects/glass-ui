@@ -221,6 +221,20 @@ test('watch: a second change while the first one still moves ends in the state o
   assert.deepEqual(r.after, { ghosts: 0, anims: 0, reels: 0, text: 'c1 a3' });
 });
 
+test('morph: an element whose id a script gave (tabs of a UI kit) is still paired with the markup that has none: the same node, no ghost', async () => {
+  const r = await page.evaluate(async () => {
+    const box = document.createElement('div'); box.style.cssText = 'position:fixed;top:8px;left:8px;width:300px;z-index:9999';
+    box.innerHTML = '<div class="tabs-x"><button data-size="5">5</button><button data-size="7" aria-selected="true">7</button><button data-size="9">9</button></div>';
+    document.body.appendChild(box);
+    const before = [...box.querySelectorAll('button')]; before.forEach((b, i) => { b.id = 'g-tab-x-' + i; b.tabIndex = -1; });   /* what a script gave them */
+    await Glass.morph(box, '<div class="tabs-x"><button data-size="5">5</button><button data-size="7">7</button><button data-size="9" aria-selected="true">9</button></div>');
+    const now = [...box.querySelectorAll('button:not(.g-morph-ghost)')];
+    const out = { same: now.filter(b => before.includes(b)).length, ghosts: box.querySelectorAll('.g-morph-ghost').length, selected: now.filter(b => b.getAttribute('aria-selected') === 'true').map(b => b.textContent).join() };
+    box.remove(); return out;
+  });
+  assert.deepEqual(r, { same: 3, ghosts: 0, selected: '9' });
+});
+
 test('list: a click on the empty edge of a linked row opens its link (the stretched link is made for the row under the mouse)', async () => {
   await page.evaluate(() => { const box = document.createElement('div'); box.id = 'edge-box'; box.innerHTML = '<ol class="g-list"><li><a href="#row-edge">word</a></li><li><a href="#other">other</a></li></ol>'; box.style.cssText = 'position:fixed;top:8px;left:8px;width:300px;z-index:9999'; document.body.appendChild(box); location.hash = ''; });
   const r = await page.evaluate(() => { const li = document.querySelector('#edge-box li'), rr = li.getBoundingClientRect(), a = li.querySelector('a').getBoundingClientRect(); return { x: rr.right - 3, y: rr.top + rr.height / 2, onText: a.right > rr.right - 3, rows: [...document.querySelectorAll('#edge-box li')].filter(e => getComputedStyle(e.querySelector('a'), '::after').content !== 'none').length }; });

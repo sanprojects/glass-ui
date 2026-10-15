@@ -96,7 +96,7 @@
     function keys(list, o, root) {
       const seen = {}, explicit = [];
       return { explicit, keys: list.map(el => {
-        const own = explicitKey(el, o), text = sig(el); explicit.push(!!own);
+        const own = explicitKey(el, o), text = sig(el); explicit.push(own ? (own.startsWith('id:') ? 'id' : 'key') : false);
         const k = own || (text ? el.tagName + '|' + text : looks(el, root));
         seen[k] = (seen[k] || 0) + 1; return k + '#' + seen[k];
       }) };
@@ -129,8 +129,11 @@
         oldL.forEach((e, i) => { if (!usedO[i] && G.claimed.has(e)) usedO[i] = 1; });   /* it goes to its new place, it is not removed here */
       }
       const grp = el => groups[el.tagName] || (groups[el.tagName] = { o: [], n: [] });
-      oldL.forEach((el, i) => { if (!usedO[i] && !ok.explicit[i] && !FORM.has(el.tagName)) grp(el).o.push(i); });
-      newL.forEach((el, j) => { if (!usedN[j] && !nk.explicit[j] && !FORM.has(el.tagName)) grp(el).n.push(j); });
+      /* an id is a key only against the same id: an element whose id is not on the other side (one a script gave, as a UI kit gives its tabs)
+         is paired as one with none, by its kind, text and place; a data-key (or opts.key) is a key the page set, it pairs only with itself */
+      const loose = (x, i) => x.explicit[i] !== 'key';
+      oldL.forEach((el, i) => { if (!usedO[i] && loose(ok, i) && !FORM.has(el.tagName)) grp(el).o.push(i); });
+      newL.forEach((el, j) => { if (!usedN[j] && loose(nk, j) && !FORM.has(el.tagName)) grp(el).n.push(j); });
       Object.keys(groups).forEach(tag => {
         const g = groups[tag], oc = g.o.filter(i => box(oldL[i])), nc = g.n.filter(j => newL[j].children.length);
         /* boxes are walked into in order, but only a box of the same kind (its first class): a list does not turn into the "nothing found" card */
