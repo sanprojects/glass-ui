@@ -881,7 +881,7 @@
     }))).observe(document.documentElement, { childList: true, subtree: true });
   }
   /* Table columns fit their box (every table of a .g-root; data-no-fit, data-wrap and data-scroll-body leave it alone). A table that fits shows its columns as the browser sizes them.
-     One that is wider than its box is cut the fair way: a column that needs less than its equal share keeps all of its width (an address, a count, a flag),
+     One that is wider than its box is cut the fair way (one that fits keeps the proportions of its columns): a column that needs less than its equal share keeps all of its width (an address, a count, a flag),
      the room that is left is shared between the wide columns (a URL, a title) in proportion to the width they ask for, and what does not fit ends with an ellipsis.
      It is a <colgroup> with percentages and table-layout: fixed, so it follows the box; it is made again when the box is resized, rows come or go, the fonts load. */
   const FIT_T = '.g-root table:not([data-scroll-body], [data-no-fit], [data-wrap])';
@@ -895,15 +895,15 @@
     t.setAttribute('data-g-measure', '');   /* CSS: as wide as the content asks, no cell is cut */
     const w = [...row.cells].map(c => c.getBoundingClientRect().width);
     t.removeAttribute('data-g-measure');
-    const need = w.reduce((a, b) => a + b, 0); if (need <= avail + 1) return;
-    const out = w.map(() => 0); let free = avail, rest = w.map((_, i) => i);
-    for (;;) {
+    const need = w.reduce((a, b) => a + b, 0), out = w.slice();   /* it fits: the columns keep their proportions and share the spare room (no equal split by a wide colspan header) */
+    let free = avail, rest = need <= avail + 1 ? [] : w.map((_, i) => i);
+    for (; rest.length;) {
       const share = free / rest.length, small = rest.filter(i => w[i] <= share);
       if (!small.length) break;
       small.forEach(i => { out[i] = w[i]; free -= w[i]; }); rest = rest.filter(i => !small.includes(i));
       if (!rest.length) break;
     }
-    const sum = rest.reduce((a, i) => a + w[i], 0); rest.forEach(i => { out[i] = Math.max(free * w[i] / sum, 40); });
+    const sum = rest.reduce((a, i) => a + w[i], 0); if (sum) rest.forEach(i => { out[i] = Math.max(free * w[i] / sum, 40); });
     const cg = document.createElement('colgroup'); cg.setAttribute('data-g-fit', '');
     const tot = out.reduce((a, b) => a + b, 0);
     out.forEach(x => { const c = document.createElement('col'); c.style.width = (x / tot * 100).toFixed(3) + '%'; cg.appendChild(c); });
