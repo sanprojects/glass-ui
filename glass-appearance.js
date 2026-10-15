@@ -111,7 +111,7 @@
   });
   /* restore the saved background */
   customs.forEach(addBtn);
-  (function(){ var s=load('g-scene')||'gradient', c=s.indexOf('custom:')===0&&customs.filter(function(x){ return 'custom:'+x.id===s; })[0];
+  (function(){ var s=load('g-scene')||scene.getAttribute('data-scene')||'gradient', c=s.indexOf('custom:')===0&&customs.filter(function(x){ return 'custom:'+x.id===s; })[0];
     if(c) setScene('custom', c); else setScene(chips.querySelector('[data-scene="'+s+'"]:not([data-id])')?s:'gradient'); })();
   /* restore the saved colours: the accent and the colour of the liquid and gradient backgrounds */
   (function(){ var a=load('g-accent'); if(/^#[0-9a-f]{6}$/i.test(a||'')){ setAccent(a,true); var b=accRow.querySelector('button[data-accent="'+a+'" i]'); if(b) pick(accRow,b); else { $('accentCustom').value=a; pick(accRow,$('accentCustom').parentNode); } }
