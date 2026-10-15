@@ -23,7 +23,8 @@
  * opts: key(el) -> string | null; keep(el) -> true: an element (of the box) that is paired stays as it is, nothing in it is patched (the form being sent);
  * leave / enter / flash / reel / move / height: false switches a part off.
  * What a script built into the page's markup (a UI kit's controls) is not the page's: the new markup does not have it, and it stays as it is.
- *   data-g-part            an element a script put in (a button, a panel): left where it stands, nothing in it is patched;
+ *   data-g-part            an element a script put in or runs (a button, a panel, an ad slot another script fills): left where it stands,
+ *                          nothing in it is patched, and on a watched page what changes in it is not animated;
  *   data-g-wrap            a box a script put around elements of the page (a select in its combobox): left where it stands, and what of the
  *                          page is in it (its children that are not parts) is paired and patched as if it stood in its place;
  *   data-g-attrs="a b"     attributes of the element that a script owns (one it set, one it took away): left as they are.
@@ -33,7 +34,8 @@
  *                      number turns); its new nodes stay the page's. Glass.watch(el) for a box made later by hand (returns a function that stops).
  * <body data-g-morph>  the whole page: not while it loads, a box with its own data-g-morph in it animates its own changes, what is not content
  *                      is left out (ASIDE: popover, dialog, svg, edited text, aria-hidden), data-g-no-morph leaves a part out.
- * Glass.morphSkip = 'selector'   parts that are not content for it (a UI kit's widgets that run by themselves; glass-ui.js sets its own).
+ * Glass.morphSkip = 'selector'   parts that are not content for it (a UI kit's widgets that run by themselves, what other scripts put in: ads);
+ *                                set it before glass-ui.js loads (window.Glass = { morphSkip: '...' }) or add to it later: glass-ui.js adds its own.
  * The animations are CSS (glass-morph.css): .g-morph-enter (what comes in) and .g-morph-ghost (what goes), their timing in custom properties
  * that inherit (--g-morph-d: when, --g-morph-enter / --g-morph-run: how long). A page can move them to a part of the element in its own CSS
  * (an element that fades is a backdrop root: glass, backdrop-filter, in it blurs nothing until the fade ends; let the glass fade itself).
@@ -383,7 +385,7 @@
           new Set(scope.flatMap(s => [...$$('[data-g-fit]', s), s.closest('[data-g-fit]')])).forEach(b => { if (b) fitBox(b); });
           const at = new Map();   /* where in the viewport each element that is animated starts: the wave reaches it from there */
           const kept = [];   /* [element, its rect]: where what stays stands in the new layout, without the ghosts (see placed) */
-          const enter = o.enter !== false ? ctx.entering.filter(e => { if (ctx.floats && ctx.floats(e)) return false; const r = e.getBoundingClientRect(); at.set(e, [r.left, r.top]); kept.push([e, r]); return onScreen(r); }).slice(0, MAX) : [];
+          const enter = o.enter !== false ? ctx.entering.filter(e => { if ((ctx.floats && ctx.floats(e)) || said(e)) return false; const r = e.getBoundingClientRect(); at.set(e, [r.left, r.top]); kept.push([e, r]); return onScreen(r); }).slice(0, MAX) : [];
           const hidden = ctx.words.filter(([host]) => !inView(host));   /* marked words out of the viewport: plain text at once */
           const box = target.getBoundingClientRect(), bs = getComputedStyle(target);
           const extra = bs.boxSizing === 'border-box' ? 0 : ['paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth'].reduce((v, k) => v + (parseFloat(bs[k]) || 0), 0);
@@ -392,7 +394,7 @@
           if (o.move !== false) {
             const raw = new Map(), gliding = new Map(), came = new Set();
             ctx.moves.forEach((f, e) => {
-              if (!e.isConnected || !e.animate) return;
+              if (!e.isConnected || !e.animate || said(e, true)) return;
               const l = e.getBoundingClientRect();
               kept.push([e, l]);
               /* where it went: by the side of it that stayed (the least of the moves of its two edges and its middle). One that only grew or shrank
@@ -524,7 +526,7 @@
             moved.forEach(e => { if (!ctx.moves.has(e) && e.isConnected) ctx.pre.set(e, at(e)); });
           }
           const flat = new Map(), isFlat = p => { if (!flat.has(p)) flat.set(p, getComputedStyle(p).position === 'static'); return flat.get(p); };
-          ghosts = leaving.slice(0, MAX).map(e => { const p = e.parentElement; if (!p || skipped(e)) return null; const r = e.getBoundingClientRect(); if (!onScreen(r)) return null; const pr = p.getBoundingClientRect(); return [e, p, r.left - pr.left - p.clientLeft + p.scrollLeft, r.top - pr.top - p.clientTop + p.scrollTop, r.width, r.height, isFlat(p), r.left, r.top]; }).filter(Boolean);
+          ghosts = leaving.slice(0, MAX).map(e => { const p = e.parentElement; if (!p || skipped(e) || said(e)) return null; const r = e.getBoundingClientRect(); if (!onScreen(r)) return null; const pr = p.getBoundingClientRect(); return [e, p, r.left - pr.left - p.clientLeft + p.scrollLeft, r.top - pr.top - p.clientTop + p.scrollTop, r.width, r.height, isFlat(p), r.left, r.top]; }).filter(Boolean);
         }
         /* the height of the last update, if it still runs, is let go now (it was read as where this one starts): the new height is then read as it
            is, not halfway, and the box gets its own overflow back at once (an event later, the next height would take the clip for its own) */
@@ -553,15 +555,21 @@
     const OWN = /(^|\s)(g-morph-ghost|g-reel|g-morph-word)(\s|$)/;   /* the library's own passing parts: their coming and going is not a change */
     const OWN_IN = '.g-reel, .g-morph-word, .g-morph-ghost';
     /* Not the page's content: what floats over the page (popover, dialog), graphics (svg), what the user edits, decoration (aria-hidden) and what
-       the page marked data-g-no-morph; plus Glass.morphSkip, a selector the host sets (a UI kit: its widgets that run by themselves, glass-ui.js
-       sets its own). A change in it, or one that only puts it in or takes it out, is no change */
-    const ASIDE_BASE = '[popover], dialog, svg, [contenteditable]:not([contenteditable="false"]), select, textarea, [aria-hidden="true"], [data-g-no-morph]';
+       the page marked data-g-no-morph, what a script runs (data-g-part); plus Glass.morphSkip, a selector the host sets (a UI kit: its widgets
+       that run by themselves, glass-ui.js adds its own; a page: what other scripts put in, ad slots). A change in it, or one that only puts it in or
+       takes it out, is no change */
+    const ASIDE_BASE = '[popover], dialog, svg, [contenteditable]:not([contenteditable="false"]), select, textarea, [aria-hidden="true"], [data-g-no-morph], [data-g-part]';
     const INERT = 'script, style, template, noscript, link, meta, datalist';   /* not drawn: a <style> whose text a script sets is no text to light up */
-    let ASIDE = ASIDE_BASE, NOT_MINE = '', NOT_SHOWN = '', skipOf = null;
+    /* what the page or a host says is not content (not the generic guesses above): Glass.morph does not animate it either - it is put in or
+       taken out at once, it does not come in or fade out (an ad slot, an auto ad that an ad script put among the content). It does not glide
+       when it is marked (data-g-no-morph, data-g-part); what only matches Glass.morphSkip (the kit's parts: a select, a pager) still glides with the rest */
+    const SAID_BASE = '[data-g-no-morph], [data-g-part]';
+    let ASIDE = ASIDE_BASE, NOT_MINE = '', NOT_SHOWN = '', SAID = SAID_BASE, skipOf = null;
+    const said = (e, marked) => { skips(); return e.nodeType === 1 && e.matches(marked ? SAID_BASE : SAID); };
     const skips = () => {   /* the selectors, again only when the host's selector changed */
       if (skipOf === (kit.morphSkip || '')) return;
       skipOf = kit.morphSkip || '';
-      ASIDE = ASIDE_BASE + (skipOf ? ', ' + skipOf : '');
+      ASIDE = ASIDE_BASE + (skipOf ? ', ' + skipOf : ''); SAID = SAID_BASE + (skipOf ? ', ' + skipOf : '');
       NOT_MINE = OWN_IN + ', ' + ASIDE + ', ' + INERT; NOT_SHOWN = ASIDE + ', ' + INERT;
     };
     /* a record of what the kit wrote itself or of what is not content: in one of those, or only those came or went (text nodes with them: a board that is a number again) */

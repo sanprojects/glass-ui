@@ -1522,7 +1522,8 @@
     init, animate, busy, fileProgress, ruler, setTheme, toast, setProgress, validate, nav: navAuto,
     fit: box => { if (box._gFit) box._gFit(); else mount1(box, ['[data-g-fit]', initFit]); },   /* measure a [data-g-fit] box now (glass-morph.js, in the reads of an update) */
     /* for glass-morph.js: the kit's parts that run by themselves (their own animations, built and changed by the kit): not content to animate */
-    morphSkip: '.g-select, .g-tooltip, .g-toasts, .g-more, .g-clamp__btn, .g-ruler, .g-input-wrap, .g-busy-bar, .g-busy-lines, [data-g-pager], [data-g-file], ' +
+    morphSkip: (global.Glass && global.Glass.morphSkip ? global.Glass.morphSkip + ', ' : '') +   /* what the page set before (ads, other scripts' widgets) stays */
+      '.g-select, .g-tooltip, .g-toasts, .g-more, .g-clamp__btn, .g-ruler, .g-input-wrap, .g-busy-bar, .g-busy-lines, [data-g-pager], [data-g-file], ' +
       '[data-g-nav-auto], [data-g-liquid], [data-g-anim-loop], [data-g-anim-random], [role="alert"]',
     popover: { open(sel) { const p = popBy(sel); if (p && p.showPopover) p.showPopover(); }, close(sel) { const p = popBy(sel); if (p && p.hidePopover) p.hidePopover(); } },
     mount(sel, fn) { MOUNTS.push([sel, fn]); allMounts = ''; mount(sel, fn); }   /* for plugins such as glass-ui-liquid.js */

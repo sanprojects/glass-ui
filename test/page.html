@@ -2,6 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><title>Watched page</title>
 <link rel="stylesheet" href="../glass-ui.css">
 <link rel="stylesheet" href="../glass-morph.css">
+<script>window.Glass = { morphSkip: '.ad-auto' };   /* what other scripts put in (the auto ads of an ad network): the page says so before the kit loads */</script>
 <script defer src="../glass-ui.js"></script>
 <script defer src="../glass-morph.js"></script>
 <style>body { margin: 0; }
@@ -25,6 +26,7 @@
   <ol id="cols"><li data-key="c1">one <b class="fc">!</b></li><li data-key="c2">two</li><li data-key="c3">three</li><li data-key="c4">four</li><li data-key="c5">five</li><li data-key="c6">six</li><li data-key="c7">seven</li></ol>
   <div id="vlist" style="height: 120px; overflow: auto"><div style="position: relative; height: 3000px"><ol id="vrows" class="g-list" style="position: absolute; left: 0; right: 0; top: 0; margin: 0"><li>r0</li><li>r1</li><li>r2</li><li>r3</li></ol></div></div>
   <p><span id="hov" style="display: inline-block; padding: 8px 16px; background: #ccc">hover me</span> <span id="away" style="display: inline-block; padding: 8px 16px">away</span></p>
+  <div id="slot" data-g-part><ins class="ad"></ins></div>
   <p id="below">below</p>
   <details id="shut"><summary>more</summary><div id="inside"><p>hidden text</p></div></details>
   <style id="st">#below { color: inherit }</style>

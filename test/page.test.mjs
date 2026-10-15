@@ -190,4 +190,24 @@ test('page: new words light up once (putting the text back is no change: it used
   assert.deepEqual({ words: r.made.words, text: await page.evaluate(() => [document.getElementById('below').childNodes.length, document.getElementById('below').textContent]) }, { words: 1, text: [1, 'Воды лечебно-столовые'] });
 });
 
+test('page: what another script runs (an ad slot it fills, data-g-part; auto ads, Glass.morphSkip set by the page before the kit) is not animated, nor is what it pushes', async () => {
+  assert.match(await page.evaluate(() => Glass.morphSkip), /^\.ad-auto, \.g-select/);   // the page's selector stays, the kit adds its own
+  const fill = await change(`const f = document.createElement('div'); f.id = 'filled'; f.style.height = '60px'; f.textContent = 'an ad'; document.querySelector('#slot ins').appendChild(f);`);
+  assert.deepEqual([fill.made.enter, fill.gliding], ['', '']);
+  const auto = await change(`const a = document.createElement('div'); a.className = 'ad-auto'; a.style.height = '50px'; a.innerHTML = '<p>auto ad</p>'; document.getElementById('below').before(a);`);
+  assert.deepEqual([auto.made.enter, auto.gliding], ['', '']);
+  await page.evaluate(() => { document.getElementById('filled').remove(); document.querySelector('.ad-auto').remove(); });
+  await page.waitForTimeout(400);
+  /* Glass.morph of new markup (a form's answer): the auto ad an ad script put among the content goes at once, it does not fade out */
+  const r = await page.evaluate(async () => {
+    const box = document.createElement('div'); box.style.cssText = 'position:fixed;top:8px;left:8px;width:300px;z-index:9999';   /* in the window whatever was scrolled before */
+    box.innerHTML = '<p>first</p><div class="ad-auto" style="height:40px">ad</div><p>second</p>'; document.body.appendChild(box);
+    await new Promise(r => setTimeout(r, 300));
+    await Glass.morph(box, '<p>first</p><p>second</p><p>third</p>');
+    const out = { ghosts: [...box.querySelectorAll('.g-morph-ghost')].map(e => e.className.replace(' g-morph-ghost', '')).join(), entering: box.querySelectorAll('.g-morph-enter').length };
+    box.remove(); return out;
+  });
+  assert.deepEqual(r, { ghosts: '', entering: 1 });
+});
+
 test('page: the page still runs without script errors', () => { assert.deepEqual(errors, []); });
