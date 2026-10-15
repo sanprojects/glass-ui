@@ -1139,6 +1139,9 @@
    *                                that hold the change, so the rest of <main> and what other scripts put there stay as they are. <title>, canonical and
    *                                description follow; the scripts that came in run. A change outside every element with an id, an error or an answer that is not
    *                                HTML: the page is loaded the usual way. Back to an address seen before: no request.
+   *                                When the user changed the form (typed, chose, cleared, sent) the request also says X-G-Form: <its id>: the form on the
+   *                                page is what the answer would draw, so the server may send it back empty as <form id="..." data-g-same>, with only its
+   *                                <output> elements (results, put in by id) and hidden fields (put in by name). Not after a link or back / forward.
    *                                A page that works the answer out itself (a filter over what it already holds) cancels g:answer { url } on the form, which comes
    *                                before each answer, at once on every keystroke: nothing is asked, the page shows it (from the fields), the address is kept here.
    *   links                        a click on a link to an address of this form is followed in place. A value a script puts into a field (a tile that puts its
@@ -1153,7 +1156,7 @@
     const TEXT = /^(text|search|email|tel|url|number|password)$/;
     const cache = new Map();   /* address -> Promise of { url, html } */
     const theirs = new WeakSet();   /* forms whose submit a script of the page cancelled: that script runs them */
-    let form = null, tpl = null, live = true, snap = null, ctl = null, timer = 0, editing = false, applying = false, shown = '', pending = '';
+    let form = null, tpl = null, live = true, snap = null, ctl = null, timer = 0, editing = false, applying = false, shown = '', pending = '', restored = '';
     const here = () => location.pathname + location.search;
     const enc = v => encodeURIComponent(v);
     const dec = v => { try { return decodeURIComponent(v); } catch (_) { return v; } };
@@ -1251,15 +1254,22 @@
       history[push && url !== here() ? 'pushState' : 'replaceState'](remember(), '', url);
       return url;
     }
-    function fetchPage(url, signal) {
-      if (cache.has(url)) return cache.get(url);
-      const p = fetch(url, { headers: { 'X-G-Fetch': '1' }, signal, credentials: 'same-origin' }).then(res => {
+    /* mine: the user changed this form (typed, chose, cleared, sent): it stands as the answer would draw it, so the request names it (X-G-Form: its id)
+       and the server may send it back as <form id="..." data-g-same></form>, "as you have it". Not after a link or back / forward: the kit only
+       puts the values in then, the server draws the rest of the form (the tab that is chosen) */
+    function fetchPage(url, signal, mine) {
+      const key = (mine && form.id ? 'mine|' : '') + url;
+      if (cache.has(key)) return cache.get(key);
+      const headers = { 'X-G-Fetch': '1' };
+      if (mine && form.id) headers['X-G-Form'] = form.id;
+      const p = fetch(url, { headers, signal, credentials: 'same-origin' }).then(res => {
         const u = new URL(res.url);
         if (res.status >= 500 || u.origin !== location.origin || !/html/i.test(res.headers.get('content-type') || '')) return null;
         return res.text().then(html => ({ url: u.pathname + u.search, html }));
       });
-      cache.set(url, p);
-      p.then(r => { if (!r) cache.delete(url); }, () => cache.delete(url));
+      cache.set(key, p);
+      /* an answer with the whole form is as good for back / forward (the plain address); one with the form left out is not (the form is drawn by it then) */
+      p.then(r => { if (!r) cache.delete(key); else if (key !== url && !/\bdata-g-same\b/.test(r.html)) cache.set(url, p); }, () => cache.delete(key));
       if (cache.size > 30) cache.delete(cache.keys().next().value);
       return p;
     }
@@ -1304,19 +1314,39 @@
       if (!snap || !next || next.tagName !== 'MAIN') return false;
       const morph = global.Glass && global.Glass.morph;
       if (!morph) return false;   /* no glass-morph.js: the answer cannot be patched in (what is typed, the focus): the page the usual way */
+      /* what the server sends back as "as you have it" (data-g-same with an id: the form that asked) is the last answer's again, so it is no change
+         and the page's own stays as it is; its markup as the server would draw it now is not known: the next answer that sends it in full redraws it */
+      /* it may still carry what is the server's in it: its results (<output>, by id) and its hidden fields (by name), they are put in */
+      const parts = [];
+      const same = $$('[data-g-same][id]', next).map(e => {
+        parts.push(...$$('output[id], input[type="hidden"][name]', e).map(x => [e.id, x]));
+        const was = snap.querySelector('#' + CSS.escape(e.id)) || document.getElementById(e.id);
+        if (was) e.replaceWith(was.cloneNode(true));
+        return e.id;
+      });
       let out = [];
       if (!differ(snap, next, out)) { if (!sent) return false; out = [next]; }   /* a change in <main> outside every element with an id */
       const live = out.map(n => [n === next ? main : document.getElementById(n.id), n]);
       if (live.some(([l]) => !l || !main.contains(l))) return false;
+      if (same.length) live.splice(0, live.length, ...live.filter(([l]) => !same.includes(l.id)));   /* the form itself, if it is one of the regions, is not patched at all */
       snap = next.cloneNode(true);
+      same.forEach(id => { const e = snap.querySelector('#' + CSS.escape(id)); if (e) { const u = document.createElement(e.tagName); u.id = id; u.setAttribute('data-g-same', ''); e.replaceWith(u); } });   /* not known: an empty one, the next full answer differs from it */
       const t = doc.querySelector('title');
       if (t) document.title = t.textContent;
       [['link[rel=canonical]', 'href'], ['meta[name=description]', 'content']].forEach(([s, a]) => { const o = document.head.querySelector(s), n = doc.querySelector(s); if (o && n) o.setAttribute(a, n.getAttribute(a)); });
       live.forEach(([l, n]) => {
         const run = $$('script', n).filter(s => !s.type || /javascript|module/i.test(s.type));
-        morph(l, n, sent ? { keep: e => e === sent } : undefined).then(() => { init(l); return runScripts(run); });
+        morph(l, n, sent || same.length ? { keep: e => e === sent || (!!e.id && same.includes(e.id)) } : undefined).then(() => { init(l); return runScripts(run); });   /* a form sent back as it is stays as it is, inside a region that changes too */
       });
-      return true;
+      let wrote = false;
+      parts.forEach(([id, x]) => {
+        const f = document.getElementById(id);
+        if (!f) return;
+        if (x.tagName === 'OUTPUT') { const o = f.querySelector('#' + CSS.escape(x.id)); if (o && o.innerHTML !== x.innerHTML) morph(o, x.innerHTML); return; }
+        const h = [...f.querySelectorAll('input[type="hidden"]')].find(i => i.name === x.name);
+        if (h && h.value !== x.value) { h.value = x.value; wrote = wrote || f === form; }
+      });
+      return wrote ? 'fields' : true;   /* 'fields': the server wrote hidden fields of this form */
     }
     const go = () => location.replace(here());   /* what cannot be done in place: the page the usual way */
     /* true when the page shows the answer to url itself: it cancelled g:answer */
@@ -1330,27 +1360,29 @@
       return true;
     }
     /* fresh: asked anew even when this address is on the screen or seen before (the submit button of a form: a random pick, a ping); told: g:answer has been sent */
-    function load(url, fresh, told) {
+    function load(url, fresh, told, mine) {
       clearTimeout(timer);
       if (url === pending) return;
       if (ctl) { ctl.abort(); ctl = null; pending = ''; }
       if (url === shown && !fresh) { busy(form, false); return; }
       if (!told && own(url)) return;
-      if (fresh) cache.delete(url);
+      if (fresh) { cache.delete(url); cache.delete('mine|' + url); }
       const c = ctl = new AbortController();
       pending = url;
       busy(form, true);
-      fetchPage(url, c.signal).then(r => {
+      fetchPage(url, c.signal, mine).then(r => {
         if (ctl !== c) return;   /* a newer one is on its way */
         ctl = null; pending = '';
-        if (!r || !apply(r.html)) return go();
+        const put = r && apply(r.html);
+        if (!put) return go();
         shown = url;
         if (r.url !== url && here() === url) { history.replaceState(history.state, '', r.url); shown = r.url; }   /* the server put the address right (a redirect) */
+        if (put === 'fields' && here() === shown) history.replaceState(remember(), '');   /* what the server wrote into hidden fields: back to this address puts it back too */
         busy(form, false);
         fire(document, 'g:navigate', { url: new URL(shown, location.href).href, title: document.title });
       }, () => { if (ctl === c) { ctl = null; pending = ''; go(); } });
     }
-    const schedule = url => { clearTimeout(timer); if (url === shown || !own(url)) timer = setTimeout(() => load(url, false, true), DELAY); };   /* the page's own answer: at once */
+    const schedule = url => { clearTimeout(timer); if (url === shown || !own(url)) timer = setTimeout(() => load(url, false, true, true), DELAY); };   /* the page's own answer: at once */
     /* A POST form of this page is sent in the background too: what is typed, the focus and the scroll stay. The address stays (an answer that redirects
        to this page puts the new address into the history; one that redirects elsewhere is loaded there); a newer submit of the form cancels the older
        one. An error, an answer that is not HTML (a file): the browser sends the form itself, as it would without the kit. */
@@ -1403,7 +1435,7 @@
       if (!live || !ours(e)) return;
       const url = write(!isText(e.target) || !e.isTrusted);   /* a choice is an entry (a value a script put in too); the end of an edit is the entry the edit made */
       editing = false;
-      load(url);
+      load(url, false, false, true);
     });
     document.addEventListener('focusout', e => { if (ours(e) && isText(e.target)) editing = false; });
     /* the clear cross of a field is one more button of the form: at once, the answer with that field empty (with a submit button: asked anew, as the button does) */
@@ -1411,7 +1443,7 @@
       const b = e.target.closest && e.target.closest('[data-g-clear-input]'), i = b && clearInput(b);
       if (!i || !ours({ target: i })) return;
       editing = false;
-      load(write(true), !live);
+      load(write(true), !live, false, true);
     });
     /* on window, last: a script of the page that cancels the submit runs this form itself, and from then on it is left to that script */
     addEventListener('submit', e => {
@@ -1425,7 +1457,9 @@
         e.preventDefault();
         const url = write(!live || (e.isTrusted && !editing));   /* in a live form a submit sent by a script (submit on change) is not the end of an edit */
         if (e.isTrusted) editing = false;
-        load(url, !live);
+        const again = !live && ((e.isTrusted && !!e.submitter) || url !== restored);   /* a submit a script sends (no button: requestSubmit() or a submit event) for the fields back / forward put back (submit on change) is not a new pick */
+        restored = '';
+        load(url, again, false, true);
         return;
       }
       if (!(f instanceof HTMLFormElement) || passing.has(f) || !snap || !pageForm(f, 'post')) return;
@@ -1454,6 +1488,7 @@
       if (!values) return location.reload();
       fill(values);
       editing = false;
+      restored = url;
       load(url);
     });
   }

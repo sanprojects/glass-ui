@@ -10,10 +10,12 @@ import path from 'node:path';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ORIGIN = 'http://kit.test';
 const DICTS = ['nouns', 'all', 'cities'];
-let browser, page, requests, slow, errors;
+let browser, page, requests, slow, errors, parts;
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-function render(u, fetchMode) {
+/* what the answer writes into the form (its id with X-G-Form): an <output> of the result, a hidden field the server picks */
+const formParts = (word, dict) => `<output id="sum">3 × ${dict}</output><input type="hidden" name="seed" value="${dict}-${word.length}">`;
+function render(u, fetchMode, form = '') {
   const word = decodeURIComponent(u.pathname.split('/')[2] || ''), dict = u.searchParams.get('dict') || 'nouns', repeat = u.searchParams.get('repeat') === '1';
   const options = DICTS.map(d => `<option value="${d}"${d === dict ? ' selected' : ''}>${d}</option>`).join('');
   const main = `<main id="content">
@@ -23,11 +25,14 @@ function render(u, fetchMode) {
     <input name="word" type="search" value="${esc(word)}">
     <select name="dict">${options}</select>
     <label><input type="checkbox" name="repeat" value="1"${repeat ? ' checked' : ''}> repeat</label>
+    ${parts ? formParts(word, dict) : ''}
   </form></aside>
   <section id="result"><ol>${[1, 2, 3].map(i => `<li>${esc(word)}-${dict}${repeat ? '-r' : ''}-${i}</li>`).join('')}</ol><a id="next" href="/find/${encodeURIComponent('дом')}?dict=cities">дом</a><script>window.ran = (window.ran || 0) + 1</script></section>
 </main>`;
+  const asked = fetchMode && parts && form;   /* X-G-Form: the form goes back as "as you have it", with only what the answer writes into it */
+  const page = asked === 'f' ? main.replace(/<form id="f"[^]*?<\/form>/, `<form id="f" data-g-same>${formParts(word, dict)}</form>`) : main;
   const head = `<title>${esc(word)} · ${dict}</title><link rel="canonical" href="${ORIGIN}/find/${encodeURIComponent(word)}">`;
-  return fetchMode ? `<!doctype html><html><head>${head}</head><body>${main}</body></html>`
+  return fetchMode ? `<!doctype html><html><head>${head}</head><body>${page}</body></html>`
     : `<!doctype html><html><head>${head}<link rel="stylesheet" href="/glass-ui.css"><link rel="stylesheet" href="/glass-morph.css"><script defer src="/glass-ui.js"></script><script defer src="/glass-morph.js"></script></head><body class="g-root">${main}</body></html>`;
 }
 
@@ -37,17 +42,18 @@ before(async () => {
 after(async () => { await browser.close(); });
 
 beforeEach(async () => {
-  requests = []; slow = new Map(); errors = [];
+  requests = []; slow = new Map(); errors = []; parts = false;
   page = await browser.newPage();
   page.on('pageerror', e => errors.push(e.message));
   await page.route(ORIGIN + '/**', async route => {
     const r = route.request(), u = new URL(r.url());
     if (['/glass-ui.js', '/glass-ui.css', '/glass-morph.js', '/glass-morph.css'].includes(u.pathname)) return route.fulfill({ body: readFileSync(path.join(root, u.pathname.slice(1))), contentType: u.pathname.endsWith('.js') ? 'text/javascript' : 'text/css' });
     const fetchMode = r.headers()['x-g-fetch'] === '1';
-    requests.push({ url: u.pathname + u.search, fetchMode });
+    const form = r.headers()['x-g-form'] || '';
+    requests.push({ url: u.pathname + u.search, fetchMode, form });
     const wait = slow.get(decodeURIComponent(u.pathname));
     if (wait) await new Promise(res => setTimeout(res, wait));
-    return route.fulfill({ body: render(u, fetchMode), contentType: 'text/html; charset=utf-8' }).catch(() => {});
+    return route.fulfill({ body: render(u, fetchMode, form), contentType: 'text/html; charset=utf-8' }).catch(() => {});
   });
   await page.goto(ORIGIN + '/find/' + encodeURIComponent('кот'));
   await page.waitForFunction(() => window.Glass);
@@ -196,6 +202,23 @@ test('a form with a submit button waits for it', async () => {
   assert.equal(await page.evaluate(() => history.length), entries);   // and no new history entry
 });
 
+test('a submit a script sends for the fields back / forward put back is not a new pick', async () => {
+  // the page sends the form when a box changes (submit on change), so also when the kit puts the box back with the address
+  const ping = host => `<!doctype html><title>ping ${esc(host)}</title><script defer src="/glass-ui.js"></script><script defer src="/glass-morph.js"></script><script>document.addEventListener('change', e => { if (e.target.type === 'checkbox') setTimeout(() => e.target.form.requestSubmit(), 30); });</script><main id="m"><form method="get" action="/ping/{host}"><input name="host" value="${esc(host)}"><label><input type="checkbox" name="v6" value="1"> v6</label><button>Ping</button></form><pre id="out">${esc(host) || '-'}</pre></main>`;
+  await page.route(ORIGIN + '/ping**', route => { const u = new URL(route.request().url()); requests.push({ url: u.pathname + u.search, fetchMode: route.request().headers()['x-g-fetch'] === '1' }); return route.fulfill({ contentType: 'text/html', body: ping(decodeURIComponent(u.pathname.split('/')[2] || '')) }); });
+  await page.goto(ORIGIN + '/ping');
+  await page.waitForFunction(() => window.Glass);
+  await page.fill('input[name=host]', 'a.org'); await page.check('input[name=v6]'); await page.waitForTimeout(500);
+  await page.fill('input[name=host]', 'b.org'); await page.uncheck('input[name=v6]'); await page.waitForTimeout(500);
+  assert.deepEqual(fetches().map(r => r.url), ['/ping/a.org?v6=1', '/ping/b.org']);
+  await page.goBack(); await page.waitForTimeout(500);
+  assert.equal(await page.evaluate(() => location.pathname + location.search), '/ping/a.org?v6=1');
+  assert.equal(await page.evaluate(() => document.querySelector('input[name=v6]').checked), true);
+  assert.deepEqual(fetches().map(r => r.url), ['/ping/a.org?v6=1', '/ping/b.org']);   // seen before: no request, and the submit of the page asks nothing anew
+  await page.click('button'); await page.waitForTimeout(500);   // the button still asks anew
+  assert.deepEqual(fetches().map(r => r.url), ['/ping/a.org?v6=1', '/ping/b.org', '/ping/a.org?v6=1']);
+});
+
 test('the clear cross is one more button: the answer with that field empty comes at once', async () => {
   const cross = () => page.evaluate(() => { const i = document.querySelector('input[name=word], input[name=host]'), w = document.createElement('span'); w.className = 'g-input-wrap'; i.replaceWith(w); w.append(i); w.insertAdjacentHTML('beforeend', '<button class="g-input-end" data-icon="x" data-g-clear-input></button>'); });
   await cross();
@@ -306,4 +329,34 @@ test('a POST form of the page is sent in the background: the focus and what is t
   await page.evaluate(() => document.getElementById('p').requestSubmit());
   await page.waitForFunction(() => !window.marker && document.contentType === 'text/xml');
   assert.deepEqual(posted.map(p => p.fetchMode), [true, true, true, false]);
+});
+
+test('the form the user changed is not sent again: only what the answer writes into it (its <output>s, its hidden fields) comes back', async () => {
+  parts = true;
+  await page.goto(ORIGIN + '/find/' + encodeURIComponent('кот'));
+  await page.waitForFunction(() => window.Glass);
+  await page.evaluate(() => {
+    window.form0 = document.getElementById('f'); window.select0 = document.querySelector('select[name=dict]');
+    const i = document.createElement('i'); i.className = 'part'; window.form0.append(i);   // what scripts built in it (the kit's parts of its fields)
+  });
+  const form = () => page.evaluate(() => ({ same: document.getElementById('f') === window.form0 && document.querySelector('select[name=dict]') === window.select0,
+    part: !!document.querySelector('#f > .part'), dict: document.querySelector('select[name=dict]').value, sum: document.getElementById('sum').textContent,
+    seed: document.querySelector('input[name=seed]').value, empty: document.querySelectorAll('[data-g-same]').length }));
+  await page.selectOption('select[name=dict]', 'cities');
+  await settle();
+  assert.deepEqual(fetches().map(r => [decodeURIComponent(r.url), r.form]), [['/find/кот?dict=cities&seed=nouns-3', 'f']]);
+  assert.match(await result(), /^кот-cities-1/);
+  assert.deepEqual(await form(), { same: true, part: true, dict: 'cities', sum: '3 × cities', seed: 'cities-3', empty: 0 });
+  await page.selectOption('select[name=dict]', 'all');
+  await settle();
+  assert.deepEqual(await form(), { same: true, part: true, dict: 'all', sum: '3 × all', seed: 'all-3', empty: 0 });
+  await page.goBack(); await settle();   // its answer came without the form: back asks for the whole page
+  assert.deepEqual(fetches().slice(2).map(r => [decodeURIComponent(r.url), r.form]), [['/find/кот?dict=cities&seed=nouns-3', '']]);
+  assert.match(await result(), /^кот-cities-1/);
+  assert.deepEqual(await form(), { same: true, part: false, dict: 'cities', sum: '3 × cities', seed: 'cities-3', empty: 0 });
+  await page.click('#next'); await settle();   // a link: the whole page
+  assert.deepEqual(fetches().slice(3).map(r => r.form), ['']);
+  assert.equal(await page.evaluate(() => document.querySelector('input[name=word]').value), 'дом');
+  assert.equal(await page.evaluate(() => window.marker), undefined);   // a page loaded anew by goto: no marker; nothing reloaded since
+  assert.deepEqual(errors, []);
 });
