@@ -305,6 +305,18 @@ test('morph: nothing is animated in a tab that is not active - what moves when i
   assert.deepEqual(r, { moving: true, leftRunning: 0, hiddenEnter: 0, justShown: true });
 });
 
+test('fields: checking a form with a wrong field fires invalid once per field (the kit\'s check does not fire it again: Safari ran out of stack)', async () => {
+  const r = await page.evaluate(() => {
+    const f = document.createElement('form'); f.className = 'g-root'; f.innerHTML = '<div class="g-field"><input name="x" pattern="[0-9]+" value="abc"></div><div class="g-field"><input name="y" pattern="[a-z]+" value="1"></div>';
+    document.body.appendChild(f);
+    let calls = 0; f.addEventListener('invalid', () => calls++, true); let err = null;
+    try { f.checkValidity(); } catch (e) { err = e.name; }
+    const marked = [...f.querySelectorAll('input')].map(i => i.getAttribute('aria-invalid')).join();
+    f.remove(); return { calls, err, marked };
+  });
+  assert.deepEqual(r, { calls: 2, err: null, marked: 'true,true' });
+});
+
 test('list: a click on the empty edge of a linked row opens its link (the stretched link is made for the row under the mouse)', async () => {
   await page.evaluate(() => { const box = document.createElement('div'); box.id = 'edge-box'; box.innerHTML = '<ol class="g-list"><li><a href="#row-edge">word</a></li><li><a href="#other">other</a></li></ol>'; box.style.cssText = 'position:fixed;top:8px;left:8px;width:300px;z-index:9999'; document.body.appendChild(box); location.hash = ''; });
   const r = await page.evaluate(() => { const li = document.querySelector('#edge-box li'), rr = li.getBoundingClientRect(), a = li.querySelector('a').getBoundingClientRect(); return { x: rr.right - 3, y: rr.top + rr.height / 2, onText: a.right > rr.right - 3, rows: [...document.querySelectorAll('#edge-box li')].filter(e => getComputedStyle(e.querySelector('a'), '::after').content !== 'none').length }; });

@@ -957,7 +957,7 @@
   }
   function validate(field) { // sets aria-invalid on the control of a .g-field from its validity (true = red, false = green)
     const c = field.querySelector('input,textarea,select'); if (!c) return true;
-    const bad = !c.checkValidity(); c.setAttribute('aria-invalid', bad ? 'true' : 'false');
+    const bad = !c.validity.valid; c.setAttribute('aria-invalid', bad ? 'true' : 'false');   /* validity, not checkValidity(): that fires invalid, which the kit handles (below) */
     const m = field.querySelector('small[role="alert"]'); if (m && bad && c.validationMessage && !m.hasAttribute('data-custom')) m.textContent = c.validationMessage;
     return !bad;
   }
@@ -979,7 +979,7 @@
     const bad = t => { c.setAttribute('aria-invalid', 'true'); m.setAttribute('data-custom', ''); m.textContent = t; };
     if (!c.value) { if (strict && c.required) bad(c.getAttribute('data-error-required') || 'Fill in the field'); else c.removeAttribute('aria-invalid'); return; }
     if (c.hasAttribute('pattern') || c.hasAttribute('data-g-validate')) {
-      if (!c.checkValidity()) bad(c.getAttribute('data-error') || c.title || c.validationMessage); else c.setAttribute('aria-invalid', 'false');
+      if (!c.validity.valid) bad(c.getAttribute('data-error') || c.title || c.validationMessage); else c.setAttribute('aria-invalid', 'false');   /* not checkValidity(): it fires invalid again, and the invalid handler below calls this - Safari ran out of stack (RangeError), Chrome cut it after ~40 */
     } else c.removeAttribute('aria-invalid');
   }
   document.addEventListener('focusout', e => { const c = e.target; if (c.matches && c.matches(CHK)) fieldCheck(c, true); });
