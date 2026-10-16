@@ -295,8 +295,15 @@
    labels. The container owns every space: the label-to-control gap is the field's own, the rest is the grid's. A field without a hint lets its control take
    the hint row too, so the line is as tall as its tallest field and the next line is one gap below. Anything else in a form (heading, button, note) is a row of its own;
    checkboxes and radios are cells like fields. The same layout is any container that holds fields (a tool panel, a card, a details body) and any [data-grid]. */
-:is(.g-root,[role="listbox"]) :is(form:not(.g-shell), fieldset, :has(> .g-field):not(details, dialog:not([open]))) { display: grid; grid-template-columns: repeat(auto-fit, minmax(max(min(100%, var(--g-grid-min, 200px)), calc((100% - (var(--g-cols, 12) - 1) * var(--g-gap)) / var(--g-cols, 12))), 1fr)); align-items: start; align-content: start; gap: var(--g-gap); min-width: 0; }
-:where(:is(.g-root,[role="listbox"]) :is(form:not(.g-shell), fieldset, :has(> .g-field):not(details, dialog:not([open]))) > :not(.g-field, label:has(> input:is([type="checkbox"], [type="radio"])))) { grid-column: 1 / -1; }
+:is(.g-root,[role="listbox"]) :is(form:not(.g-shell), fieldset, :not(table, thead, tbody, tfoot, tr, td, th, ul, ol, a, span, b, i, em, strong, small, code, label, button, p):has(> .g-field):not(details, dialog:not([open]))) { display: grid; grid-template-columns: repeat(auto-fit, minmax(max(min(100%, var(--g-grid-min, 200px)), calc((100% - (var(--g-cols, 12) - 1) * var(--g-gap)) / var(--g-cols, 12))), 1fr)); align-items: start; align-content: start; gap: var(--g-gap); min-width: 0; }
+/* What is not a field takes a row of its own: in a form or a fieldset, and next to a field (after one, or before one) in any container of fields.
+   Told by the siblings, not by a :has() on the parent: "every child of an element that has a .g-field child" made every change of the page (a
+   number written in a cell) restyle the whole page - sanstv.ru/admin/online, a table of 14000 rows: three restyles of the page per refresh
+   instead of one, ~0.8 s each, and the old rule was half of each. A field and a checkbox stay cells. */
+:where(:is(.g-root,[role="listbox"]) :is(form:not(.g-shell), fieldset)) > *,
+:where(:is(.g-root,[role="listbox"]) .g-field) ~ :where(:not(td, th, tr, li, dt, dd, option, a, span, b, i, em, strong, code, e, data, abbr)),
+:where(:is(.g-root,[role="listbox"]) :not(td, th, tr, li, dt, dd, option, a, span, b, i, em, strong, code, e, data, abbr):has(~ .g-field)) { grid-column: 1 / -1; }   /* by its tag first: a cell, a row, a link or a word is never a row of a form, and its siblings are not looked through */
+:where(:is(.g-root,[role="listbox"]) :is(.g-field, label:has(> input:is([type="checkbox"], [type="radio"])))) { grid-column: auto; }
 :where(:is(.g-root,[role="listbox"]) [data-grid]:has(> :is(.g-field, label))) { --g-grid-min: 200px; align-items: start; align-content: start; }
 /* A fold whose body is fields: the body (::details-content) is the grid, the summary stays above it. The body's own padding-top is the gap under the summary (the children carry none). */
 :is(.g-root,[role="listbox"]) details:has(> .g-field)::details-content { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--g-grid-min, 200px)), 1fr)); align-items: start; gap: var(--g-gap); padding-top: var(--g-gap-inner); }
@@ -736,8 +743,8 @@ span.g-input-end { right: var(--g-inset); width: var(--g-icon-md); height: var(-
 :where(:is(.g-root,[role="listbox"]) :is(th, td)[align="right"]) { text-align: right; }
 :where(:is(.g-root,[role="listbox"]) table[data-rows="two-line"] td) { height: 56px; }
 /* Sortable header (a button inside th, aria-sort set by glass-ui.js) */
-table[data-g-measure] { width: max-content !important; table-layout: auto !important; }   /* glass-ui.js measures the columns here (tableFit): as wide as the content asks */
-table[data-g-measure] :is(th, td) { max-width: none !important; }
+table[data-g-fit-measure] { width: max-content !important; table-layout: auto !important; }   /* glass-ui.js measures the columns here (tableFit): as wide as the content asks */
+table[data-g-fit-measure] :is(th, td) { max-width: none !important; }
 :where(:is(.g-root,[role="listbox"]) td[data-icon]) { display: table-cell; --g-icon-size: var(--g-icon-md); --g-icon-color: var(--g-text-3); }   /* <td data-icon="name">: a leading icon in the cell */
 :where(:is(.g-root,[role="listbox"]) td[data-icon])::before { display: inline-block; vertical-align: middle; margin-right: var(--g-gap-inner); }
 :where(:is(.g-root,[role="listbox"]) th > button) { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: var(--g-gap-inner); cursor: pointer; border-radius: var(--g-radius-sm); padding: 4px 0; transition: color var(--g-dur); }

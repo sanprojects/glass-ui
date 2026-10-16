@@ -254,4 +254,19 @@ test('page: where things stand is read in the background while the tab is hidden
   assert.ok(r.dys.length && r.dys.every(d => Math.abs(d - r.rowH) <= 2), JSON.stringify(r));   // what is below glides by the new row only, not by what came while the tab was away
 });
 
+test('page: a long table written anew turns the numbers that are on the screen only (not one per row of the table)', async () => {
+  const r = await page.evaluate(async () => {
+    const rows = n => '<table id="big"><tbody>' + Array.from({ length: 900 }, (_, i) => `<tr${i ? "" : " id=\"r0\""}><td>row ${i}</td><td><a>${(i * 7 + n) % 40}</a></td></tr>`).join('') + '</tbody></table>';   /* longer than what is read of the page (2000 elements): the rows below are not known one by one */
+    const box = document.createElement('div'); box.id = 'bigbox'; box.innerHTML = rows(0); document.querySelector('main').prepend(box);
+    await new Promise(r => setTimeout(r, 900));   /* read as it stands */
+    let reels = 0; const mo = new MutationObserver(rs => rs.forEach(x => x.addedNodes.forEach(n => { if (n.nodeType === 1 && n.classList.contains('g-reel')) reels++; }))); mo.observe(box, { childList: true, subtree: true });
+    const t = document.createElement('template'); t.innerHTML = rows(1); document.getElementById('big').replaceWith(t.content.querySelector('table'));   /* every number changed */
+    await new Promise(r => setTimeout(r, 300)); mo.disconnect();
+    const rowH = document.getElementById('r0').getBoundingClientRect().height, onScreen = Math.ceil(innerHeight / rowH) + 1;
+    await new Promise(r => setTimeout(r, 900)); box.remove(); await new Promise(r => setTimeout(r, 600));
+    return { reels, onScreen };
+  });
+  assert.ok(r.reels <= r.onScreen, JSON.stringify(r));   // it was one per row: the table, taller than the window, told nothing of where a cell of it stands
+});
+
 test('page: the page still runs without script errors', () => { assert.deepEqual(errors, []); });

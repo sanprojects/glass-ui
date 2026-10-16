@@ -59,7 +59,17 @@
     const isNum = e => !e.children.length && NUM.test(e.textContent);
     const AUX = /(^|\s)g-morph-ghost(\s|$)/;   /* what fades out of the last update: not content */
     /* the children that are content; a script's part is not, the page's elements in a script's wrap stand in its place */
-    const kids = p => { const out = []; for (const c of p.children) { if (SKIP.has(c.tagName) || AUX.test(c.className) || c.hasAttribute('data-g-part')) continue; if (c.hasAttribute('data-g-wrap')) out.push(...kids(c)); else out.push(c); } return out; };
+    /* KIDS: while two trees are paired and neither changes (a watched box's update, the leave phase of Glass.morph), the children of a box and
+       the place of each among them are worked out once: path() asks it of every element without a text, and a row of a table of thousands asked it
+       of the whole table again (sanstv.ru/admin/online: seconds of script per refresh) */
+    let KIDS = null;
+    const kids = p => {
+      let out = KIDS && KIDS.get(p); if (out) return out;
+      out = []; for (const c of p.children) { if (SKIP.has(c.tagName) || AUX.test(c.className) || c.hasAttribute('data-g-part')) continue; if (c.hasAttribute('data-g-wrap')) out.push(...kids(c)); else out.push(c); }
+      if (KIDS) KIDS.set(p, out);
+      return out;
+    };
+    const place = (e, p) => { if (!KIDS) return kids(p).indexOf(e); let m = KIDS.get(e.ownerDocument) || new WeakMap(); KIDS.set(e.ownerDocument, m); let at = m.get(p); if (!at) { at = new Map(kids(p).map((c, i) => [c, i])); m.set(p, at); } const i = at.get(e); return i === undefined ? -1 : i; };
     const part = n => !!n && n.nodeType === 1 && n.hasAttribute('data-g-part');
     const up = e => { let p = e.parentElement; while (p && p.hasAttribute('data-g-wrap')) p = p.parentElement; return p; };   /* the parent, a script's wraps left out */
     const later = (el, cls, ms, then) => setTimeout(() => { el.classList.remove(cls); if (!el.className) el.removeAttribute('class'); if (then) then(); }, ms);
@@ -103,7 +113,7 @@
     /* where the element stands, from the container (the box that is morphed) down: TAG[index among the children of its parent]/TAG[...]/... */
     function path(el, root) {
       const p = [];
-      for (let e = el; e && e !== root; e = up(e)) p.push(e.tagName + (up(e) ? kids(up(e)).indexOf(e) : ''));
+      for (let e = el; e && e !== root; e = up(e)) p.push(e.tagName + (up(e) ? place(e, up(e)) : ''));
       return p.reverse().join('/');
     }
     /* what an element with no text is told by: the tag, what it points at, and the full path to it, so that no two of them have one key */
@@ -221,11 +231,13 @@
         } else { size.style.visibility = 'visible'; size.textContent = c || o; }   /* the same character, or a separator that appeared / went away */
         board.insertBefore(cell, board.firstChild);
       }
-      const lineOf = host => { const cs = host ? getComputedStyle(host) : null; board.style.setProperty('--g-reel-h', (cs && parseFloat(cs.lineHeight) || (cs ? parseFloat(cs.fontSize) : 16) * 1.25) + 'px'); };   /* a cell is as tall as a line of its host */
-      if (!late) lineOf(t.parentElement);
-      board._arm = () => {   /* once it is in the DOM */
-        if (late) lineOf(board.parentElement);
-        $$('.g-reel__cell--new, .g-reel__cell--gone', board).forEach(c => { c.style.setProperty('--g-reel-w', c.firstChild.getBoundingClientRect().width + 'px'); });
+      /* once it is in the DOM: it measures itself (a cell is as tall as a line of its host; a digit that comes or goes, as wide as it is) and returns
+         what it writes. All the boards of an update read first and write after: a read after a write would lay the page out again, once per board
+         (sanstv.ru/admin/online: a table of thousands of rows, a few dozen numbers turning, ~4 s of layout) */
+      board._arm = () => {
+        const cs = board.parentElement ? getComputedStyle(board.parentElement) : null, h = (cs && parseFloat(cs.lineHeight)) || (cs ? parseFloat(cs.fontSize) : 16) * 1.25;
+        const ws = $$('.g-reel__cell--new, .g-reel__cell--gone', board).map(c => [c, c.firstChild.getBoundingClientRect().width]);
+        return () => { board.style.setProperty('--g-reel-h', h + 'px'); ws.forEach(([c, w]) => c.style.setProperty('--g-reel-w', w + 'px')); };
       };
       board._finish = () => { clearTimeout(board._timer); if (board.parentNode) { const p = board.parentNode; p._gRun = null; p.replaceChild(document.createTextNode(to), board); unseen(p); } };
       settled(() => { if (board.parentNode) board._timer = setTimeout(board._finish, T.reel + Math.max(changed - 1, 0) * T.reelStagger + 60); });
@@ -308,7 +320,7 @@
         while (part(cursor)) cursor = cursor.nextSibling;   /* a script's part stays where it stands */
         if (at === cursor) { put(); cursor = cursor.nextSibling; }
         else (batch || (batch = document.createDocumentFragment())).appendChild(at);
-        if (node._arm) { put(); node._arm(); }   /* a reel measures itself: it has to be in the page */
+        if (node._arm) (ctx.arms || (ctx.arms = [])).push(node);   /* a reel measures itself once it is in the page: after the patch, all together */
       });
       put();
       while (cursor) { const next = cursor.nextSibling; if (!part(cursor)) op.removeChild(cursor); cursor = next; }
@@ -517,7 +529,9 @@
       return new Promise(resolve => {
         const gone = [], moved = new Set(), g = globalPairs(target, next, o), roots = { old: target, next };
         G = g; R = roots;
+        KIDS = new WeakMap();   /* nothing changes while what leaves is collected */
         if (play && o.leave !== false) collect(target, next, o, gone, o.move !== false ? moved : null);
+        KIDS = null;
         G = null; R = null;
         const carries = e => g.claimed.has(e) || [...e.querySelectorAll('li, [data-key]')].some(c => g.claimed.has(c));   /* what goes to another place does not slide out */
         /* what leaves fades out where it stood while the new content comes in: nothing waits (it is not what goes to another place) */
@@ -545,6 +559,7 @@
         HOLLOW = new WeakSet();
         gone.forEach(e => { const p = e.parentNode; if (p) { p.removeChild(e); if (!p.children.length) HOLLOW.add(p); } });
         reconcile(target, next, o, ctx);
+        if (ctx.arms) { const writes = ctx.arms.map(b => b._arm()); writes.forEach(w => w()); ctx.arms = null; }
         G = null; R = null;
         if (play) ctx.flush();   /* the ghosts go in there, after its reads */
         wrote(target, ctx.until || 0);
@@ -791,6 +806,7 @@
       /* Pairs, as Glass.morph pairs: a row is its key or its text wherever it went (another list); the rest by the place in its parent, and down
          into what is paired. pairs: new element -> old one, back: old -> new */
       const pairs = new Map(), back = new Map(), oldTops = gone.map(g => g[0]);
+      KIDS = new WeakMap();   /* nothing changes while the trees are paired (up to the writes of the texts below) */
       const key = e => { const k = explicitKey(e, o); if (k) return k; const t = e.tagName === 'LI' && sig(e); return t ? 'LI|' + t : null; };
       const index = tops => { const m = new Map(); tops.forEach(t => [t, ...t.querySelectorAll('li, [data-key], [id]')].forEach(e => { const k = key(e); if (k != null) m.set(k, m.has(k) ? null : e); })); return m; };
       const oi = index(oldTops), ni = index(fresh), g = { map: new Map(), claimed: new Set() };
@@ -815,12 +831,17 @@
       G = null;
       g.map.forEach((e, n) => { if (!pairs.has(n)) pair(e, n); });   /* a keyed row that went to a parent of its own */
       /* a new text in a place that stays (the same node, or the new one of a pair): a number turns, new words light up (writes, before the reads) */
+      KIDS = null;
       const sx = PX, sy = PY, moving = performance.now() < W.busy;   /* no layout is read before the reads of flush(): the writes here would lay it out again */
       const view = c => c.fx ? { left: c.x, top: c.y, width: c.w, height: c.h, right: c.x + c.w, bottom: c.y + c.h }
         : { left: c.x - sx, top: c.y - sy, width: c.w, height: c.h, right: c.x - sx + c.w, bottom: c.y - sy + c.h };
       /* where it stood: its own place or the old one's it is, else the place of what holds it */
       const near = e => { for (let p = e; p && p !== box; p = p.parentElement) { const c = W.cache.get(p) || W.cache.get(pairs.get(p)); if (c) return c; } return null; };
-      const shown = e => { const c = near(e); return !!c && !c.lazy && onScreen(view(c)); };
+      /* on the screen: what was read of it (it, or the old one it is) is, or a box no taller than the window that holds it is; a taller box (the
+         page, a long table written anew) tells nothing of where a cell of it stands - that is not animated (sanstv.ru/admin/online: a table of
+         thousands of rows written anew every 5 s turned the number of every row, ~3700 reels with a blur, the page drew a frame a second) */
+      const shown = e => { const c = near(e); if (!c || c.lazy) return false; const v = view(c); return onScreen(v) && (c === W.cache.get(e) || c === W.cache.get(pairs.get(e)) || v.height <= innerHeight); };
+      let turns = 0;   /* numbers that turn in this update: a screen holds no more than a few dozen */
       const boards = [];
       const jobs = retext.map(e => [e, was(e)]);
       pairs.forEach((a, b) => { if (!a.children.length && !b.children.length && a.textContent !== b.textContent) jobs.push([b, a.textContent]); });
@@ -828,7 +849,9 @@
         const at = near(e); if (at && at.out) return;   /* a text in what floats over the page is not lit up nor turned */
         const t = e.firstChild, to = t && t.nodeValue;
         if (!t || t.nodeType !== 3 || e.childNodes.length !== 1 || from === to) return;
-        if (o.reel !== false && NUM.test(from) && NUM.test(to) && shown(e)) { t.nodeValue = from; const board = reel(t, to, T, true); t.replaceWith(board); boards.push(board); e._gRun = { to, nodes: [board], at: performance.now() }; }   /* measured with the reads of the update */
+        const seen = shown(e);
+        if (!seen) return;   /* not on the screen: the new text is there, nothing turns or lights up */
+        if (o.reel !== false && NUM.test(from) && NUM.test(to) && turns++ < 100) { t.nodeValue = from; const board = reel(t, to, T, true); t.replaceWith(board); boards.push(board); e._gRun = { to, nodes: [board], at: performance.now() }; }   /* measured with the reads of the update */
         else if (o.flash !== false) { t.nodeValue = from; const f = words(t, to, ctx); if (f) { const nodes = [...f.childNodes]; t.replaceWith(f); e._gRun = { to, nodes, at: performance.now() }; } else t.nodeValue = to; }
       });
       /* where each one stood: its own place, or the place of the old one it is (page coordinates to the viewport; a glide that still runs is where it is now) */
@@ -889,7 +912,7 @@
         ctx.floats = floats;
       }
       ctx.onRead = () => snapshot(W);
-      ctx.onWrite = () => boards.forEach(b => b._arm());   /* the boards take their size after the reads (and after the ghosts are checked against them) */
+      ctx.onWrite = () => { const writes = boards.map(b => b._arm()); writes.forEach(w => w()); };   /* the boards take their size after the reads (and after the ghosts are checked against them): all read, then all write */
       ctx.flush();   /* the ghosts go in there, after its reads */
       W.mo.takeRecords();   /* the copies, the boards, the marked words: written here, not changes */
       W.busy = performance.now() + (ctx.until || 0) + 100;

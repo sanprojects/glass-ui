@@ -897,9 +897,9 @@
     t.style.tableLayout = '';
     const cs = getComputedStyle(t.parentElement), avail = t.parentElement.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
     if (avail <= 0) return;
-    t.setAttribute('data-g-measure', '');   /* CSS: as wide as the content asks, no cell is cut */
+    t.setAttribute('data-g-fit-measure', '');   /* CSS: as wide as the content asks, no cell is cut (not glass-morph's data-g-measure: the same name on <main> invalidated every cell under it) */
     const w = [...row.cells].map(c => c.getBoundingClientRect().width);
-    t.removeAttribute('data-g-measure');
+    t.removeAttribute('data-g-fit-measure');
     const need = w.reduce((a, b) => a + b, 0), out = w.slice();   /* it fits: the columns keep their proportions and share the spare room (no equal split by a wide colspan header) */
     let free = avail, rest = need <= avail + 1 ? [] : w.map((_, i) => i);
     for (; rest.length;) {
