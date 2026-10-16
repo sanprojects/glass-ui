@@ -308,4 +308,24 @@ test('page: a row with an id that comes from far below is not paired with anothe
   assert.ok(r.ok, JSON.stringify(r));   // it glided from the place of the row that went
 });
 
+test('page: what changes elsewhere while rows glide (a counter) does not glide them again from where they were read', async () => {
+  const r = await page.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    scrollTo(0, 0); await wait(400);
+    const box = document.createElement('div');
+    box.innerHTML = '<p><span id="c1">10</span> <span id="c2">20</span></p><table><tbody>' + Array.from({ length: 12 }, (_, i) => `<tr id="g${i}"><td>row ${i}</td><td>${i}</td></tr>`).join('') + '</tbody></table>';
+    document.querySelector('main').prepend(box); await wait(1200);
+    const tb = box.querySelector('tbody'), row = document.getElementById('g8'), tops = [];
+    let on = true; const tick = () => { tops.push(row.getBoundingClientRect().top); if (on) requestAnimationFrame(tick); };
+    tb.insertAdjacentHTML('afterbegin', '<tr id="n1"><td>new 1</td><td>1</td></tr><tr id="n2"><td>new 2</td><td>2</td></tr><tr id="n3"><td>new 3</td><td>3</td></tr>');   /* the rows below go down by three */
+    requestAnimationFrame(tick);
+    await wait(80); document.getElementById('c1').textContent = '11';   /* read while they glide */
+    await wait(100); document.getElementById('c2').textContent = '21';   /* and once more */
+    await wait(900); on = false; await wait(50); box.remove(); await wait(600);
+    const back = tops.slice(1).map((t, i) => tops[i] - t).filter(d => d > 1.5);   /* a row going down never goes up meanwhile */
+    return { ok: !back.length, back: back.map(Math.round), from: Math.round(tops[0]), to: Math.round(tops[tops.length - 1]) };
+  });
+  assert.ok(r.ok, JSON.stringify(r));   // it jumped back to where it was when the counter's change read it, and came again
+});
+
 test('page: the page still runs without script errors', () => { assert.deepEqual(errors, []); });

@@ -638,6 +638,24 @@
     let PX = 0, PY = 0;
     /* when the page (the window or a box in it) scrolled last: what changes while it scrolls is drawn for the scroll, not changed (see changed()) */
     let SCROLL_AT = -1e9;
+    /* what an animation that runs now moves (a glide, an entry, the page's own): element -> [x, y] of its transform. The places kept are where
+       things stand in the layout, without it, and a glide starts where that layout plus what runs on it now puts the element: a place read while
+       a glide runs would be kept with the glide in it (sanstv.ru/admin/online: the counter in the footer that changed 200 ms after an update
+       glided the rows again from where they had been when the update read them, they jumped back and came again) */
+    function shifts(box) {
+      const m = new Map();
+      if (!document.getAnimations) return m;
+      for (const a of document.getAnimations()) {
+        const t = a.effect && a.effect.target;
+        if (!t || t.nodeType !== 1 || a.effect.pseudoElement || m.has(t) || !box.contains(t)) continue;
+        if (!a.effect.getKeyframes().some(k => k.transform != null || k.translate != null)) continue;   /* only what moves it (not a fade, not a flash) */
+        const x = new DOMMatrixReadOnly(getComputedStyle(t).transform);
+        if (x.m41 || x.m42) m.set(t, [x.m41, x.m42]);
+      }
+      return m;
+    }
+    /* how far what runs now moves an element: its own animation and the ones of the boxes it is in */
+    const shiftOf = (e, sh, box) => { let x = 0, y = 0; for (let p = e; p && p !== box; p = p.parentElement) { const s = sh.get(p); if (s) { x += s[0]; y += s[1]; } } return [x, y]; };
     /* what a row that goes needs of the parent it goes back into: its border, its scroll, whether it is positioned (static: made relative for the ghosts) */
     const frame = (e, pos) => ({ cl: e.clientLeft, ct: e.clientTop, sl: e.scrollLeft, st: e.scrollTop, flat: (pos || getComputedStyle(e).position) === 'static' });
     /* What is kept of a box: its children down to 3 levels, and the rows (li, data-key, id) at any depth, not inside a row; at most 2000. On the
@@ -649,12 +667,12 @@
       if (!W.box.isConnected) return;
       skips();
       PX = scrollX; PY = scrollY;
-      const sx = PX, sy = PY, cache = new Map(), lazy = new Map(), b = W.box.getBoundingClientRect(), stuck = new Set(), floated = new Set(), page = W.page;
+      const sx = PX, sy = PY, cache = new Map(), lazy = new Map(), b = W.box.getBoundingClientRect(), stuck = new Set(), floated = new Set(), page = W.page, sh = shifts(W.box);
       W.at = Object.assign({ x: b.left + sx, y: b.top + sy, h: b.height, seen: onScreen(b) }, frame(W.box));
       W.text = plain(W.box);   /* a box that is only text (a status line): its text is kept too */
       W.T = timings(W.box);
       /* in a content-visibility box out of the viewport (s: [box, its rect]): not laid out, its box stands for it */
-      (function walk(n, depth, s) {
+      (function walk(n, depth, s, ox, oy) {   /* ox, oy: how far the boxes it is in are moved by what runs now (shifts) */
         const shut = n.tagName === 'DETAILS' && !n.open;
         for (const e of n.children) {
           if (cache.size >= 2000) return;
@@ -662,13 +680,14 @@
           const own = WATCHED.has(e), mark = page && (e.id || e.tagName === 'MAIN');
           const keep = own || mark || depth < 3 || e.tagName === 'LI' || e.id || e.hasAttribute('data-key');
           let inner = s;
+          const mv = sh.size ? sh.get(e) : null, ex = mv ? ox + mv[0] : ox, ey = mv ? oy + mv[1] : oy;
           if (s) { if (keep) { if (!lazy.has(s[0])) lazy.set(s[0], { x: s[1].left + sx, y: s[1].top + sy, w: s[1].width, h: s[1].height }); cache.set(e, { lazy: s[0] }); } }
           else {
             const rs = e.getClientRects();
             if (!rs.length) continue;   /* not drawn, nor anything in it */
             if (keep) {
               const r = e.getBoundingClientRect(), holds = e.tagName !== 'LI' && e.firstElementChild;   /* a box rows may go back into (not a row: nothing goes back into a row) */
-              const c = { x: r.left + sx, y: r.top + sy, w: r.width, h: r.height };
+              const c = { x: r.left + sx - ex, y: r.top + sy - ey, w: r.width, h: r.height };   /* in the layout, without what runs on it (shifts) */
               const pos = page || holds ? getComputedStyle(e).position : null;
               if (holds) Object.assign(c, frame(e, pos));
               /* on the page: what stays in the window as the page scrolls (fixed, sticky, or in one of them) is kept where it is in the window; what
@@ -677,7 +696,7 @@
               if (page) {
                 let fx = pos === 'fixed' || pos === 'sticky';
                 if (!fx && stuck.size) for (let p = e.parentElement; !fx && p && p !== W.box; p = p.parentElement) fx = stuck.has(p);
-                if (fx) { stuck.add(e); c.x = r.left; c.y = r.top; c.fx = 1; }
+                if (fx) { stuck.add(e); c.x = r.left - ex; c.y = r.top - ey; c.fx = 1; }
                 let out = pos === 'fixed' || (pos === 'absolute' && e.parentElement === W.box);
                 if (!out && floated.size) for (let p = e.parentElement; !out && p && p !== W.box; p = p.parentElement) out = floated.has(p);
                 if (out) { floated.add(e); c.out = 1; }
@@ -687,9 +706,9 @@
             if (e.firstElementChild) { const cv = getComputedStyle(e).contentVisibility; if (cv === 'hidden') continue; if (cv === 'auto') { const r = e.getBoundingClientRect(); if (!onScreen(r)) inner = [e, r]; } }
           }
           if (own || e.tagName === 'LI' || FORM.has(e.tagName) || (page && e.matches(ASIDE))) continue;
-          walk(e, mark ? 0 : depth + 1, inner);
+          walk(e, mark ? 0 : depth + 1, inner, ex, ey);
         }
-      })(W.box, 0, skipper()(W.box));
+      })(W.box, 0, skipper()(W.box), 0, 0);
       W.cache = cache; W.lazy = lazy;
     }
     /* read again when the box has settled: after what runs in it now, after the next frame (the layout is there then, the reads cost nothing).
@@ -844,7 +863,7 @@
       g.map.forEach((e, n) => { if (!pairs.has(n)) pair(e, n); });   /* a keyed row that went to a parent of its own */
       /* a new text in a place that stays (the same node, or the new one of a pair): a number turns, new words light up (writes, before the reads) */
       KIDS = null;
-      const sx = PX, sy = PY, moving = performance.now() < W.busy;   /* no layout is read before the reads of flush(): the writes here would lay it out again */
+      const sx = PX, sy = PY, sh = shifts(box);   /* no layout is read before the reads of flush(): the writes here would lay it out again */
       const view = c => c.fx ? { left: c.x, top: c.y, width: c.w, height: c.h, right: c.x + c.w, bottom: c.y + c.h }
         : { left: c.x - sx, top: c.y - sy, width: c.w, height: c.h, right: c.x - sx + c.w, bottom: c.y - sy + c.h };
       /* where it stood: its own place or the old one's it is, else the place of what holds it */
@@ -866,16 +885,14 @@
         if (o.reel !== false && NUM.test(from) && NUM.test(to) && turns++ < 100) { t.nodeValue = from; const board = reel(t, to, T, true); t.replaceWith(board); boards.push(board); e._gRun = { to, nodes: [board], at: performance.now() }; }   /* measured with the reads of the update */
         else if (o.flash !== false) { t.nodeValue = from; const f = words(t, to, ctx); if (f) { const nodes = [...f.childNodes]; t.replaceWith(f); e._gRun = { to, nodes, at: performance.now() }; } else t.nodeValue = to; }
       });
-      /* where each one stood: its own place, or the place of the old one it is (page coordinates to the viewport; a glide that still runs is where it is now) */
+      /* where each one stood: its own place, or the place of the old one it is (page coordinates to the viewport), and on it what runs now (a glide
+         of the last update, its own or of the box it is in: where it is drawn now) */
       const from = e => {
         const c = W.cache.get(e) || (pairs.has(e) ? W.cache.get(pairs.get(e)) : null);
         if (!c || c.out) return null;
         if (c.lazy) { const L = W.lazy.get(c.lazy); return L ? { box: c.lazy, at: view(L) } : null; }
         const v = view(c);
-        if (moving && W.cache.has(e) && e.getAnimations && e.getAnimations().length) {   /* still gliding from the last update */
-          const m = new DOMMatrixReadOnly(getComputedStyle(e).transform);
-          if (m.m41 || m.m42) { v.left += m.m41; v.right += m.m41; v.top += m.m42; v.bottom += m.m42; }
-        }
+        if (sh.size) { const [x, y] = shiftOf(e, sh, box); if (x || y) { v.left += x; v.right += x; v.top += y; v.bottom += y; } }
         return v;
       };
       /* what may have moved: each element whose place is kept, or the new one of it (in this box, not in a box watched by itself) */
