@@ -291,4 +291,21 @@ test('page: thousands of elements written anew at once (a long table) are not an
   assert.deepEqual(r, { few: true, many: 0, patched: true });
 });
 
+test('page: a row with an id that comes from far below is not paired with another one that went (it does not glide from that one\'s place)', async () => {
+  const r = await page.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    scrollTo(0, 0); await wait(400);
+    const box = document.createElement('div'); box.innerHTML = '<table><tbody>' + Array.from({ length: 700 }, (_, i) => `<tr id="v${i}"><td>visitor ${i}</td><td><a>${i}</a></td></tr>`).join('') + '</tbody></table>';
+    document.querySelector('main').prepend(box); await wait(1200);   /* read: the rows far below are past what is read of the page */
+    const tb = box.querySelector('tbody'), far = document.getElementById('v650'), gone = document.getElementById('v3'), before = far.offsetTop;
+    gone.remove(); tb.insertBefore(far, document.getElementById('v1'));   /* one leaves near the top, one comes from far below to the top */
+    await wait(60);
+    const a = far.getAnimations().find(x => !(x instanceof CSSAnimation) && x.effect.getKeyframes().some(k => k.transform && k.transform !== 'none'));
+    const m = a && /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(a.effect.getKeyframes()[0].transform || ''), dy = m ? Math.round(+m[2]) : null, real = before - far.offsetTop;
+    await wait(900); box.remove(); await wait(600);
+    return { ok: dy === null || Math.abs(dy - real) <= 3, dy, real };
+  });
+  assert.ok(r.ok, JSON.stringify(r));   // it glided from the place of the row that went
+});
+
 test('page: the page still runs without script errors', () => { assert.deepEqual(errors, []); });

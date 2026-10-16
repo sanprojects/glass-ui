@@ -166,8 +166,10 @@
         const g = groups[tag], oc = g.o.filter(i => box(oldL[i])), nc = g.n.filter(j => newL[j].children.length);
         /* boxes are walked into in order, but only a box of the same kind (its first class): a list does not turn into the "nothing found" card */
         const kind = e => e.classList[0] || '', queue = {};
-        /* a list row is its text: a row with other words is another row (it slides in, the old one out), not this one with a new text; only its numbers may change (a counter) */
-        const same = (a, b) => a.tagName !== 'LI' || sameButDigits(a, b);
+        /* a list row is its text: a row with other words is another row (it slides in, the old one out), not this one with a new text; only its numbers may change (a counter).
+           Two elements that each have an id, another one, are two things: never one by its place (sanstv.ru/admin/online: a visitor's row that came from
+           far below, not read before, was paired with the row of a visitor who left, and glided from that one's place) */
+        const same = (a, b) => !(a.id && b.id && a.id !== b.id) && (a.tagName !== 'LI' || sameButDigits(a, b));
         nc.forEach(j => (queue[kind(newL[j])] = queue[kind(newL[j])] || []).push(j));
         oc.forEach(i => { const q = queue[kind(oldL[i])], k = q ? q.findIndex(j => same(oldL[i], newL[j])) : -1; if (k >= 0) { const j = q.splice(k, 1)[0]; pairs.push([i, j]); usedO[i] = usedN[j] = 1; } });
         const ol = g.o.filter(i => !usedO[i]), nl = g.n.filter(j => !usedN[j]);
@@ -178,7 +180,7 @@
           /* a percent is not a count: the numbers of one class go together */
           new Set(on.map(i => oldL[i].className)).forEach(c => {
             const oi = on.filter(i => oldL[i].className === c), nj = nn.filter(j => newL[j].className === c);
-            for (let k = 0; k < Math.min(oi.length, nj.length); k++) { pairs.push([oi[k], nj[k]]); usedO[oi[k]] = usedN[nj[k]] = 1; }
+            for (let k = 0; k < Math.min(oi.length, nj.length); k++) { if (!same(oldL[oi[k]], newL[nj[k]])) continue; pairs.push([oi[k], nj[k]]); usedO[oi[k]] = usedN[nj[k]] = 1; }
           });
         }
       });
