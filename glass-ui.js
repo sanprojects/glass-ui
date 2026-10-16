@@ -95,11 +95,13 @@
         if (f.isOpen()) return; floats.push(f);
         const host = trigger.closest('dialog, [popover]') || document.body;   // inside a modal dialog or popover the panel must stay in it
         if (panel.parentNode !== host) host.appendChild(panel);
-        panel.showPopover(); aria(trigger, 'expanded', true);
+        if (panel.showPopover) panel.showPopover();   /* a browser without the Popover API (iOS < 17): the panel is not raised, but nothing throws */
+        aria(trigger, 'expanded', true);
       },
       close(focus) {
         const i = floats.indexOf(f); if (i < 0) return; floats.splice(i, 1);
-        panel.hidePopover(); aria(trigger, 'expanded', false); if (o.onClose) o.onClose();
+        if (panel.hidePopover) panel.hidePopover();
+        aria(trigger, 'expanded', false); if (o.onClose) o.onClose();
         if (focus) trigger.focus();
       }
     };
@@ -366,9 +368,9 @@
       tip.setAttribute('data-pos', t.getAttribute('data-tip-position') === 'bottom' ? 'bottom' : 'top');   // CSS flips it when there is no room
       if (prev && prev !== t) prev.style.removeProperty('anchor-name');
       t.style.setProperty('anchor-name', '--g-tip'); prev = t;
-      if (!tip.matches(':popover-open')) tip.showPopover();
+      if (tip.showPopover && !tip.matches(':popover-open')) tip.showPopover();
     }
-    function hide() { if (!tip) return; if (cur) cur.removeAttribute('aria-describedby'); cur = null; if (tip.matches(':popover-open')) tip.hidePopover(); }
+    function hide() { if (!tip) return; if (cur) cur.removeAttribute('aria-describedby'); cur = null; if (tip.hidePopover && tip.matches(':popover-open')) tip.hidePopover(); }
     /* <button title="Duplicate project">: the native title of any element inside .g-root is taken over (moved to data-g-tip, so the browser does not show its own tip).
        Icon-only elements keep their accessible name through aria-label. Without JS the native title still works. */
     const SEL = '.g-root [title], [data-g-tip]';
