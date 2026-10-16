@@ -227,4 +227,31 @@ test('page: what another script runs (an ad slot it fills, data-g-part; auto ads
   assert.deepEqual(r, { ghosts: '', entering: 1 });
 });
 
+test('page: where things stand is read in the background while the tab is hidden: the first change once it is back is animated at once, from where they stand now', async () => {
+  const r = await page.evaluate(async () => {
+    /* a hidden tab as the browser has it: no frames, what waits for one runs once it is shown again */
+    const raf = window.requestAnimationFrame, held = [];
+    const vis = h => {
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => h }); Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => h ? 'hidden' : 'visible' });
+      window.requestAnimationFrame = h ? f => held.push(f) : raf;
+      document.dispatchEvent(new Event('visibilitychange'));
+      if (!h) held.splice(0).forEach(f => raf(f));
+    };
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    vis(true);
+    const pad = document.createElement('div'); pad.id = 'pad'; pad.style.height = '60px'; document.getElementById('below').before(pad);   /* the page changes while the tab is away: not animated */
+    await wait(1500);   /* read meanwhile, when the browser is idle (no frames are drawn for a hidden tab) */
+    vis(false);
+    const li = document.createElement('li'); li.textContent = 'back'; document.querySelector('#res ol').appendChild(li);   /* right away, once it is back */
+    await wait(60);
+    const dys = document.getAnimations().filter(x => !(x instanceof CSSAnimation) && x.effect && x.effect.target !== li).map(x => { const k = x.effect.getKeyframes()[0].transform || ''; const m = /translate\([^,]+,\s*(-?[\d.]+)px/.exec(k); return m ? Math.abs(+m[1]) : null; }).filter(v => v);   /* what is below it glides */
+    const out = { entered: li.classList.contains('g-morph-enter'), dys: [...new Set(dys.map(Math.round))], rowH: Math.round(li.getBoundingClientRect().height) };
+    await wait(800); li.remove(); pad.remove(); await wait(800);
+    delete document.hidden; delete document.visibilityState;
+    return out;
+  });
+  assert.equal(r.entered, true);
+  assert.ok(r.dys.length && r.dys.every(d => Math.abs(d - r.rowH) <= 2), JSON.stringify(r));   // what is below glides by the new row only, not by what came while the tab was away
+});
+
 test('page: the page still runs without script errors', () => { assert.deepEqual(errors, []); });

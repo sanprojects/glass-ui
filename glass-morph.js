@@ -67,15 +67,13 @@
        are over counts from there, so it neither cuts them short nor lays the page out while they still move */
     const settled = f => requestAnimationFrame(() => requestAnimationFrame(f));
     /* An inactive tab draws nothing, so nothing is animated in it: what changes then is patched at once, and what was moving when the tab went away
-       is put at its end at once (an animation in a hidden tab waits and would play when the tab is shown again). A tab only just shown is not active
-       yet either: what changed while it was away is not animated (nor in a hidden tab that a browser shows for a moment, to draw its thumbnail) */
-    let SHOWN = document.hidden ? Infinity : -1e9;
+       is put at its end at once (an animation in a hidden tab waits and would play when the tab is shown again; a browser may show a hidden tab for
+       a moment, to draw its thumbnail). Where things stand is read meanwhile in the background (settle), so the first change once the tab is back
+       is animated at once */
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) { SHOWN = performance.now(); return; }
-      SHOWN = Infinity;
-      document.getAnimations().forEach(a => { if (a.id === 'g-morph' || /^g-(morph|reel|a-highlight$)/.test(a.animationName || '')) try { a.finish(); } catch (e) { /* one that never ends */ } });
+      if (document.hidden) document.getAnimations().forEach(a => { if (a.id === 'g-morph' || /^g-(morph|reel|a-highlight$)/.test(a.animationName || '')) try { a.finish(); } catch (e) { /* one that never ends */ } });
     });
-    const quiet = () => document.hidden || performance.now() - SHOWN < 500;
+    const quiet = () => document.hidden;
     const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;   /* less motion: nothing slides, glides or turns; what is new or changed fades */
     /* in the viewport and with a size: one getBoundingClientRect per element, the reads go in a batch */
     const onScreen = r => !!(r.width || r.height) && r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth;
@@ -677,14 +675,17 @@
       })(W.box, 0, skipper()(W.box));
       W.cache = cache; W.lazy = lazy;
     }
-    /* read again when the box has settled: after what runs in it now, after the next frame (the layout is there then, the reads cost nothing) */
+    /* read again when the box has settled: after what runs in it now, after the next frame (the layout is there then, the reads cost nothing).
+       A hidden tab draws no frames: it is read when the browser is idle, in the background, so it is ready when the tab is shown again */
+    const whenIdle = window.requestIdleCallback ? f => requestIdleCallback(f, { timeout: 1000 }) : f => setTimeout(f, 50);
     function settle(W, ms) {
       if (!W.live) return;   /* the page still loading: read once it is idle */
       clearTimeout(W.timer);
       W.timer = setTimeout(() => {
         const wait = W.busy - performance.now();
         if (wait > 0) return settle(W, wait + 20);
-        requestAnimationFrame(() => setTimeout(() => snapshot(W)));
+        if (document.hidden) whenIdle(() => snapshot(W));
+        else requestAnimationFrame(() => setTimeout(() => snapshot(W)));
       }, ms || 0);
     }
     /* it changed where nothing is animated (the kit's parts, what runs, what shows or hides): read again soon, not on every such change */
