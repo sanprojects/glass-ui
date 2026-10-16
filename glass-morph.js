@@ -754,6 +754,12 @@
          that stops reads all anyway). The same write at another time animates as ever */
       if (performance.now() - SCROLL_AT < 200) { fits(); stale(W); return; }
       if (quiet()) { fits(); settle(W, 0); return; }   /* a hidden page draws nothing: only where things stand is read again */
+      /* thousands of elements put in or taken out at once (a long table written anew) are a new picture, not a move: not animated, only read
+         again - every frame of it would lay out and paint the thousands of rows (sanstv.ru/admin/online, 4000 rows refreshed every 5 s: frames
+         of 0.4-0.7 s in a row, 2.3 s for the refresh) */
+      let many = 0;
+      for (const r of recs) { if (r.type !== 'childList') continue; for (const l of [r.addedNodes, r.removedNodes]) for (const n of l) if (n.nodeType === 1) many += 1 + n.getElementsByTagName('*').length; if (many > 3000) break; }
+      if (many > 3000) { fits(); stale(W); return; }
       if (W.page) {
         if (!W.live) { fits(); stale(W); return; }   /* the page is still loading: it is being built, not changed */
         /* an element that changed twice right before (within 80 ms each time) runs (a clock, a counter, a game): left as it is until it pauses.

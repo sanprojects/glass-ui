@@ -269,4 +269,21 @@ test('page: a long table written anew turns the numbers that are on the screen o
   assert.ok(r.reels <= r.onScreen, JSON.stringify(r));   // it was one per row: the table, taller than the window, told nothing of where a cell of it stands
 });
 
+test('page: thousands of elements written anew at once (a long table) are not animated; a few are', async () => {
+  const r = await page.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const table = (n, k) => '<table><tbody>' + Array.from({ length: n }, (_, i) => `<tr><td>${k}-${i}</td><td><a>${(i + k) % 9}</a></td></tr>`).join('') + '</tbody></table>';
+    scrollTo(0, 0); await wait(400);   /* in the window: what is out of it is not animated anyway */
+    const box = document.createElement('div'); box.id = 'many'; document.querySelector('main').prepend(box);
+    const count = async html => { box.innerHTML = html; await wait(60); const l = [...box.querySelectorAll('.g-morph-enter, .g-reel'), ...document.querySelectorAll('.g-morph-ghost')]; return l.length; };
+    box.innerHTML = table(10, 0); await wait(900);
+    const few = await count(table(10, 1)); await wait(900);
+    box.innerHTML = table(1000, 2); await wait(900);   /* 4000 elements */
+    const many = await count(table(1000, 3)); await wait(900);
+    box.remove(); await wait(600);
+    return { few: few > 0, many };
+  });
+  assert.deepEqual(r, { few: true, many: 0 });
+});
+
 test('page: the page still runs without script errors', () => { assert.deepEqual(errors, []); });

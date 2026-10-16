@@ -909,7 +909,7 @@
       if (!rest.length) break;
     }
     const sum = rest.reduce((a, i) => a + w[i], 0); if (sum) rest.forEach(i => { out[i] = Math.max(free * w[i] / sum, 40); });
-    const cg = document.createElement('colgroup'); cg.setAttribute('data-g-fit', '');
+    const cg = part(document.createElement('colgroup')); cg.setAttribute('data-g-fit', '');   /* the kit's part: a watched page does not bring it in */
     const tot = out.reduce((a, b) => a + b, 0);
     out.forEach(x => { const c = document.createElement('col'); c.style.width = (x / tot * 100).toFixed(3) + '%'; cg.appendChild(c); });
     t.insertBefore(cg, t.firstChild); t.style.tableLayout = 'fixed';
