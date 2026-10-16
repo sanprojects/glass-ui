@@ -269,7 +269,7 @@ test('page: a long table written anew turns the numbers that are on the screen o
   assert.ok(r.reels <= r.onScreen, JSON.stringify(r));   // it was one per row: the table, taller than the window, told nothing of where a cell of it stands
 });
 
-test('page: thousands of elements written anew at once (a long table) are not animated; a few are', async () => {
+test('page: thousands of elements written anew at once (a long table) are not animated; a few are, and a row put into the long table is', async () => {
   const r = await page.evaluate(async () => {
     const wait = ms => new Promise(r => setTimeout(r, ms));
     const table = (n, k) => '<table><tbody>' + Array.from({ length: n }, (_, i) => `<tr><td>${k}-${i}</td><td><a>${(i + k) % 9}</a></td></tr>`).join('') + '</tbody></table>';
@@ -280,10 +280,15 @@ test('page: thousands of elements written anew at once (a long table) are not an
     const few = await count(table(10, 1)); await wait(900);
     box.innerHTML = table(1000, 2); await wait(900);   /* 4000 elements */
     const many = await count(table(1000, 3)); await wait(900);
-    box.remove(); await wait(600);
-    return { few: few > 0, many };
+    /* the same long table, with only what changed put in (a page that patches its rows): 800 new rows, 3200 elements, less than half of it */
+    const tb = box.querySelector('tbody'), add = document.createElement('tbody'); add.innerHTML = Array.from({ length: 800 }, (_, i) => `<tr><td>new-${i}</td><td><a>${i % 9}</a></td></tr>`).join('');
+    const first = add.rows[0], frag = document.createDocumentFragment(); [...add.rows].forEach(r => frag.appendChild(r));
+    tb.insertBefore(frag, tb.rows[2]); await wait(60);
+    const patched = first.classList.contains('g-morph-enter');
+    await wait(900); box.remove(); await wait(600);
+    return { few: few > 0, many, patched };
   });
-  assert.deepEqual(r, { few: true, many: 0 });
+  assert.deepEqual(r, { few: true, many: 0, patched: true });
 });
 
 test('page: the page still runs without script errors', () => { assert.deepEqual(errors, []); });

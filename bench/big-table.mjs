@@ -1,7 +1,7 @@
 // A big table written anew on a watched page (<body data-g-morph>), as sanstv.ru/admin/online does every 5 s: how long the main thread
 // is busy after one refresh, and where (CPU profile, the top functions by self time).   node bench/big-table.mjs [rows] [refreshes]
 // The page is served from this folder (the kit's sources); the rows have the cells of /admin/online (a flag, links, a count).
-// MODE=morph patches the table with Glass.morph instead of writing it anew; WATCH=0 leaves the page unwatched.
+// MODE=morph patches the table with Glass.morph, MODE=diff puts in only what changed, instead of writing it anew; WATCH=0 leaves the page unwatched.
 import { chromium } from 'playwright';
 import http from 'node:http';
 import fs from 'node:fs';
@@ -27,9 +27,31 @@ const page_html = `<!doctype html><html><head><meta charset="utf-8"><link rel="s
     return h + '</tbody></table>';
   }
   document.getElementById('box').innerHTML = table(0);
-  /* MODE=morph: the table is patched (Glass.morph): what did not change stays as it is; else it is written anew (replaceWith), as /admin/online did */
-  window.refresh = seed => { const t = document.createElement('template'); t.innerHTML = table(seed); const next = t.content.querySelector('table');
-    if (${JSON.stringify(process.env.MODE === 'morph')}) Glass.morph(document.getElementById('table'), next.innerHTML); else document.getElementById('table').replaceWith(next); };
+  /* MODE=morph: the table is patched with Glass.morph; MODE=diff: the page puts in only what changed (as admin/online.php does now: the rows by id,
+     a cell written only when it differs, a row moved only when it is not in its place, the gone ones taken out); else it is written anew (replaceWith) */
+  /* the same shape: only the texts and the attributes that differ are written (a number that changed is a text that changed: it turns) */
+  const sync = (a, b) => {
+    if (a.nodeType === 3 && b.nodeType === 3) { if (a.nodeValue !== b.nodeValue) a.nodeValue = b.nodeValue; return true; }
+    if (a.nodeType !== 1 || a.nodeName !== b.nodeName || a.childNodes.length !== b.childNodes.length) return false;
+    for (const at of b.attributes) if (a.getAttribute(at.name) !== at.value) a.setAttribute(at.name, at.value);
+    for (let i = 0; i < b.childNodes.length; i++) if (!sync(a.childNodes[i], b.childNodes[i])) a.replaceChild(b.childNodes[i].cloneNode(true), a.childNodes[i]);
+    return true;
+  };
+  window.patchRows = (live, next) => {
+    const lb = live.tBodies[0], nb = next.tBodies[0], old = new Map([...lb.rows].filter(r => r.id).map(r => [r.id, r]));
+    const kept = new Set([...nb.rows].map(r => r.id).filter(Boolean)), next_ = () => { while (cursor && cursor.id && !kept.has(cursor.id)) cursor = cursor.nextElementSibling; };   /* a row that goes is passed by: what follows is in its place */
+    let cursor = lb.firstElementChild;
+    for (const nr of [...nb.rows]) {
+      next_();
+      const r = nr.id && old.get(nr.id);
+      if (r) { old.delete(nr.id); for (let i = 0; i < nr.cells.length; i++) if (r.cells[i] && r.cells[i].innerHTML !== nr.cells[i].innerHTML && !sync(r.cells[i], nr.cells[i])) r.cells[i].innerHTML = nr.cells[i].innerHTML; }
+      const row = r || nr;
+      if (row === cursor) cursor = cursor.nextElementSibling; else lb.insertBefore(row, cursor);
+    }
+    old.forEach(r => r.remove());
+  };
+  window.refresh = seed => { const t = document.createElement('template'); t.innerHTML = table(seed); const next = t.content.querySelector('table'), live = document.getElementById('table');
+    if (${JSON.stringify(process.env.MODE === 'morph')}) Glass.morph(live, next.innerHTML); else if (${JSON.stringify(process.env.MODE === 'diff')}) window.patchRows(live, next); else live.replaceWith(next); };
 </script></body></html>`;
 const types = { '.js': 'text/javascript', '.css': 'text/css' };
 const server = http.createServer((req, res) => {
