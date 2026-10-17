@@ -328,4 +328,36 @@ test('page: what changes elsewhere while rows glide (a counter) does not glide t
   assert.ok(r.ok, JSON.stringify(r));   // it jumped back to where it was when the counter's change read it, and came again
 });
 
+test('page: a browser that does not keep up gets less motion, step by step, and more again once it keeps up', async () => {
+  const r = await page.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    scrollTo(0, 0); await wait(400);
+    Glass.morph.motion(0);
+    const box = document.createElement('div');
+    box.innerHTML = '<ul>' + Array.from({ length: 12 }, (_, i) => `<li data-key="m${i}">row ${i}</li>`).join('') + '</ul>';
+    document.querySelector('main').prepend(box); await wait(1200);
+    const ul = box.querySelector('ul'), glides = () => ul.querySelectorAll('li').length && [...ul.children].filter(li => li.getAnimations().some(a => a.id === 'g-morph')).length;
+    const update = async () => { ul.prepend(ul.lastElementChild); await wait(60); const n = glides(); await wait(1000); return n; };   /* a row moves to the top: the rest glide */
+    const first = await update();
+    let hog = true; const frame = () => { const t = performance.now(); while (performance.now() - t < 50); if (hog) requestAnimationFrame(frame); };
+    requestAnimationFrame(frame);   /* every frame takes 50 ms: 20 frames a second */
+    await update(); await update();
+    const slow = Glass.morph.motion(), mark = document.documentElement.getAttribute('data-g-motion');
+    hog = false; await wait(300);
+    const calm = await update();   /* at step 1 rows still glide; set 2: they do not */
+    Glass.morph.motion(2); const still = await update(); Glass.morph.motion(1);
+    for (let i = 0; i < 5; i++) await update();
+    const back = Glass.morph.motion(), unmarked = !document.documentElement.hasAttribute('data-g-motion');
+    box.remove(); Glass.morph.motion(0); await wait(600);
+    return { first, slow, mark, calm, still, back, unmarked };
+  });
+  assert.ok(r.first > 0, JSON.stringify(r));   // smooth: the rows glide
+  assert.equal(r.slow, 1, JSON.stringify(r));   // two slow updates: one step less
+  assert.equal(r.mark, '1');
+  assert.ok(r.calm > 0, JSON.stringify(r));   // step 1 still glides
+  assert.equal(r.still, 0, JSON.stringify(r));   // step 2 does not
+  assert.equal(r.back, 0, JSON.stringify(r));   // five smooth ones: back to all of it
+  assert.ok(r.unmarked);
+});
+
 test('page: the page still runs without script errors', () => { assert.deepEqual(errors, []); });

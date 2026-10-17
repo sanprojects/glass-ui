@@ -26,6 +26,10 @@
 /* Glass.morph measures the patched box at once, before the browser has told which of them are on the screen: for those reads they are all laid out
    (else a new or changed one stands at a guessed size, and what glides would aim wrong). Only [data-g-lazy] is named: switching it touches nothing else */
 [data-g-measure] [data-g-lazy] { content-visibility: visible; }
+/* A browser that does not keep up (glass-morph.js steps the motion down, <html data-g-motion>): the new words only tint; from step 2 what is
+   new only fades in */
+[data-g-motion] .g-morph-word { animation-name: g-morph-word-calm; }
+[data-g-motion]:not([data-g-motion="1"]) .g-morph-enter { animation-name: g-morph-fade !important; }
 /* Less motion: nothing slides, glides or turns (the script), what is new fades in and the new words only tint */
 @media (prefers-reduced-motion: reduce) {
   .g-morph-enter { animation-name: g-morph-fade !important; }

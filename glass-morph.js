@@ -85,6 +85,44 @@
     });
     const quiet = () => document.hidden;
     const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;   /* less motion: nothing slides, glides or turns; what is new or changed fades */
+    /* Does the browser keep up? An update that animates is watched while it plays: how many frames the browser drew (the first two after the update
+       are its own layout and are not counted). Under 30 a second, in two updates in a row: one step less motion; five smooth updates in a row: one
+       step more again. The steps (MOTION):
+         0  all of it
+         1  no numbers that turn (their reels run an SVG blur on every frame) and the new words only tint (no blur); no height animation
+         2  nothing glides nor fades out where it stood; what is new fades in
+         3  nothing is animated: patched at once, as in a hidden tab. A change once a minute plays at step 2, to see whether the browser keeps up again
+       The step is kept for the tab (sessionStorage) and shown on <html data-g-motion="1|2|3"> for the page's own CSS; Glass.morph.motion() reads it,
+       Glass.morph.motion(n) sets it (a setting of the site, a test) */
+    let MOTION = 0, motionAt = 0, BAD = 0, GOOD = 0, gauging = false;
+    try { MOTION = Math.min(3, Math.max(0, parseInt(sessionStorage.getItem('g-motion'), 10) || 0)); } catch (e) { /* storage off */ }
+    const motionMark = () => { const r = document.documentElement; if (MOTION) r.setAttribute('data-g-motion', String(MOTION)); else r.removeAttribute('data-g-motion'); };
+    function setMotion(m) {
+      m = Math.min(3, Math.max(0, m | 0)); BAD = GOOD = 0; motionAt = performance.now();
+      if (m === MOTION) return;
+      MOTION = m; motionMark();
+      try { if (m) sessionStorage.setItem('g-motion', String(m)); else sessionStorage.removeItem('g-motion'); } catch (e) { /* storage off */ }
+    }
+    if (MOTION) motionMark();
+    /* the step an update plays at (at 3, once a minute, 2: a try) */
+    const motion = () => MOTION === 3 && !gauging && performance.now() - motionAt > 60000 ? 2 : MOTION;
+    const tame = (o, m) => m >= 2 ? Object.assign({}, o, { leave: false, move: false, reel: false, height: false }) : m === 1 ? Object.assign({}, o, { reel: false, height: false }) : o;
+    function gauge(ms, probe) {
+      if (gauging || quiet()) return;
+      gauging = true;
+      let from = 0, frames = 0;
+      const tick = t => {
+        if (quiet()) { gauging = false; return; }   /* hidden meanwhile: it tells nothing */
+        if (!from) from = t; else frames++;
+        if (t - from < ms) return requestAnimationFrame(tick);
+        gauging = false;
+        const slow = frames < (t - from) / 33.4;   /* under 30 frames a second on the whole: one long frame (a script of the page, an ad) is not that */
+        if (probe) { if (slow) motionAt = performance.now(); else setMotion(2); return; }
+        if (slow) { GOOD = 0; if (++BAD >= 2) setMotion(MOTION + 1); }
+        else { BAD = 0; if (MOTION && ++GOOD >= 5) setMotion(MOTION - 1); }
+      };
+      requestAnimationFrame(() => requestAnimationFrame(tick));   /* past the update's own frames */
+    }
     /* in the viewport and with a size: one getBoundingClientRect per element, the reads go in a batch */
     const onScreen = r => !!(r.width || r.height) && r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth;
     const inView = el => onScreen(el.getBoundingClientRect());
@@ -468,6 +506,7 @@
           const waveOf = e => { const p = at.get(e); return p ? ctx.wave(p[0], p[1]) : 0; };
           if (ctx.ghosts.length) placed(ghost(ctx.ghosts, ctx.run, ctx.until, ctx.wave), kept);
           if (ctx.onWrite) ctx.onWrite();
+          if (enter.length || glide.length || away.length || ctx.ghosts.length || flash.length || ctx.words.length || ctx.reels) gauge(Math.max(end, ctx.reels ? T.reel : 0, 300), ctx.probe);   /* does the browser keep up with it */
           scope.forEach(s => s.removeAttribute('data-g-measure'));   /* the reads are done: what is out of the viewport is skipped again in the next frame */
           hidden.forEach(([, finish]) => finish());
           /* the box takes its new height smoothly, so what is below it does not jump (overflow clipped along Y meanwhile; X stays visible for the slides) */
@@ -513,21 +552,24 @@
     function morph(target, next, opts) {
       if (typeof target === 'string') target = document.querySelector(target);
       if (!target) return Promise.resolve(false);
-      if (quiet()) return patch(target, next, opts);
+      if (quiet() || motion() >= 3) return patch(target, next, opts);
       let T = null;
       return new Promise((resolve, reject) => afterPaint(Object.assign(() => { try { patch(target, next, opts, T).then(resolve, reject); } catch (e) { reject(e); } }, { pre: () => { T = timings(target); } })));
     }
     function patch(target, next, opts, tuned) {
       let o = opts || {};
       if (calm()) o = Object.assign({}, o, { leave: false, move: false, reel: false, height: false });   /* reduced motion: patched at once, the new and the changed fade in */
+      const m = motion();
+      o = tame(o, m);   /* a browser that does not keep up: less motion */
       if (typeof next === 'string') { const tmp = target.cloneNode(false); tmp.innerHTML = next; next = tmp; }
       if (!target.hasAttribute('data-g-no-enter')) target.setAttribute('data-g-no-enter', '');   /* the morph brings in its own new rows: the generic entrance of .g-list rows stays out */
       $$('.g-reel, .g-morph-word', target).forEach(b => { if (b._finish) b._finish(); });
       $$('.g-morph-ghost', target).forEach(e => { if (e._done) e._done(); else e.remove(); });   /* what was fading out of the last update is gone now */   /* a board that still turns is the plain number now, marked words plain text */
       const prev = target._morph;
       if (prev) { clearTimeout(prev.timer); prev.leaving.forEach(e => { e.classList.remove('g-morph-leave'); e.style.animationDelay = ''; }); prev.resolve(false); target._morph = null; }
-      const T = tuned || timings(target), play = !quiet();
+      const T = tuned || timings(target), play = !quiet() && m < 3;
       const ctx = stage(target, o, T, play);
+      ctx.probe = m !== MOTION;
       return new Promise(resolve => {
         const gone = [], moved = new Set(), g = globalPairs(target, next, o), roots = { old: target, next };
         G = g; R = roots;
@@ -774,7 +816,8 @@
          shows what came under the still pointer. It is not a change of the content: nothing is animated, it is only read again (the scroll
          that stops reads all anyway). The same write at another time animates as ever */
       if (performance.now() - SCROLL_AT < 200) { fits(); stale(W); return; }
-      if (quiet()) { fits(); settle(W, 0); return; }   /* a hidden page draws nothing: only where things stand is read again */
+      const m = motion();
+      if (quiet() || m >= 3) { fits(); settle(W, 0); return; }   /* a hidden page draws nothing (nor one that does not keep up): only where things stand is read again */
       /* thousands of elements put in or taken out at once that are most of the box (a long table written anew) are a new picture, not a move:
          not animated, only read again - every frame of it would lay out and paint the thousands of rows (sanstv.ru/admin/online, 4000 rows
          refreshed every 5 s: frames of 0.4-0.7 s in a row, 2.3 s for the refresh). A page that puts in only what changed is animated */
@@ -824,8 +867,10 @@
       if (!gone.length && !fresh.length && !retext.length && !shownRows.length && ![...came].some(n => W.cache.has(n))) { fits(); stale(W); return; }   /* nothing that shows (a text that is the same again) */
       let o = {};
       if (calm()) o = { leave: false, move: false, reel: false, height: false };
+      o = tame(o, m);   /* a browser that does not keep up: less motion */
       if (W.page) o.height = false;   /* the page has no box to grow: what is below a change glides */
-      const T = W.T || timings(box), ctx = stage(box, o, T, true);   /* its tuning as read when it settled: read now, after the page's write, it would work the styles out once more */
+      const T = W.T || timings(box), ctx = stage(box, o, T, true);
+      ctx.probe = m !== MOTION;   /* its tuning as read when it settled: read now, after the page's write, it would work the styles out once more */
       /* what was passing from the last update where this one changes is over now: the text of an element whose text changes, what fades out of a
          parent that changes (a change elsewhere does not cut what plays there) */
       texts.forEach(e => $$('.g-reel, .g-morph-word', e).forEach(b => { if (b._finish) b._finish(); }));
@@ -940,6 +985,7 @@
         const floats = p => { if (!p || p === box) return false; if (fl.has(p)) return fl.get(p); const q = getComputedStyle(p).position, v = q === 'fixed' || (q === 'absolute' && p.parentElement === box) || floats(p.parentElement); fl.set(p, v); return v; };
         ctx.floats = floats;
       }
+      ctx.reels = boards.length;
       ctx.onRead = () => snapshot(W);
       ctx.onWrite = () => { const writes = boards.map(b => b._arm()); writes.forEach(w => w()); };   /* the boards take their size after the reads (and after the ghosts are checked against them): all read, then all write */
       ctx.flush();   /* the ghosts go in there, after its reads */
@@ -976,6 +1022,7 @@
     morph.busy = () => { const now = performance.now(); for (const W of WATCHED.values()) if (W.busy > now) return true; return false; };
     morph.busyUntil = () => { let t = 0; for (const W of WATCHED.values()) t = Math.max(t, W.busy); return t; };   /* when what plays now is over (performance.now() time) */
     morph.watching = n => { for (const b of WATCHED.keys()) if (b.contains(n)) return true; return false; };
+    morph.motion = n => { if (n != null) setMotion(n); return MOTION; };   /* the step of motion (see gauge): read, or set */
     return morph;
   })();
   kit.morph = morph;
