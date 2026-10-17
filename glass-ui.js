@@ -1361,9 +1361,10 @@
     const named = (f, name) => fieldsOf(f).find(e => e.name === name);
     const same = (a, b) => (a.type === 'checkbox' || a.type === 'radio') ? a.checked === b.checked : a.value === b.value;
     /* a field of a copy -> the field of the form it stands for, which takes its value; null: the form has no such field */
+    /* the copy's field t writes the form's field; the page hears it (input, change), the form does not take that change for a choice of its own: the copy's event says when to ask */
     function lead(t) {
       const m = named(form, t.name);
-      if (m && !same(m, t)) { if (t.type === 'checkbox' || t.type === 'radio') m.checked = t.checked; else m.value = t.value; commit(m); }
+      if (m && !same(m, t)) { if (t.type === 'checkbox' || t.type === 'radio') m.checked = t.checked; else m.value = t.value; applying = true; commit(m); applying = false; }
       return m || null;
     }
     /* the copies follow the form; the field the user is typing in is left as it is, unless the address put the form back (all: back, forward, a link) */
@@ -1422,7 +1423,13 @@
         } else if (e.tagName === 'SELECT') {
           const opts = [...e.options];
           if (e.multiple) opts.forEach(o => { const on = vs.includes(o.value); if (o.selected !== on) { o.selected = on; changed.add(e); } });
-          else { const want = vs.length ? vs[0] : e.getAttribute('data-default'), i = Math.max(0, opts.findIndex(o => o.value === want)); if (e.selectedIndex !== i) { e.selectedIndex = i; changed.add(e); } }
+          else {
+            const want = vs.length ? vs[0] : e.getAttribute('data-default');
+            /* a list the server fills (data-load-list) holds only what was loaded: the value of the address is one more option of it */
+            if (want && e.hasAttribute('data-load-list') && !opts.some(o => o.value === want)) opts.push(e.appendChild(new Option(want, want)));
+            const i = Math.max(0, opts.findIndex(o => o.value === want));
+            if (e.selectedIndex !== i) { e.selectedIndex = i; changed.add(e); }
+          }
         } else {
           const n = seen.get(e.name) || 0, v = vs[n] !== undefined ? vs[n] : (e.getAttribute('data-default') || '');
           seen.set(e.name, n + 1);

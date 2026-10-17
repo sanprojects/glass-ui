@@ -446,6 +446,20 @@ test('a select that loads its list (data-load-list) has the busy line on the lis
   assert.deepEqual(errors, []);
 });
 
+test('a select that loads its list (data-load-list): the value of the address is chosen though the list was never loaded', async () => {
+  const pg = city => `<!doctype html><script defer src="/glass-ui.js"></script><main><form id="c" method="get" action="/sel"><select name="city" data-g-select data-load-list="/list"><option value="">Any</option>${city ? `<option value="${esc(city)}" selected>${esc(city)}</option>` : ''}</select></form><a id="go" href="/sel?city=lim">lim</a><p id="out">${esc(city) || '-'}</p></main>`;
+  await page.route(ORIGIN + '/sel**', route => route.fulfill({ contentType: 'text/html', body: pg(new URL(route.request().url()).searchParams.get('city') || '') }));
+  await page.goto(ORIGIN + '/sel');
+  await page.waitForFunction(() => window.Glass);
+  await page.click('#go');   // a link to an address of the form: the fields take it before the answer comes
+  await page.waitForFunction(() => document.querySelector('select[name=city]').value === 'lim');
+  await page.goBack(); await page.waitForTimeout(300);
+  assert.equal(await page.inputValue('select[name=city]'), '');
+  await page.goForward(); await page.waitForTimeout(300);
+  assert.equal(await page.inputValue('select[name=city]'), 'lim');
+  assert.deepEqual(errors, []);
+});
+
 test('a copy of the form (the box in the header): kept in step both ways, typing in it is the form\'s, its Enter is the form\'s submit', async () => {
   const ping = host => `<!doctype html><title>ping ${esc(host)}</title><script defer src="/glass-ui.js"></script><script defer src="/glass-morph.js"></script><nav><form id="h" action="/ping/{host}"><input name="host" type="search" value="${esc(host)}"></form></nav><main id="m"><form id="f" method="get" action="/ping/{host}"><input name="host" value="${esc(host)}"><label><input type="checkbox" name="v6" value="1"> v6</label><button>Ping</button></form><pre id="out">${esc(host) || '-'}</pre></main>`;
   await page.route(ORIGIN + '/ping**', route => { const u = new URL(route.request().url()); requests.push({ url: u.pathname + u.search, fetchMode: route.request().headers()['x-g-fetch'] === '1' }); return route.fulfill({ contentType: 'text/html', body: ping(decodeURIComponent(u.pathname.split('/')[2] || '')) }); });
@@ -471,6 +485,21 @@ test('a copy of the form (the box in the header): kept in step both ways, typing
   await page.goBack(); await page.waitForTimeout(300);
   assert.equal(await page.inputValue('#h input'), 'a.orgu');   // back puts the copy back too
   assert.equal(await page.inputValue('#f input[name=host]'), 'a.orgu');
+  assert.deepEqual(errors, []);
+});
+
+test('a copy of a form with no button: typing in it is one request after the pause, not one per key', async () => {
+  const age = d => `<!doctype html><title>age ${esc(d)}</title><script defer src="/glass-ui.js"></script><script defer src="/glass-morph.js"></script><nav><form id="h" action="/age/{date}"><input name="date" type="search" value="${esc(d)}"></form></nav><main id="m"><form id="f" method="get" action="/age/{date}"><input name="date" value="${esc(d)}"></form><pre id="out">${esc(d) || '-'}</pre></main>`;
+  await page.route(ORIGIN + '/age**', route => { const u = new URL(route.request().url()); requests.push({ url: u.pathname + u.search, fetchMode: route.request().headers()['x-g-fetch'] === '1' }); return route.fulfill({ contentType: 'text/html', body: age(decodeURIComponent(u.pathname.split('/')[2] || '')) }); });
+  await page.goto(ORIGIN + '/age/1986');
+  await page.waitForFunction(() => window.Glass);
+  await page.click('#h input');
+  await page.keyboard.press('End');
+  await page.keyboard.type('.03.08');
+  assert.equal(await page.inputValue('#f input[name=date]'), '1986.03.08');
+  await page.waitForTimeout(700);
+  assert.deepEqual(fetches().map(r => r.url), ['/age/1986.03.08']);
+  await page.waitForFunction(() => document.getElementById('out').textContent === '1986.03.08');   /* the morph turns the text over a moment */
   assert.deepEqual(errors, []);
 });
 
