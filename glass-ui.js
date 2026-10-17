@@ -1300,6 +1300,8 @@
    *                                that hold the change, so the rest of <main> and what other scripts put there stay as they are. <title>, canonical and
    *                                description follow; the scripts that came in run. A change outside every element with an id, an error or an answer that is not
    *                                HTML: the page is loaded the usual way. Back to an address seen before: no request.
+   *                                The scripts of an answer run once it is in; <html data-g-script-types="text/delayscript"> names the types a site gives
+   *                                its inline scripts to run them later itself (they are run as scripts too).
    *                                When the user changed the form (typed, chose, cleared, sent) the request also says X-G-Form: <its id>: the form on the
    *                                page is what the answer would draw, so the server may send it back empty as <form id="..." data-g-same>, with only its
    *                                <output> elements (results, put in by id) and hidden fields (put in by name). Not after a link or back / forward.
@@ -1483,10 +1485,14 @@
       x.forEach((e, i) => { if (!differ(e, y[i], out)) out.push(y[i]); });
       return true;
     }
+    /* <html data-g-script-types="text/delayscript">: the types a site gives its scripts to run them later itself are scripts too */
+    const extraTypes = () => (document.documentElement.getAttribute('data-g-script-types') || '').split(/\s+/).filter(Boolean);
+    const runnable = s => !s.type || /javascript|module/i.test(s.type) || extraTypes().includes(s.type);
     function runScripts(list) {   /* a script that came with markup does not run: a new one with the same source and attributes does, in order */
       return list.reduce((p, s) => p.then(() => {
         const n = document.createElement('script');
         [...s.attributes].forEach(a => n.setAttribute(a.name, a.value));
+        if (extraTypes().includes(s.type)) n.removeAttribute('type');
         if (!s.src) { n.textContent = s.textContent; document.head.appendChild(n); n.remove(); return; }
         n.async = false;
         return new Promise(done => { n.onload = n.onerror = done; document.head.appendChild(n); });
@@ -1525,7 +1531,7 @@
       if (t) document.title = t.textContent;
       [['link[rel=canonical]', 'href'], ['meta[name=description]', 'content']].forEach(([s, a]) => { const o = document.head.querySelector(s), n = doc.querySelector(s); if (o && n) o.setAttribute(a, n.getAttribute(a)); });
       live.forEach(([l, n]) => {
-        const run = $$('script', n).filter(s => (!s.type || /javascript|module/i.test(s.type)) && !s.closest('[data-g-part]'));   /* a script's part is not put in (glass-morph): nor is its script run */
+        const run = $$('script', n).filter(s => runnable(s) && !s.closest('[data-g-part]'));   /* a script's part is not put in (glass-morph): nor is its script run */
         morph(l, n, sent || same.length ? { keep: e => e === sent || (!!e.id && same.includes(e.id)) } : undefined).then(() => { init(l); return runScripts(run); });   /* a form sent back as it is stays as it is, inside a region that changes too */
       });
       let wrote = false;

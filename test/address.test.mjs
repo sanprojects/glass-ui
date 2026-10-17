@@ -484,3 +484,14 @@ test('data-g-delay: the pause in typing before the request', async () => {
   await page.waitForTimeout(800);
   assert.deepEqual(fetches().map(r => decodeURIComponent(r.url)), ['/find/котик']);
 });
+
+test('data-g-script-types: a script of a type the site runs itself runs with the answer, back to the first address too', async () => {
+  const pg = host => `<!doctype html><html data-g-script-types="text/later"><title>p ${esc(host)}</title><script defer src="/glass-ui.js"></script><script defer src="/glass-morph.js"></script><main id="m"><form method="get" action="/p/{host}"><input name="host" value="${esc(host)}"></form><section id="out"><script type="text/later">window.got = (window.got || []).concat('${esc(host)}')</script></section></main></html>`;
+  await page.route(ORIGIN + '/p/**', route => { const u = new URL(route.request().url()); return route.fulfill({ contentType: 'text/html', body: pg(decodeURIComponent(u.pathname.split('/')[2] || '')) }); });
+  await page.goto(ORIGIN + '/p/a');
+  await page.waitForFunction(() => window.Glass);
+  await page.fill('input[name=host]', 'b');
+  await page.waitForTimeout(700);
+  await page.goBack(); await page.waitForTimeout(300);
+  assert.deepEqual(await page.evaluate(() => window.got), ['b', 'a']);   // the page's own script of the first address (its runner, not the kit, ran it on load: not here)
+});
