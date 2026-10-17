@@ -503,6 +503,23 @@ test('a copy of a form with no button: typing in it is one request after the pau
   assert.deepEqual(errors, []);
 });
 
+test('an edit whose first key leaves the address as it is (a field the server filled, cleared): the typing after it is still an entry of its own', async () => {
+  await page.goto(ORIGIN + '/find');
+  await page.waitForFunction(() => window.Glass);
+  await page.evaluate(() => { document.querySelector('input[name=word]').value = 'кот'; });   // the server's default, not in the address
+  const len = await page.evaluate(() => history.length);
+  await page.click('input[name=word]');
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.press('Backspace');
+  assert.equal(await path_(), '/find');
+  await page.keyboard.type('лес');
+  assert.equal(await path_(), '/find/лес');
+  assert.equal(await page.evaluate(() => history.length), len + 1);
+  await settle();
+  await page.goBack(); await page.waitForTimeout(300);
+  assert.equal(await path_(), '/find');
+});
+
 test('data-g-delay: the pause in typing before the request', async () => {
   await page.evaluate(() => document.querySelector('input[name=word]').setAttribute('data-g-delay', '1200'));
   await page.click('input[name=word]');

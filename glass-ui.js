@@ -1644,8 +1644,8 @@
     }
     document.addEventListener('input', e => {
       if (!isText(e.target) || !step(e)) return;   /* a box or a select: its change */
-      const url = write(!editing);
-      editing = true;
+      const was = here(), url = write(!editing);
+      if (url !== was) editing = true;   /* the edit's entry is made by the first key that changes the address: a key that leaves it as it is (a field the server filled, cleared) made none */
       schedule(url, delayOf(e.target));
     });
     document.addEventListener('change', e => {
