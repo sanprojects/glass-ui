@@ -1577,7 +1577,8 @@
     });
     document.addEventListener('click', e => {
       if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || !ready()) return;
-      const a = e.target.closest && e.target.closest('a[href]');
+      /* a link inside a shadow root (a widget on the page) is seen from here as its host: the click's own path has the link */
+      const a = (e.composedPath ? e.composedPath().find(n => n.tagName === 'A' && n.hasAttribute && n.hasAttribute('href')) : null) || (e.target.closest && e.target.closest('a[href]'));
       if (!a || (a.target && a.target !== '_self') || a.hasAttribute('download')) return;
       const u = new URL(a.href, location.href);
       if (u.hash && u.pathname + u.search === here()) return;   /* an anchor on this page */
