@@ -122,6 +122,11 @@
 .g-root, .g-scene, dialog, [popover], [role="menu"], [role="listbox"], .g-toasts, .g-tooltip { font-variant-numeric: tabular-nums; }
 .g-root, .g-scene { font-family: var(--g-font); font-size: var(--g-fs-body); line-height: 1.3; color: var(--g-text); -webkit-font-smoothing: antialiased; }   /* running text: the .g-prose size, so bare text in a div reads like a paragraph */
 [role="menu"], [role="listbox"], .g-toasts, .g-tooltip { font-family: var(--g-font); color: var(--g-text); }
+/* Text never runs out of its box. A word longer than the line breaks (anywhere: it also lets a flex / grid item shrink under it),
+ * and a flex / grid item may be narrower than its text (min-width: auto would keep it as wide as its longest word and push it out of the parent).
+ * A one-line part (button, option, cell, chip ...) cuts what does not fit with an ellipsis. Both rules have zero specificity: a class of your own wins. */
+:where(.g-root, .g-scene, dialog, [popover], [role="menu"], [role="listbox"], .g-toasts, .g-tooltip) { overflow-wrap: anywhere; }
+:where(.g-root *, .g-scene *) { min-width: 0; }
 .g-root, .g-scene, .g-root *, .g-root *::before, .g-root *::after,
 .g-scene *, .g-scene *::before, .g-scene *::after { box-sizing: border-box; }
 .g-scene { position: relative; background: #1b2a3f center/cover no-repeat; color-scheme: dark; }
@@ -262,6 +267,7 @@
   position: relative; display: inline-flex; align-items: center; justify-content: center; gap: var(--g-gap-inner);
   height: var(--h); padding: 0 var(--g-inset); border: 0; border-radius: var(--g-radius-pill);
   font: 500 var(--g-fs-subhead)/1 var(--g-font); letter-spacing: -.005em; white-space: nowrap; text-decoration: none; cursor: pointer;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis;   /* one line: a label longer than the box is cut, never runs out of the button */
   color: var(--g-text); background: var(--g-fill);
   backdrop-filter: var(--g-blur);
   box-shadow: var(--g-rim);
@@ -644,7 +650,7 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
  * Underline style: data-variant="underline" on the tablist. Selected tab: aria-selected="true". */
 :where(:is(.g-root,[role="listbox"]) [role="tablist"]) { display: inline-flex; gap: 4px; padding: 4px; border-radius: var(--g-radius-pill); max-width: 100%; overflow-x: auto; scrollbar-width: none;
   background: var(--g-fill-recessed); box-shadow: var(--g-recess); }
-:where(:is(.g-root,[role="listbox"]) [role="tablist"] > :is(button, [role="tab"])) { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: var(--g-gap-inner); height: calc(var(--g-h-md) - 8px); padding: 0 var(--g-inset); border: 0; border-radius: var(--g-radius-pill); background: transparent; color: var(--g-text-2); font: 400 var(--g-fs-subhead)/1 var(--g-font); cursor: pointer; white-space: nowrap; transition: background var(--g-dur), color var(--g-dur), box-shadow var(--g-dur); }
+:where(:is(.g-root,[role="listbox"]) [role="tablist"] > :is(button, [role="tab"])) { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: var(--g-gap-inner); height: calc(var(--g-h-md) - 8px); padding: 0 var(--g-inset); border: 0; border-radius: var(--g-radius-pill); background: transparent; color: var(--g-text-2); font: 400 var(--g-fs-subhead)/1 var(--g-font); cursor: pointer; white-space: nowrap; flex-shrink: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; transition: background var(--g-dur), color var(--g-dur), box-shadow var(--g-dur); }   /* the tablist scrolls, a tab keeps its width; one longer than the list is cut */
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) [role="tablist"] > :is(button, [role="tab"]):hover) { color: var(--g-text); } }
 :where(:is(.g-root,[role="listbox"]) [role="tablist"] > :is(button, [role="tab"])[data-g-hover]) { color: var(--g-text); }
 :where(:is(.g-root,[role="listbox"]) [role="tablist"] > :is(button, [role="tab"]), :is(.g-root,[role="listbox"]) nav a) { --g-icon-size: var(--g-icon-sm); }
