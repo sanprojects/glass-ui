@@ -7,6 +7,8 @@
  *
  *   <select data-g-select multiple>   -> multi-select: list stays open, toggles options, shows "A, B" or "3 selected"
  *   <select data-g-select>            -> glass dropdown (add data-searchable for a combobox filter)
+ *   <option value="bots">Bots <small>12</small></option> -> the markup of an option goes into the list and the trigger, as <selectedcontent> does; a <small> in it is a dimmed side note, such as a count
+ *     (give it a value: without one the value is the whole text, the count too). Options changed by a script are followed
  *   <select data-g-select data-searchable data-load-list="/url">  -> the options come from the server: GET /url?value=<typed text> returns [[text, value?], ...] (opens with value=""; the empty <option> is the "any" row, labelled data-clear-label)
  *   (automatic) every text <input> in a .g-field gets this cross; data-g-no-clear on the input or a container turns it off. Written by hand:
  *   <input pattern="…" data-error="Message" required>  -> checks in a .g-field: pattern as you type; empty required after leaving / on submit (data-error-required); red control + message under it
@@ -186,6 +188,7 @@
     const optOf = d => mem(d, 'o');   // an option element of the list -> its <option>
     const visible = () => opts.filter(d => !d.hidden && !isDisabled(d));
     const placeholder = () => sel.querySelector('option[value=""]')?.textContent.trim() || data(sel, 'placeholder', 'Select…');
+    const copy = o => [...o.childNodes].map(n => n.cloneNode(true));   // an option as it is written: its text and its markup
 
     const url = sel.getAttribute('data-load-list'); let seq = 0, timer = 0;   /* remote options: the server filters, the kit only draws */
     function build() {   // the options are read from the <select> each time it opens
@@ -193,7 +196,7 @@
       $$('option', sel).forEach((o, i) => {
         if (o.hidden || (o.value === '' && !(url && search))) return;
         const d = attrs(el('div'), { id: id + '-o' + i, role: 'option', tabindex: -1 });
-        d.textContent = o.value === '' ? data(sel, 'clear-label', '—') : o.textContent; if (o.disabled) d.setAttribute('aria-disabled', 'true');
+        if (o.value === '') d.textContent = data(sel, 'clear-label', '—'); else d.append(...copy(o)); if (o.disabled) d.setAttribute('aria-disabled', 'true');
         mem(d, 'o', o); mem(d, 'label', o.textContent.toLowerCase());
         holder.appendChild(d); opts.push(d);
       });
@@ -201,7 +204,8 @@
     }
     function paint() {   // the trigger text and the selected marks
       const on = $$('option', sel).filter(o => o.selected && o.value !== ''), ph = !on.length;
-      valueEl.textContent = ph ? placeholder() : !multi ? on[0].textContent : on.length > 2 ? on.length + ' ' + data(sel, 'selected-label', 'selected') : on.map(o => o.textContent).join(', ');
+      if (ph || on.length > 2) valueEl.textContent = ph ? placeholder() : on.length + ' ' + data(sel, 'selected-label', 'selected');
+      else valueEl.replaceChildren(...on.flatMap((o, i) => i ? [', ', ...copy(o)] : copy(o)));
       valueEl.classList.toggle('is-placeholder', ph);
       opts.forEach(d => aria(d, 'selected', optOf(d).selected && !ph));
     }
@@ -267,6 +271,14 @@
     if (search) ['input', 'change'].forEach(t => search.addEventListener(t, e => { e.stopPropagation(); if (t === 'input') filter(); }));   /* the filter text is not a field of the form: its events stay here, so a form that submits on input does not see it */
     trigger.disabled = sel.disabled;
     build();
+    /* options changed by a script (a count in them, another list): the trigger follows at once, an open list is built again with the same option active.
+       A list from the server builds itself (load) */
+    if (window.MutationObserver) new MutationObserver(() => {
+      if (!isOpen()) { paint(); return; }
+      if (url) return;
+      const was = opts[active] && optOf(opts[active]);
+      build(); if (search) filter(); setActive(opts.find(d => optOf(d) === was) || null);
+    }).observe(sel, { childList: true, subtree: true, characterData: true });
   }
   (() => {   // delegated select events
     const stOf = (node, q) => { const n = node.closest(q); return n && mem(n, 'st'); };

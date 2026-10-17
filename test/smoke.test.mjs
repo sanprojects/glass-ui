@@ -46,6 +46,29 @@ test('select: opens as a listbox and picks an option', async () => {
   assert.equal(await page.evaluate(() => document.getElementById('s-role').value), 'Designer');
 });
 
+test('select: the markup of an option (a dimmed count) goes into the list and the trigger, and follows a script that changes it', async () => {
+  const r = await page.evaluate(async () => {
+    const tick = () => new Promise(res => setTimeout(res, 0));
+    const box = document.createElement('div'); box.className = 'g-root'; document.body.appendChild(box);
+    const sel = document.createElement('select'); sel.setAttribute('data-g-select', ''); box.appendChild(sel);
+    [['u', 'Users', 3], ['b', 'Bots', 5]].forEach(([v, t, n]) => { const o = new Option('', v), s = document.createElement('small'); s.textContent = n; o.append(t + ' ', s); sel.appendChild(o); });   /* by script: an older parser drops tags in an <option> */
+    Glass.init(box);
+    const value = box.querySelector('.g-select__value'), first = value.innerHTML;
+    const dimmed = getComputedStyle(value.querySelector('small')).color !== getComputedStyle(value).color;
+    sel.options[0].querySelector('small').textContent = '4'; await tick();
+    const closed = value.innerHTML;
+    const trigger = box.querySelector('.g-select__trigger'), lb = document.getElementById(trigger.getAttribute('aria-controls'));   /* the open list is a popover */
+    trigger.click(); await tick();
+    const list = [...lb.querySelectorAll('[role="option"]')].map(d => d.innerHTML);
+    sel.options[1].querySelector('small').textContent = '6'; await tick();
+    const open = [...lb.querySelectorAll('[role="option"]')].map(d => d.innerHTML);
+    trigger.click();
+    box.remove();
+    return { first, dimmed, closed, list, open };
+  });
+  assert.deepEqual(r, { first: 'Users <small>3</small>', dimmed: true, closed: 'Users <small>4</small>', list: ['Users <small>4</small>', 'Bots <small>5</small>'], open: ['Users <small>4</small>', 'Bots <small>6</small>'] });
+});
+
 test('table: rows select, Clear empties the selection', async () => {
   const t = page.locator('table[data-g-selectable]').first();
   await t.scrollIntoViewIfNeeded();

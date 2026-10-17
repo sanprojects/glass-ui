@@ -517,6 +517,8 @@ span.g-input-end { right: var(--g-inset); width: var(--g-icon-md); height: var(-
 [role="option"].is-active { background: var(--g-fill-strong); }
 [role="option"][hidden] { display: none; }   /* filtered out by the search field */
 [role="option"] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }   /* an option never wraps: what does not fit ends with an ellipsis (its text shows as a tooltip) */
+/* a side note after the text of an option, such as a count: <option value="bots">Bots <small>12</small></option>. The same size, dimmed, in the list and in the trigger */
+:is([role="option"], .g-select__value) small { font-size: inherit; line-height: inherit; font-weight: 400; color: var(--g-text-3); }
 @media (hover: hover) { [role="menu"] > :is(button, a, [role="menuitem"]):hover, [role="option"]:hover { background: var(--g-fill-strong); } }
 [role="menu"] > [aria-current="true"] { background: var(--g-fill-selected); }
 [role="menu"] > :is(button, a, [role="menuitem"]) { --g-icon-size: var(--g-icon-md); --g-icon-color: var(--g-text-2); }
