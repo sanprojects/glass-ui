@@ -445,3 +445,42 @@ test('a select that loads its list (data-load-list) has the busy line on the lis
   assert.deepEqual(await busyBoxes(), []);
   assert.deepEqual(errors, []);
 });
+
+test('a copy of the form (the box in the header): kept in step both ways, typing in it is the form\'s, its Enter is the form\'s submit', async () => {
+  const ping = host => `<!doctype html><title>ping ${esc(host)}</title><script defer src="/glass-ui.js"></script><script defer src="/glass-morph.js"></script><nav><form id="h" action="/ping/{host}"><input name="host" type="search" value="${esc(host)}"></form></nav><main id="m"><form id="f" method="get" action="/ping/{host}"><input name="host" value="${esc(host)}"><label><input type="checkbox" name="v6" value="1"> v6</label><button>Ping</button></form><pre id="out">${esc(host) || '-'}</pre></main>`;
+  await page.route(ORIGIN + '/ping**', route => { const u = new URL(route.request().url()); requests.push({ url: u.pathname + u.search, fetchMode: route.request().headers()['x-g-fetch'] === '1' }); return route.fulfill({ contentType: 'text/html', body: ping(decodeURIComponent(u.pathname.split('/')[2] || '')) }); });
+  await page.goto(ORIGIN + '/ping/a.org');
+  await page.waitForFunction(() => window.Glass);
+  await page.check('#f input[name=v6]');   // the form has a button: its own fields wait for it
+  await page.click('#h input');
+  await page.keyboard.press('End');
+  await page.keyboard.type('u');   // the copy has none: it answers as it is typed in
+  assert.equal(await path_(), '/ping/a.orgu?v6=1');
+  assert.equal(await page.inputValue('#f input[name=host]'), 'a.orgu');
+  await page.waitForTimeout(700);
+  assert.deepEqual(fetches().map(r => r.url), ['/ping/a.orgu?v6=1']);
+  assert.equal(await page.textContent('#out'), 'a.orgu');
+  assert.equal(await page.inputValue('#h input'), 'a.orgu');   // the box typed in keeps what is typed
+  await page.fill('#f input[name=host]', 'b.org');   // the form's field: the copy follows
+  assert.equal(await page.inputValue('#h input'), 'b.org');
+  await page.click('#h input');
+  await page.keyboard.press('Enter');   // Enter in the copy: the form's submit, at once
+  await page.waitForTimeout(300);
+  assert.deepEqual(fetches().map(r => r.url), ['/ping/a.orgu?v6=1', '/ping/b.org?v6=1']);
+  assert.equal(await page.textContent('#out'), 'b.org');
+  await page.goBack(); await page.waitForTimeout(300);
+  assert.equal(await page.inputValue('#h input'), 'a.orgu');   // back puts the copy back too
+  assert.equal(await page.inputValue('#f input[name=host]'), 'a.orgu');
+  assert.deepEqual(errors, []);
+});
+
+test('data-g-delay: the pause in typing before the request', async () => {
+  await page.evaluate(() => document.querySelector('input[name=word]').setAttribute('data-g-delay', '1200'));
+  await page.click('input[name=word]');
+  await page.keyboard.press('End');
+  await page.keyboard.type('ик');
+  await page.waitForTimeout(700);
+  assert.deepEqual(fetches().map(r => decodeURIComponent(r.url)), []);   // past the kit's 350 ms, before the field's 1200
+  await page.waitForTimeout(800);
+  assert.deepEqual(fetches().map(r => decodeURIComponent(r.url)), ['/find/котик']);
+});

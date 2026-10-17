@@ -1290,7 +1290,11 @@
    *                                a history entry, the next ones replace it), a choice (select, box, a step of a number) is an entry of its own. A form with a
    *                                submit button (a slow or not idempotent action: ping, a random pick) waits for it: each submit is an entry and is asked
    *                                anew. The clear cross of a field is one more button: the answer with that field empty comes at once. Back / forward
-   *                                and an address opened by a link put the fields back.
+   *                                and an address opened by a link put the fields back. data-g-delay="2000" on the form or a field: the pause in typing
+   *                                before the request (a slow answer: a real ping), instead of the kit's 350 ms.
+   *   copies                       another GET form with the same action (the box in the header that repeats a field of the form in <main>) is a copy:
+   *                                its fields stand for the fields of the form with the same name and are kept in step with them both ways. Typing in it,
+   *                                a choice in it and its submit are the form's; a copy with no submit button answers as it is typed in, as the form does.
    *   answer                       GET of the same address with the header X-G-Fetch: 1 (the server may answer with just <title> and <main>): after a pause in
    *                                typing, at once for a choice or a submit. What differs from the last answer is morphed in (Glass.morph): the smallest elements with an id
    *                                that hold the change, so the rest of <main> and what other scripts put there stay as they are. <title>, canonical and
@@ -1313,7 +1317,7 @@
     const TEXT = /^(text|search|email|tel|url|number|password)$/;
     const cache = new Map();   /* address -> Promise of { url, html } */
     const theirs = new WeakSet();   /* forms whose submit a script of the page cancelled: that script runs them */
-    let form = null, tpl = null, live = true, snap = null, ctl = null, timer = 0, editing = false, applying = false, shown = '', pending = '', restored = '';
+    let form = null, tpl = null, live = true, copies = [], snap = null, ctl = null, timer = 0, editing = false, applying = false, shown = '', pending = '', restored = '';
     const here = () => location.pathname + location.search;
     const enc = v => encodeURIComponent(v);
     const dec = v => { try { return decodeURIComponent(v); } catch (_) { return v; } };
@@ -1336,17 +1340,38 @@
       const t = template(f), p = location.pathname;
       return t && (!t.base || p === t.base || p.startsWith(t.base + '/')) ? t : null;
     }
+    const hasButton = f => [...f.elements].some(e => e.type === 'submit' || e.type === 'image');   /* a <button> with no type is a submit button */
+    const sameTpl = (a, b) => !!a && !!b && a.base === b.base && a.vars.join('/') === b.vars.join('/');
     function bind() {
-      form = tpl = null;
+      form = tpl = null; copies = [];
       for (const f of [...$$('main form'), ...$$('form')]) {   /* the form of <main> first */
         const t = pageForm(f, 'get');
         if (t) {
           form = f; tpl = t;
-          live = ![...f.elements].some(e => e.type === 'submit' || e.type === 'image');   /* a <button> with no type is a submit button */
+          live = !hasButton(f);
+          copies = $$('form').filter(c => c !== f && sameTpl(pageForm(c, 'get'), t));
           return true;
         }
       }
       return false;
+    }
+    const liveOf = f => f === form ? live : !hasButton(f);
+    const named = (f, name) => fieldsOf(f).find(e => e.name === name);
+    const same = (a, b) => (a.type === 'checkbox' || a.type === 'radio') ? a.checked === b.checked : a.value === b.value;
+    /* a field of a copy -> the field of the form it stands for, which takes its value; null: the form has no such field */
+    function lead(t) {
+      const m = named(form, t.name);
+      if (m && !same(m, t)) { if (t.type === 'checkbox' || t.type === 'radio') m.checked = t.checked; else m.value = t.value; commit(m); }
+      return m || null;
+    }
+    /* the copies follow the form; the field the user is typing in is left as it is, unless the address put the form back (all: back, forward, a link) */
+    function mirror(all) {
+      copies.forEach(c => fieldsOf(c).forEach(e => {
+        const m = (all || e !== document.activeElement) && named(form, e.name);
+        if (!m || same(e, m)) return;
+        if (e.type === 'checkbox' || e.type === 'radio') e.checked = m.checked; else e.value = m.value;
+        commit(e);
+      }));
     }
     const ready = () => (form && form.isConnected) || bind();
     function atDefault(e) {
@@ -1403,6 +1428,7 @@
         }
       }
       changed.forEach(commit);   /* the kit's select, stepper and cross, and the page, see the new values */
+      mirror(true);
       applying = false;
     }
     /* the fields, kept in the history entry: back to an address this form cannot read (an old format, a default the server picked) still restores them */
@@ -1411,6 +1437,7 @@
     function write(push) {
       const url = address();
       history[push && url !== here() ? 'pushState' : 'replaceState'](remember(), '', url);
+      if (!applying) { applying = true; mirror(); applying = false; }
       return url;
     }
     /* mine: the user changed this form (typed, chose, cleared, sent): it stands as the answer would draw it, so the request names it (X-G-Form: its id)
@@ -1545,7 +1572,7 @@
         fire(document, 'g:navigate', { url: new URL(shown, location.href).href, title: document.title });
       }, () => { if (ctl === c) { ctl = null; pending = ''; go(); } });
     }
-    const schedule = url => { clearTimeout(timer); if (url === shown || !own(url)) timer = setTimeout(() => load(url, false, true, true), DELAY); };   /* the page's own answer: at once */
+    const schedule = (url, ms) => { clearTimeout(timer); if (url === shown || !own(url)) timer = setTimeout(() => load(url, false, true, true), ms || DELAY); };   /* the page's own answer: at once */
     /* A POST form of this page is sent in the background too: what is typed, the focus and the scroll stay. The address stays (an answer that redirects
        to this page puts the new address into the history; one that redirects elsewhere is loaded there); a newer submit of the form cancels the older
        one. An error, an answer that is not HTML (a file): the browser sends the form itself, as it would without the kit. */
@@ -1573,7 +1600,21 @@
         });
       }).catch(err => { if (err && err.name !== 'AbortError') native(); });
     }
-    const ours = e => !applying && ready() && e.target.form === form && e.target.name;
+    /* the field of the form an event of the page is about: one of the form, or the one a field of a copy stands for; null: not this form's */
+    function ours(e) {
+      const t = e.target;
+      if (applying || !t || !t.name || !ready()) return null;
+      if (t.form === form) return t;
+      return copies.includes(t.form) && t.isConnected ? lead(t) : null;
+    }
+    /* the fields are kept in step whether or not the form answers as it is typed in; true: it does, the event is the form's to answer */
+    function step(e) {
+      const f = e.target.form;
+      if (!f || !ours(e)) return false;
+      if (f === form) { applying = true; mirror(); applying = false; }
+      return liveOf(f);
+    }
+    const delayOf = t => +((t.closest && t.closest('[data-g-delay]')) || { getAttribute: () => 0 }).getAttribute('data-g-delay') || DELAY;
 
     const hasGet = bind();
     if (!hasGet && !$$('main form').some(f => pageForm(f, 'post'))) return;
@@ -1589,13 +1630,13 @@
       cache.set(shown, Promise.resolve({ url: shown, html: d.documentElement.outerHTML }));
     }
     document.addEventListener('input', e => {
-      if (!live || !ours(e) || !isText(e.target)) return;   /* a box or a select: its change */
+      if (!isText(e.target) || !step(e)) return;   /* a box or a select: its change */
       const url = write(!editing);
       editing = true;
-      schedule(url);
+      schedule(url, delayOf(e.target));
     });
     document.addEventListener('change', e => {
-      if (!live || !ours(e)) return;
+      if (!step(e)) return;
       const url = write(!isText(e.target) || !e.isTrusted);   /* a choice is an entry (a value a script put in too); the end of an edit is the entry the edit made */
       editing = false;
       load(url, false, false, true);
@@ -1606,11 +1647,20 @@
       const b = e.target.closest && e.target.closest('[data-g-clear-input]'), i = b && clearInput(b);
       if (!i || !ours({ target: i })) return;
       editing = false;
-      load(write(true), !live, false, true);
+      load(write(true), !liveOf(i.form), false, true);
     });
     /* on window, last: a script of the page that cancels the submit runs this form itself, and from then on it is left to that script */
     addEventListener('submit', e => {
       const f = e.target;
+      if (ready() && copies.includes(f)) {   /* a copy is sent as the form: its fields are the form's, the answer and the address are the form's */
+        if (e.defaultPrevented) return;
+        e.preventDefault();
+        fieldsOf(f).forEach(c => { if (named(form, c.name)) lead(c); });
+        const url = write(true);
+        editing = false;
+        load(url, !liveOf(f) || (e.isTrusted && !!e.submitter), false, true);
+        return;
+      }
       if (ready() && f === form) {
         if (e.defaultPrevented) {
           theirs.add(form); form = null;
