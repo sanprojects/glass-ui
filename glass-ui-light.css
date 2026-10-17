@@ -3,6 +3,7 @@
  * Activate with <html data-theme="light"> or Glass.setTheme('light' | 'dark' | 'auto'). Without this file the kit is dark only. */
 [data-theme="light"] {
   color-scheme: light;
+  --g-page-bg: #e8f6ff;
   --g-success-text: #12803f; --g-danger-text: #c4352d;
   --g-ov: 0,0,0; --g-ink: #1C1C1E; --g-ink-fg: #fff;
   --g-text: rgba(0,0,0,.88); --g-text-2: rgba(0,0,0,.70); --g-text-3: rgba(0,0,0,.56); --g-text-4: rgba(0,0,0,.42);

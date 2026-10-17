@@ -32,7 +32,9 @@
  *   <nav data-g-pager data-total="24" data-size="4" data-page="1"> -> pager
  *   <button data-size="sm" data-g-remove>Berlin</button>  -> removable chip: draws a × and removes itself on click (g:remove)
  *   <button data-size="sm" data-g-toggle aria-pressed="false">Design</button>  -> toggle chip
+ *   <button data-g-toggle data-icon="eye-off" aria-pressed="true" aria-label="Hide ticked"></button>  -> round icon toggle (the state is aria-pressed; the button fires a non-bubbling `change` after it flips)
  *   <button popovertarget="p"> + <aside popover id="p"> -> native popover panel (top layer, closes on outside click / Esc)
+ *   (automatic) touch hover: a finger on an element is a mouse over it ([data-g-hover] + mouseover/mouseenter for the page's handlers), lifted off it: no click; <html data-g-touch-hover="off"> turns it off
  *   title="…" on any element inside .g-root -> glass tooltip (data-tip-position="bottom" to show it below)
  *   data-icon="play" / data-icon-end="chevron-down" / data-icon="heart" on any element -> icon from glass-icons.css (Lucide subset, CSS masks; no JS involved)
  *   Glass.toast({ title, text, variant, duration })
@@ -351,7 +353,7 @@
   });
 
   /* ---------- Delegated behaviour: toggle button, removable button, dialog helpers (no per-element setup) ---------- */
-  on('click', '[data-g-toggle]', (e, p) => aria(p, 'pressed', p.getAttribute('aria-pressed') !== 'true'));
+  on('click', '[data-g-toggle]', (e, p) => { aria(p, 'pressed', p.getAttribute('aria-pressed') !== 'true'); p.dispatchEvent(new Event('change')); });   // `change` does not bubble: only a listener on the button hears it, a form's submit-on-change does not
   on('click', '[data-g-remove]', (e, x) => { fire(x, 'g:remove'); x.remove(); });
   /* Dialogs: <button command="show-modal" commandfor="dlg">, <button command="close" commandfor="dlg" value="ok">, <dialog closedby="any"> are native (focus returns by itself).
      Left for JS: the accessible name from the heading, the zoom-from-the-button origin, and a fallback for browsers without invoker commands / closedby. */
@@ -364,6 +366,11 @@
     const d = e.target, o = e.source;
     requestAnimationFrame(() => { const dr = d.getBoundingClientRect(), r = o.getBoundingClientRect(); d.style.transformOrigin = Math.round(r.left + r.width / 2 - dr.left) + 'px ' + Math.round(r.top + r.height / 2 - dr.top) + 'px'; });
   }, true);/* the command event does not bubble */
+  /* iOS: focusing a field scrolls the page to it and leaves it scrolled after the keyboard closes, even when the page is made not to scroll (body { overflow: hidden }):
+     the sticky bar stays, the content slides under it. A page that does not scroll is put back. */
+  const unscroll = () => { const s = document.scrollingElement; if (s && s.scrollTop && getComputedStyle(document.body).overflow === 'hidden') s.scrollTop = 0; };
+  document.addEventListener('focusout', () => setTimeout(unscroll, 100));
+  if (window.visualViewport) visualViewport.addEventListener('resize', unscroll);
   if (!('command' in HTMLButtonElement.prototype)) document.addEventListener('click', e => {
     const b = e.target.closest && e.target.closest('button[commandfor]'), d = b && document.getElementById(b.getAttribute('commandfor')); if (!d || !d.showModal) return;
     const c = b.getAttribute('command'); if (c === 'show-modal') d.showModal(); else if (c === 'close') d.close(b.value); else if (c === 'request-close') d.requestClose ? d.requestClose(b.value) : d.close(b.value);
@@ -1633,5 +1640,57 @@
     return { add(f) { subs.add(f); run(); return () => subs.delete(f); }, speed(v) { k = Math.max(0, +v || 0); } };
   })();
   global.Glass.scene = scene;
+
+  /* Touch hover. A finger on an element is a mouse over it: the element and its ancestors get [data-g-hover] (the kit's :hover rules have a twin with it) and the page gets
+     mouseover / mouseenter (and mouseout / mouseleave when the finger leaves or lifts), so hover handlers of the page (a preview, a highlight) run on a touch screen too.
+     The finger is not captured by the element it went down on: sliding it moves the hover. Lifted on the touched clickable thing: a click, as usual.
+     Lifted off it (or the touch became a scroll): no click. Safari's own mouse events after a tap are swallowed: they came late, and a hover handler changing the page
+     made iOS cancel the click. Off for a page: <html data-g-touch-hover="off"> */
+  (() => {
+    const off = () => document.documentElement.getAttribute('data-g-touch-hover') === 'off';
+    const CLICKABLE = 'a[href], button, summary, label, select, [role="button"], [role="link"], [role="tab"], [role="menuitem"], [role="option"], [role="checkbox"], [role="switch"], input:is([type="button"], [type="submit"], [type="reset"], [type="checkbox"], [type="radio"])';
+    let zone = null, kill = false, quietTill = 0, upAt = 0;
+    const chain = (el, rel) => { const a = []; for (; el && el.nodeType === 1; el = el.parentElement) if (!(rel && rel.nodeType === 1 && el.contains(rel))) a.push(el); return a; };
+    const fire = (el, type, rel, e) => el.dispatchEvent(new MouseEvent(type, { bubbles: type === 'mouseover' || type === 'mouseout', cancelable: true, view: window,
+      clientX: e.clientX, clientY: e.clientY, screenX: e.screenX, screenY: e.screenY, relatedTarget: rel && rel.nodeType === 1 ? rel : null }));
+    function zoneOf(el) {   // what the finger presses: a control, or the outermost box of a run of cursor:pointer (a word of a list with a click handler); none: plain content
+      const c = el.closest(CLICKABLE); if (c) return c;
+      if (el.closest('input, textarea, [contenteditable]') || getComputedStyle(el).cursor !== 'pointer') return null;
+      while (el.parentElement && el.parentElement !== document.body && getComputedStyle(el.parentElement).cursor === 'pointer') el = el.parentElement;
+      return el;
+    }
+    const touch = e => e.pointerType === 'touch' && e.isPrimary && !off();
+    addEventListener('pointerdown', e => {
+      if (!touch(e)) return;
+      const t = e.target; if (t.hasPointerCapture && t.hasPointerCapture(e.pointerId)) t.releasePointerCapture(e.pointerId);
+      kill = false; quietTill = Infinity; if (zone) zone.removeAttribute('data-g-touch');
+      zone = t.nodeType === 1 ? zoneOf(t) : null; if (zone) zone.setAttribute('data-g-touch', '');
+    }, true);
+    addEventListener('pointerover', e => {
+      if (!touch(e) || e.target.nodeType !== 1) return;
+      const add = chain(e.target, e.relatedTarget); add.forEach(n => n.setAttribute('data-g-hover', ''));
+      fire(e.target, 'mouseover', e.relatedTarget, e); add.reverse().forEach(n => fire(n, 'mouseenter', e.relatedTarget, e));
+    }, true);
+    addEventListener('pointerout', e => {
+      if (!touch(e) || e.target.nodeType !== 1) return;
+      const gone = chain(e.target, e.relatedTarget); gone.forEach(n => n.removeAttribute('data-g-hover'));
+      fire(e.target, 'mouseout', e.relatedTarget, e); gone.forEach(n => fire(n, 'mouseleave', e.relatedTarget, e));
+    }, true);
+    const end = e => {
+      if (!touch(e)) return;
+      upAt = performance.now(); quietTill = upAt + 800;
+      const at = e.type === 'pointerup' && document.elementFromPoint(e.clientX, e.clientY);
+      kill = e.type !== 'pointerup' || !!(zone && !(at && zone.contains(at)));
+      if (zone) { zone.removeAttribute('data-g-touch'); zone = null; }
+      document.querySelectorAll('[data-g-hover]').forEach(n => n.removeAttribute('data-g-hover'));   // a hover a lost pointerout left behind
+    };
+    addEventListener('pointerup', end, true); addEventListener('pointercancel', end, true);
+    ['mouseover', 'mouseout', 'mouseenter', 'mouseleave', 'mousemove'].forEach(t => addEventListener(t, e => {
+      if (e.isTrusted && performance.now() < quietTill) e.stopImmediatePropagation();
+    }, true));
+    addEventListener('click', e => {
+      if (kill && e.isTrusted && performance.now() - upAt < 800) { kill = false; e.preventDefault(); e.stopImmediatePropagation(); }
+    }, true);
+  })();
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })(window);

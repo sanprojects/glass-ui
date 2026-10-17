@@ -125,6 +125,10 @@
 .g-root, .g-scene, .g-root *, .g-root *::before, .g-root *::after,
 .g-scene *, .g-scene *::before, .g-scene *::after { box-sizing: border-box; }
 .g-scene { position: relative; background: #1b2a3f center/cover no-repeat; color-scheme: dark; }
+/* The page colour. Safari 26 tints its top and bottom bars from the background-COLOR of <body>; a transparent body is tinted black (and an open dialog / popover swaps it for its own colour).
+ * It is also the canvas: leave <html> without a background, or the body would paint over a fixed scene (z-index: -1). */
+:root { --g-page-bg: #00283c; }
+:where(body.g-root) { background-color: var(--g-page-bg); }
 /* a link to a place on the page (#id) scrolls there instead of jumping; reduced motion: it jumps */
 @media (prefers-reduced-motion: no-preference) { html:has(> :is(.g-root, .g-scene)) { scroll-behavior: smooth; } }
 .g-scene--gradient {
@@ -139,6 +143,9 @@
 .g-root, .g-scene, dialog, .g-toasts { -webkit-tap-highlight-color: transparent; }
 :where(:is(.g-root,[role="listbox"])) :is(button, [role="tab"], [role="menuitem"], [role="option"], summary, nav a, .g-select__trigger, table[data-g-selectable] tr, a:has(> article),
     label:has(> input:is([type="checkbox"], [type="radio"])), [role="button"], a[role="button"], input:is([type="button"], [type="submit"], [type="reset"])), [role="menuitem"], [role="option"] { -webkit-user-select: none; user-select: none; }   /* checkbox / radio labels and buttons: what you click is not text you select */
+/* Touch hover (glass-ui.js): [data-g-hover] is the finger's :hover, on the touched element and its ancestors, as :hover is; [data-g-touch] is the clickable thing under the finger:
+   a long press on it does not select text or open the link menu */
+[data-g-touch], [data-g-touch] * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 
 /* ---------- Typography: native elements ---------- */
 :where(:is(.g-root,[role="listbox"]) :is(h1, h2, h3, h4, h5, h6, p, ul, ol, dl, dd, figure, pre, blockquote, hr)) { margin: 0; }
@@ -156,9 +163,11 @@
 :where(.g-root a:visited) { color: inherit; }
 :where(:is(.g-root,[role="listbox"]) :is(p, small, blockquote, dd, td, label, li:not(nav li, .g-list > li)) a:not([role], [class^="g-"], [class*=" g-"])) { color: var(--g-text); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: rgba(var(--g-ov),.5); transition: text-decoration-color var(--g-dur); }
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) :is(p, small, blockquote, dd, td, label, li:not(nav li, .g-list > li)) a:not([role], [class^="g-"], [class*=" g-"]):hover) { text-decoration-color: currentColor; } }
+:where(:is(.g-root,[role="listbox"]) :is(p, small, blockquote, dd, td, label, li:not(nav li, .g-list > li)) a:not([role], [class^="g-"], [class*=" g-"])[data-g-hover]) { text-decoration-color: currentColor; }
 /* A plain link straight inside an article (a card with a link line) reads like the links in its prose, never the browser's blue/purple */
 :where(:is(.g-root,[role="listbox"]) article > a:not([role], [class^="g-"], [class*=" g-"])) { color: var(--g-text); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: rgba(var(--g-ov),.5); transition: text-decoration-color var(--g-dur); }
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) article > a:not([role], [class^="g-"], [class*=" g-"]):hover) { text-decoration-color: currentColor; } }
+:where(:is(.g-root,[role="listbox"]) article > a:not([role], [class^="g-"], [class*=" g-"])[data-g-hover]) { text-decoration-color: currentColor; }
 :where(:is(.g-root,[role="listbox"]) u) { text-decoration-thickness: 1px; text-underline-offset: 3px; }
 :where(:is(.g-root,[role="listbox"]) :is(s, del)) { text-decoration-thickness: 1px; opacity: .78; }
 :where(:is(.g-root,[role="listbox"]) mark) { padding: 0 .25em; border-radius: var(--g-radius-sm); background: rgba(255,214,102,.28); color: var(--g-text); }
@@ -216,6 +225,11 @@
   box-shadow: var(--g-rim), var(--g-shadow-float);
 }
 .g-glass { border-radius: var(--g-radius-card); }
+/* Phones: Safari 26 tints its top bar from the background-COLOR of an open modal dialog; a translucent fill is read as transparent = black. So the dialog gets the page colour underneath
+ * (the glass fill stays on top as an image); the see-through blur of a dialog is given up on a phone, desktop keeps the glass. */
+@media (max-width: 800px) {
+  :where(:is(.g-root,[role="listbox"]) dialog) { background-image: linear-gradient(var(--g-fill-strong), var(--g-fill-strong)); background-color: var(--g-page-bg); }
+}
 /* Performance: glass nested inside glass does not need its own blur (its backdrop is already the parent's blurred
  * surface), and every extra blur layer costs GPU time on scroll. Keep one blur layer per stack. */
 :is(.g-glass, .g-shell) :is(button, article, blockquote, figure, [role="group"], data, [role="tablist"], .g-toast) { backdrop-filter: none; }
@@ -256,6 +270,7 @@
   will-change: transform; /* keeps the button on its own layer, so the hover scale does not re-snap the icon by ~1px when the transition ends */
 }
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon])):hover) { background: var(--g-fill-strong); } }
+:where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-g-hover]) { background: var(--g-fill-strong); }
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon])):active) { transform: scale(var(--g-press)); transition-timing-function: var(--g-ease); }
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-size="sm"]) { --h: var(--g-h-sm); padding: 0 var(--g-inset); font-size: var(--g-fs-footnote); }
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-size="lg"]) { --h: var(--g-h-lg); padding: 0 var(--g-pad); font-size: var(--g-fs-body); }
@@ -264,19 +279,24 @@
 /* Primary = the one main action of a view, in the accent colour */
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="primary"]) { background: var(--g-accent); color: var(--g-accent-fg); box-shadow: var(--g-rim); }
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="primary"]:hover) { background: var(--g-accent-hover); } }
+:where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="primary"][data-g-hover]) { background: var(--g-accent-hover); }
 /* Light = neutral emphasis: a white pill for secondary highlights, or when the accent would clash */
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="light"]) { background: var(--g-ink); color: var(--g-ink-fg); box-shadow: none; }
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="light"]:hover) { background: var(--g-ink); } }
+:where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="light"][data-g-hover]) { background: var(--g-ink); }
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="danger"]) { background: var(--g-danger); color: #fff; }
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="danger"]:hover) { background: var(--g-danger); } }
+:where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="danger"][data-g-hover]) { background: var(--g-danger); }
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="outline"]) { background: transparent; backdrop-filter: none; } /* the standard glass button rim, just without the fill */
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="outline"]:hover) { background: rgba(var(--g-ov),.12); } }
+:where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="outline"][data-g-hover]) { background: rgba(var(--g-ov),.12); }
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="recessed"]) { background: var(--g-fill-recessed); box-shadow: var(--g-recess); }
 /* Plain = no pad at all, just the icon (or text) in the secondary colour: a close cross on a row, a speaker, a link icon. Not for a main action. */
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="plain"]) { --h: var(--g-icon-md); padding: 0; border-radius: var(--g-radius-sm, 4px); background: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; color: var(--g-text-3); --g-icon-size: var(--g-icon-md); }
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="plain"])::before { background-color: currentColor; }
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="plain"])::after { display: none; }
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="plain"]:hover) { background: none; color: var(--g-text); } }
+:where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="plain"][data-g-hover]) { background: none; color: var(--g-text); }
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="plain"]:active) { transform: none; opacity: .6; }
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon])):disabled), :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[aria-disabled="true"]) { opacity: .38; pointer-events: none; }
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-icon])::before, :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-icon-end])::after { margin-inline: -2px; }
@@ -418,6 +438,7 @@
 .g-input-end, .g-input-start { position: absolute; right: 6px; width: 28px; height: 28px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--g-text-2); cursor: pointer; transition: background var(--g-dur), opacity var(--g-dur); }
 span.g-input-end { right: var(--g-inset); width: var(--g-icon-md); height: var(--g-icon-md); --g-icon-size: var(--g-icon-md); pointer-events: none; cursor: default; }
 @media (hover: hover) { button.g-input-end:hover, .g-input-start:hover { background: var(--g-fill-strong); } }
+button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var(--g-fill-strong); }
 .g-input-start { right: auto; left: 6px; }
 .g-input-end:disabled, .g-input-start:disabled { opacity: .35; pointer-events: none; }
 .g-input-start, .g-input-end { --g-icon-size: var(--g-icon-md); }
@@ -472,6 +493,7 @@ span.g-input-end { right: var(--g-inset); width: var(--g-icon-md); height: var(-
 .g-file__item.has-progress .g-file__bar { display: block; }
 .g-file__remove { all: unset; box-sizing: border-box; flex: none; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; cursor: pointer; color: var(--g-text); background: var(--g-fill-strong); transition: background var(--g-dur); }
 @media (hover: hover) { .g-file__remove:hover { background: var(--g-fill-selected); } }
+.g-file__remove[data-g-hover] { background: var(--g-fill-selected); }
 .g-file__remove { --g-icon-size: var(--g-icon-md); }
 .g-file__item.is-error { box-shadow: 0 0 0 2px var(--g-danger); }
 .g-file__item.is-error::after { display: none; }
@@ -526,6 +548,7 @@ span.g-input-end { right: var(--g-inset); width: var(--g-icon-md); height: var(-
 :is([role="option"], .g-select__value) > small { flex: none; }
 [role="option"]:has(> .g-select__text)::after { content: ""; width: 16px; flex: none; }
 @media (hover: hover) { [role="menu"] > :is(button, a, [role="menuitem"]):hover, [role="option"]:hover { background: var(--g-fill-strong); } }
+[role="menu"] > :is(button, a, [role="menuitem"])[data-g-hover], [role="option"][data-g-hover] { background: var(--g-fill-strong); }
 [role="menu"] > [aria-current="true"] { background: var(--g-fill-selected); }
 [role="menu"] > :is(button, a, [role="menuitem"]) { --g-icon-size: var(--g-icon-md); --g-icon-color: var(--g-text-2); }
 [role="menu"] > [data-variant="danger"] { color: var(--g-danger-text); --g-icon-color: var(--g-danger-text); }
@@ -607,6 +630,7 @@ span.g-input-end { right: var(--g-inset); width: var(--g-icon-md); height: var(-
   background: var(--g-fill-recessed); box-shadow: var(--g-recess); }
 :where(:is(.g-root,[role="listbox"]) [role="tablist"] > :is(button, [role="tab"])) { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: var(--g-gap-inner); height: calc(var(--g-h-md) - 8px); padding: 0 var(--g-inset); border: 0; border-radius: var(--g-radius-pill); background: transparent; color: var(--g-text-2); font: 400 var(--g-fs-subhead)/1 var(--g-font); cursor: pointer; white-space: nowrap; transition: background var(--g-dur), color var(--g-dur), box-shadow var(--g-dur); }
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) [role="tablist"] > :is(button, [role="tab"]):hover) { color: var(--g-text); } }
+:where(:is(.g-root,[role="listbox"]) [role="tablist"] > :is(button, [role="tab"])[data-g-hover]) { color: var(--g-text); }
 :where(:is(.g-root,[role="listbox"]) [role="tablist"] > :is(button, [role="tab"]), :is(.g-root,[role="listbox"]) nav a) { --g-icon-size: var(--g-icon-sm); }
 :where(:is(.g-root,[role="listbox"]) [role="tablist"][data-variant="underline"]) { display: flex; width: 100%; background: none; box-shadow: none; padding: 0; gap: var(--g-gap); border-radius: 0; border-bottom: 1px solid var(--g-line); }
 :where(:is(.g-root,[role="listbox"]) [role="tablist"][data-variant="underline"] > *) { height: var(--g-h-md); padding: 0 2px; border-radius: 0; box-shadow: none; background: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
@@ -636,10 +660,12 @@ span.g-input-end { right: var(--g-inset); width: var(--g-icon-md); height: var(-
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > div) { display: flex; align-items: center; gap: var(--g-gap); flex: none; }
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > ul > li > a), .g-nav__morebtn { white-space: nowrap; display: inline-flex; align-items: center; gap: var(--g-gap-inner); height: var(--g-h-md); padding: 0 var(--g-inset); border-radius: var(--g-radius-pill); color: var(--g-text-2); font-weight: 500; font-size: var(--g-fs-subhead); text-decoration: none; transition: background var(--g-dur), color var(--g-dur); }
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > ul > li > a:hover) { background: var(--g-fill-strong); color: var(--g-text); } }
+:where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > ul > li > a[data-g-hover]) { background: var(--g-fill-strong); color: var(--g-text); }
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > ul > li > a[aria-current="page"]) { background: var(--g-fill-selected); color: var(--g-text); }
 /* Auto navigation (data-g-nav-auto on the <ul>): links that do not fit move into a "More" menu (built by glass-ui.js) */
 .g-nav__morebtn { border: 0; background: none; font: inherit; font-weight: 600; font-size: var(--g-fs-subhead); cursor: pointer; gap: var(--g-gap-inner); }
 @media (hover: hover) { .g-nav__morebtn:hover { background: var(--g-fill-strong); color: var(--g-text); } }
+.g-nav__morebtn[data-g-hover] { background: var(--g-fill-strong); color: var(--g-text); }
 .g-nav__morebtn { --g-icon-size: var(--g-icon-sm); }
 .g-nav__morebtn[data-compact] { padding-inline: var(--g-inset); } .g-nav__morebtn[data-compact] > span { display: none; }
 .g-nav__morebtn[aria-current="true"] { background: var(--g-fill-selected); color: var(--g-text); }
@@ -693,6 +719,7 @@ span.g-input-end { right: var(--g-inset); width: var(--g-icon-md); height: var(-
 @container (min-width: 640px) { :where([data-grid] > [data-span="3"]) { grid-column: span 3; } }
 :where(:is(.g-root,[role="listbox"]) a:has(> article) > article) { height: 100%; cursor: pointer; transition: transform var(--g-dur-md) var(--g-ease), background var(--g-dur); }
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) a:has(> article):hover > article) { transform: translateY(-3px); background: var(--g-fill-strong); } }
+:where(:is(.g-root,[role="listbox"]) a:has(> article)[data-g-hover] > article) { transform: translateY(-3px); background: var(--g-fill-strong); }
 /* ---------- Badge / chip ---------- */
 :where(:is(.g-root,[role="listbox"]) data) { position: relative; display: inline-flex; white-space: nowrap; flex: none; align-items: center; gap: var(--g-gap-inner); height: 28px; padding: 0 var(--g-inset); border-radius: var(--g-radius-pill); font-size: var(--g-fs-footnote); font-weight: 400; font-variant-numeric: tabular-nums; color: var(--g-text); background: var(--g-fill-strong); }
 :where(:is(.g-root,[role="listbox"]) data[data-variant="accent"]) { background: var(--g-accent); color: var(--g-accent-fg); --edge: rgba(255,255,255,.35); }
@@ -758,11 +785,13 @@ table[data-g-fit-measure] :is(th, td) { max-width: none !important; }
 :where(:is(.g-root,[role="listbox"]) th > button) { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: var(--g-gap-inner); cursor: pointer; border-radius: var(--g-radius-sm); padding: 4px 0; transition: color var(--g-dur); }
 :where(:is(.g-root,[role="listbox"]) th[aria-sort="ascending"] > button), :where(:is(.g-root,[role="listbox"]) th[aria-sort="descending"] > button) { color: var(--g-text); }
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) th > button:hover) { color: var(--g-text); } }
+:where(:is(.g-root,[role="listbox"]) th > button[data-g-hover]) { color: var(--g-text); }
 :where(:is(.g-root,[role="listbox"]) th > button)::after { content: ""; width: 14px; height: 14px; flex: none; background: currentColor; -webkit-mask: var(--g-i-chevron-down, linear-gradient(#0000, #0000)) center / contain no-repeat; mask: var(--g-i-chevron-down, linear-gradient(#0000, #0000)) center / contain no-repeat; opacity: 0; transition: opacity var(--g-dur), transform var(--g-dur) var(--g-ease); } /* icon only on the sorted column; space is kept so the header does not shift */
 :where(:is(.g-root,[role="listbox"]) th[aria-sort="ascending"] > button)::after, :where(:is(.g-root,[role="listbox"]) th[aria-sort="descending"] > button)::after { opacity: 1; }
 :where(:is(.g-root,[role="listbox"]) th[aria-sort="ascending"] > button)::after { transform: rotate(180deg); }
 :where(:is(.g-root,[role="listbox"]) tbody tr) { transition: background var(--g-dur); }
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) tbody tr:hover) { background: rgba(var(--g-ov),.08); } }
+:where(:is(.g-root,[role="listbox"]) tbody tr[data-g-hover]) { background: rgba(var(--g-ov),.08); }
 :where(:is(.g-root,[role="listbox"]) table[data-g-selectable] tbody tr) { cursor: pointer; }
 :where(:is(.g-root,[role="listbox"]) tbody tr[aria-selected="true"]) { background: var(--g-fill-active); } /* clearly stronger than hover */
 /* Table footer: <tfoot><tr><td colspan="N"><span>selection status</span><nav data-g-pager></nav></td></tr></tfoot>: the first child on the left, the last on the right */
@@ -782,6 +811,20 @@ table[data-g-fit-measure] :is(th, td) { max-width: none !important; }
 .g-list { list-style: none; margin: 0; padding: 0; min-width: 0; max-width: 100%; display: grid; --g-col-min: var(--g-col-w, 200px); grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--g-col-min)), 1fr)); justify-content: stretch; grid-auto-rows: 1fr; column-gap: var(--g-gap); row-gap: 0; counter-reset: g-n; font-size: var(--g-fs-subhead); }
 .g-list { --g-col-w: calc(var(--g-text-w, calc(var(--g-chars) * 1.1ch)) + 2.4ch + var(--g-inset) + 2 * var(--g-gap-inner)); }   /* --g-text-w (px, data-g-fit measures it) or --g-chars (a count you know); undefined without both: the 200px default applies */
 .g-list > li { counter-increment: g-n; position: relative; display: flex; align-items: center; gap: var(--g-gap-inner); min-height: var(--g-list-row-h); padding: 0 var(--g-gap-inner) 0 var(--g-inset); border-radius: var(--g-radius-field); font-size: var(--g-fs-subhead); color: var(--g-text); transition: background var(--g-dur); }
+/* Columns mode, the default of a .g-list (and data-columns on any other box of rows): the rows run down the columns. The columns are equal, as many as fit
+   the width (column-width = --g-col-min, 200px without --g-col-w) and they fill the whole box. --g-cap keeps two rows at least, so a short list is not spread over
+   empty columns and stays 100% wide: 1-2 rows -> 1 column, 3-4 -> 2, 5-6 -> 3 ... (counted by the rows that are shown; a hidden row is the last). 13 and more: no limit.
+   Lists that must have a row of the same width (several lists of one result): --g-cap: 99 on them (a rule of the page after the kit wins: same specificity).
+   data-grid on a .g-list: the rows run along the rows, in a grid of equal cells (the former look). */
+:is(.g-list:not([data-grid]), [data-columns]) { display: block; column-width: var(--g-col-min, 200px); column-count: var(--g-cap, 1); column-fill: balance; grid-auto-rows: auto; --g-cap: 1; }
+:is(.g-list:not([data-grid]), [data-columns]) > * { break-inside: avoid; }
+:is(.g-list:not([data-grid]), [data-columns]):where(:has(> :nth-child(3):not([hidden]))) { --g-cap: 2; }
+:is(.g-list:not([data-grid]), [data-columns]):where(:has(> :nth-child(5):not([hidden]))) { --g-cap: 3; }
+:is(.g-list:not([data-grid]), [data-columns]):where(:has(> :nth-child(7):not([hidden]))) { --g-cap: 4; }
+:is(.g-list:not([data-grid]), [data-columns]):where(:has(> :nth-child(9):not([hidden]))) { --g-cap: 5; }
+:is(.g-list:not([data-grid]), [data-columns]):where(:has(> :nth-child(11):not([hidden]))) { --g-cap: 6; }
+:is(.g-list:not([data-grid]), [data-columns]):where(:has(> :nth-child(13):not([hidden]))) { --g-cap: 99; }
+.g-shell .g-list:not([data-grid]):has(> li[data-icon]) { column-count: 1; column-width: auto; }   /* a tree in a panel is one column */
 .g-list > li[hidden] { display: none; }
 .g-list > li > :is(span, a) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .g-list > li > a { color: inherit; text-decoration: none; }
@@ -796,6 +839,7 @@ table[data-g-fit-measure] :is(th, td) { max-width: none !important; }
 ul.g-list.g-list > li:has(> label > input[role="switch"])::before, ol.g-list.g-list > li:has(> label > input[role="switch"])::before { content: none; }   /* a switch row has no number or bullet */
 ol.g-list > li::before { content: counter(g-n) "."; flex: none; min-width: 2.4ch; text-align: right; color: var(--g-text-3); font-variant-numeric: tabular-nums; }
 @media (hover: hover) { .g-list > li:hover { background: var(--g-fill-strong); cursor: pointer; } }
+.g-list > li[data-g-hover] { background: var(--g-fill-strong); cursor: pointer; }
 .g-list > li.is-active { background: var(--g-fill-active); box-shadow: var(--g-recess); }   /* a text field's sunken look: same fill, same dark top edge and light lower edge */
 ul.g-list:not(:has(> li[data-icon])) > li::before { content: ""; flex: none; width: 6px; height: 6px; margin: 0 9px; border-radius: 50%; background: var(--g-text-3); }
 /* ---------- Expandable text: clamp to N lines with an inline "more" / "less" pill (data-g-clamp) ---------- */
@@ -806,6 +850,7 @@ ul.g-list:not(:has(> li[data-icon])) > li::before { content: ""; flex: none; wid
 .g-clamp__btn { position: relative; flex: none; height: 30px; margin-bottom: -2px; padding: 0 var(--g-inset); border: 0; border-radius: var(--g-radius-pill); font: 600 var(--g-fs-subhead)/1 var(--g-font); color: var(--g-text); cursor: pointer; background: var(--g-fill-strong); transition: background var(--g-dur); }
 .g-clamp__btn[hidden] { display: none; }
 @media (hover: hover) { .g-clamp__btn:hover { background: var(--g-fill-selected); } }
+.g-clamp__btn[data-g-hover] { background: var(--g-fill-selected); }
 
 .g-list > li[data-level="1"] { padding-left: 38px; }
 .g-list > li { --g-icon-size: var(--g-icon-md); --g-icon-color: var(--g-text-3); }
@@ -863,6 +908,7 @@ dialog > [data-icon]:first-child { display: grid; place-items: center; width: 56
   mask: var(--g-q) center / contain no-repeat; }
 :is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> input:is([type="checkbox"], [type="radio"]))[title]:not([data-no-hint]))):focus-within::before { background: var(--g-text-2); }
 @media (hover: hover) { :is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> input:is([type="checkbox"], [type="radio"]))[title]:not([data-no-hint]))):hover::before { background: var(--g-text-2); } }
+:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> input:is([type="checkbox"], [type="radio"]))[title]:not([data-no-hint])))[data-g-hover]::before { background: var(--g-text-2); }
 .g-input-wrap:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> input:is([type="checkbox"], [type="radio"]))[title]:not([data-no-hint])))::before, button:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> input:is([type="checkbox"], [type="radio"]))[title]:not([data-no-hint])))::before { top: 50%; right: var(--g-inset); transform: translateY(-50%); }
 /* A field (caption above the control): the marker sits INSIDE the control, at its end. The field becomes a grid so the marker can take the control's row as its
    containing block (an absolutely positioned child with a grid area is placed against that area): row 2 under a caption, row 1 without one. */
@@ -911,6 +957,7 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> i
 :where(:is(.g-root,[role="listbox"]) details > summary)::-webkit-details-marker { display: none; }
 :where(:is(.g-root,[role="listbox"]) details > summary)::before { content: ""; position: absolute; z-index: -1; inset: 4px calc(var(--g-inset) * -1); border-radius: var(--g-radius-field); background: transparent; transition: background var(--g-dur); }
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) details > summary:hover)::before { background: var(--g-fill-strong); } }
+:where(:is(.g-root,[role="listbox"]) details > summary[data-g-hover])::before { background: var(--g-fill-strong); }
 :where(:is(.g-root,[role="listbox"]) details > summary > small) { margin-left: auto; font-size: var(--g-fs-footnote); font-weight: 400; color: var(--g-text-3); }
 :where(:is(.g-root,[role="listbox"]) details > summary)::after { content: ""; flex: none; width: 18px; height: 18px; background: currentColor; color: var(--g-text-3); transform: rotate(-90deg); transition: transform var(--g-dur) var(--g-ease);
   -webkit-mask: var(--g-i-chevron-down, linear-gradient(#0000, #0000)) center / contain no-repeat; mask: var(--g-i-chevron-down, linear-gradient(#0000, #0000)) center / contain no-repeat; }
@@ -940,6 +987,7 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> i
 .g-pager__pages { display: flex; align-items: center; gap: 2px; }
 .g-pager__btn { display: grid; place-items: center; min-width: var(--g-h-sm); height: var(--g-h-sm); padding: 0 8px; border: 0; border-radius: var(--g-radius-pill); background: none; color: var(--g-text-2); font: 500 var(--g-fs-footnote)/1 var(--g-font); font-variant-numeric: tabular-nums; cursor: pointer; transition: background var(--g-dur), color var(--g-dur); }
 @media (hover: hover) { .g-pager__btn:hover { background: var(--g-fill-strong); color: var(--g-text); } }
+.g-pager__btn[data-g-hover] { background: var(--g-fill-strong); color: var(--g-text); }
 /* Selected state of tab, chip and page button: one white pill */
 [role="tablist"] > [aria-selected="true"]:not([data-variant="underline"] > *), [role="tablist"]:not([data-variant="underline"], :has([aria-selected="true"])) > :first-child, .g-pager__btn[aria-current="page"] { background: rgba(255,255,255,.92); color: var(--g-text-inverse); box-shadow: 0 1px 3px rgba(0,0,0,.14); }
 /* Tab indicator: ONE pill (or underline) slides from the old tab to the new one. The chosen tab is its anchor (--g-dur-md). Without anchor positioning the chosen tab keeps its own fill. */
@@ -974,6 +1022,7 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> i
 .g-toast__text { font-size: var(--g-fs-footnote); line-height: 1.38; color: var(--g-text-2); margin: 0; }
 .g-toast__close { --g-icon-size: var(--g-icon-md); all: unset; flex: none; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; cursor: pointer; color: var(--g-text-2); transition: background var(--g-dur); }   /* the same cross as the one in a field (.g-input-end) */
 @media (hover: hover) { .g-toast__close:hover { background: var(--g-fill-strong); } }
+.g-toast__close[data-g-hover] { background: var(--g-fill-strong); }
 
 /* ---------- Keyframes + motion ---------- */
 @keyframes g-spin { to { transform: rotate(360deg); } }
@@ -982,7 +1031,7 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> i
 @keyframes g-fade { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
   .g-root *, .g-scene *, dialog, [popover], .g-toast { animation-duration: .001ms !important; transition-duration: .001ms !important; }
-  .g-root button:hover, .g-root a:has(> article):hover > article { transform: none; }
+  .g-root button:is(:hover, [data-g-hover]), .g-root a:has(> article):is(:hover, [data-g-hover]) > article { transform: none; }
 }
 
 
@@ -1104,6 +1153,7 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> i
   -webkit-mask: var(--g-i-x, linear-gradient(#0000, #0000)) center / contain no-repeat; mask: var(--g-i-x, linear-gradient(#0000, #0000)) center / contain no-repeat; }
 :where(:is(.g-root,[role="listbox"]) button[data-g-remove]) { padding-inline-end: 10px; }
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) button[data-g-remove]:hover)::after { opacity: 1; } }
+:where(:is(.g-root,[role="listbox"]) button[data-g-remove][data-g-hover])::after { opacity: 1; }
 /* Toggle button: <button aria-pressed="true"> gets the same white pill as a selected tab */
 :where(:is(.g-root,[role="listbox"]) button[aria-pressed="true"]:not([class^="g-"], [class*=" g-"], [data-variant])) { background: rgba(255,255,255,.92); color: var(--g-text-inverse); box-shadow: 0 1px 3px rgba(0,0,0,.14); }
 
@@ -1128,6 +1178,7 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> i
 :where(.g-root article[data-tile] > h4) { font-size: var(--g-fs-body); font-weight: 400; overflow-wrap: break-word; hyphens: auto; text-align: center; }
 :where(.g-root article[data-tile] > data) { position: absolute; top: var(--g-inset); right: var(--g-inset); bottom: auto; margin: 0; }
 @media (hover: hover) { :where(.g-root a:has(> article[data-tile]):hover > article[data-tile]) { transform: translateY(-3px); } }
+:where(.g-root a:has(> article[data-tile])[data-g-hover] > article[data-tile]) { transform: translateY(-3px); }
 
 /* ---------- Stack: the children one under another with one gap. <div class="g-stack">…</div> */
 .g-stack { display: flex; flex-direction: column; gap: var(--g-gap); min-width: 0; }
@@ -1164,4 +1215,4 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> i
 .g-ruler--page .g-ruler__track { top: 0; left: 0; margin-right: var(--g-gap); }
 .g-ruler__track { position: absolute; top: 0; margin-right: var(--g-gap); left: var(--g-ruler-x, 0); width: var(--g-ruler-w); height: var(--g-ruler-h, 0); cursor: pointer; user-select: none; pointer-events: auto; }
 .g-ruler .g-ruler__seg { text-decoration: none; position: absolute; left: 0; right: 0; box-sizing: border-box; padding-top: 2px; border-top: var(--g-edge-w) solid var(--g-line); font-size: var(--g-fs-caption); line-height: 1; color: var(--g-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color var(--g-dur), border-color var(--g-dur); }
-.g-ruler .g-ruler__seg:hover, .g-ruler .g-ruler__seg[aria-current] { color: var(--g-text); border-top-color: var(--g-text); }
+.g-ruler .g-ruler__seg:is(:hover, [data-g-hover]), .g-ruler .g-ruler__seg[aria-current] { color: var(--g-text); border-top-color: var(--g-text); }

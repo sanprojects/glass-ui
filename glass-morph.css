@@ -20,8 +20,9 @@
 @keyframes g-morph-word-calm { from { background-color: var(--g-fill-strong, rgba(128,128,128,.28)); } }
 .g-morph-word { border-radius: 3px; -webkit-box-decoration-break: clone; box-decoration-break: clone; animation: g-morph-word var(--g-morph-word) ease-out; }
 /* the old content fading out where it stood (the script places it), under what comes in at its place: to the right, with the new one of its place
-   (--g-morph-d), done a little before the rest (--g-morph-run). Both inherit: a page can put this animation on a part of it */
-@keyframes g-morph-away { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(24px); } }
+   (--g-morph-d), done a little before the rest (--g-morph-run). Both inherit: a page can put this animation on a part of it.
+   It is gone at 40% of its run, as the new one of its place is whole at 40% of its own: a whole new text over an old one that still shows reads as both at once */
+@keyframes g-morph-away { 0% { opacity: 1; transform: none; } 40% { opacity: 0; } 100% { opacity: 0; transform: translateX(24px); } }
 .g-morph-ghost { z-index: -1; animation: g-morph-away var(--g-morph-run, 180ms) var(--g-ease, cubic-bezier(.3,.7,.25,1)) var(--g-morph-d, 0ms) both !important; }
 /* Glass.morph measures the patched box at once, before the browser has told which of them are on the screen: for those reads they are all laid out
    (else a new or changed one stands at a guessed size, and what glides would aim wrong). Only [data-g-lazy] is named: switching it touches nothing else */
