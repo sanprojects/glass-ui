@@ -220,11 +220,13 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
     <div class="pair">
       <div data-grid data-code>
         <div class="g-field"><label for="s-role">Role</label>
-          <select id="s-role" data-g-select><option value="">Choose a role</option><option value="Designer">Designer <small>12</small></option><option value="Engineer">Engineer <small>48</small></option><option value="Product manager" selected>Product manager <small>7</small></option><option value="Researcher">Researcher <small>5</small></option><option disabled>Founder (invite only)</option></select></div>
+          <select id="s-role" data-g-select><option value="">Choose a role</option><option>Designer</option><option>Engineer</option><option selected>Product manager</option><option>Researcher</option><option disabled>Founder (invite only)</option></select></div>
         <div class="g-field"><label for="s-city">City (combobox)</label>
           <select id="s-city" data-g-select data-searchable><option value="">Search cities</option><option>Amsterdam</option><option>Berlin</option><option>Lisbon</option><option>Nairobi</option><option>Osaka</option><option>Reykjavik</option><option>Tbilisi</option><option>Vancouver</option></select></div>
         <div class="g-field"><label for="s-skills">Skills (multiple)</label>
           <select id="s-skills" multiple data-g-select data-placeholder="Pick skills"><option>Research</option><option selected>Prototyping</option><option>Illustration</option><option selected>Motion</option><option>Front-end</option><option>Copywriting</option></select></div>
+        <div class="g-field"><label for="s-show">Show (with counts)</label>
+          <select id="s-show" data-g-select><option value="now" selected>Active now <small>57</small></option><option value="users">Users only <small>812</small></option><option value="bots">Bots only <small>23 104</small></option><option value="all">All visitors <small>23 916</small></option></select></div>
       </div>
       <div class="code" data-for="4"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
     </div>
