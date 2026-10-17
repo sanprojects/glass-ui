@@ -44,7 +44,7 @@
     "glass-appearance.min.js"
   ],
   "scripts": {
-    "test": "node --test test/smoke.test.mjs test/spacing.test.mjs test/address.test.mjs test/page.test.mjs"
+    "test": "node --test test/min.test.mjs test/smoke.test.mjs test/spacing.test.mjs test/address.test.mjs test/page.test.mjs"
   },
   "devDependencies": {
     "@formkit/auto-animate": "0.8.2",
