@@ -180,6 +180,7 @@
 .g-desc { max-width: 70ch; font-size: var(--g-fs-subhead); line-height: 1.33; color: var(--g-text-2); }   /* a short description under a heading: <p class="g-desc">, smaller than running text */
 /* Empty state, e.g. a search with no results (centred in the free space when its parent is a flex column): <div class="g-empty" data-icon="search"><h4>Title</h4><p>A hint on what to try.</p></div> */
 .g-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--g-gap-inner); padding: var(--g-pad); text-align: center; --g-icon-size: calc(var(--g-icon-lg) * 2); --g-icon-color: var(--g-text-3); }
+.g-empty[hidden] { display: none; }   /* shown by the script only when there is nothing: display: flex above must not beat hidden */
 .g-empty > :is(h1, h2, h3, h4, h5, h6) { font-size: var(--g-fs-title3); font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--g-text); }
 .g-empty > p { max-width: 40ch; font-size: var(--g-fs-subhead); line-height: 1.33; }
 /* Message in the flow of a page: an icon and a text. Tone with data-tone="warning" | "danger" | "success"; no tone is neutral. <div class="g-alert" data-icon="triangle-alert" data-tone="warning" role="status">Text with <b>emphasis</b>.</div> */
