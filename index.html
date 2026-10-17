@@ -144,7 +144,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
   </section>
 
   <section class="sec g-glass g-anim-scroll" id="buttons" data-title="Buttons">
-    <div class="sec__head"><h2>Buttons</h2><p class="g-desc">Five variants, three sizes, icon and block forms, plus toggle and removable small buttons. Hover highlights (on a phone too: hold a button, slide off to cancel), press scales down with a spring release, disabled drops to 38%.</p></div>
+    <div class="sec__head"><h2>Buttons</h2><p class="g-desc">Five variants, three sizes, icon and block forms, plus toggle and removable small buttons. Ghost is an icon with no glass, the size of a field&#39;s clear cross: a small icon toggle with <span class="inline-code">aria-pressed</span>, or, with <span class="inline-code">data-reveal</span>, an action that fades in when its row is pointed at. Hover highlights (on a phone too: hold a button, slide off to cancel), press scales down with a spring release, disabled drops to 38%.</p></div>
     <div class="pair">
       <div class="stack" style="display:flex;flex-direction:column;gap:var(--g-gap)">
         <div class="demo" data-code>
@@ -173,8 +173,23 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
         <button data-size="sm" title="A finger is a mouse here: hover, tooltip, mouseenter">Hold me</button>
         <button data-size="sm" title="Slide off before lifting: no click">Or me</button>
         </div>
+        <div class="demo" data-code>
+        <button data-variant="ghost" data-icon="globe" data-g-toggle aria-pressed="false" aria-label="Whole site"></button>
+        <button data-variant="ghost" data-icon="message-circle" data-g-toggle aria-pressed="true" aria-label="Chat"></button>
+        <button data-variant="ghost" data-icon="bell" data-g-toggle aria-pressed="false" aria-label="Notifications"></button>
+        <button data-variant="ghost" data-icon="settings" aria-label="Settings"></button>
+        </div>
+        <div class="demo" data-code style="display:block">
+        <table>
+          <thead><tr><th>City</th><th>Visitors</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>Berlin</td><td>128</td><td><button data-variant="ghost" data-icon="trash-2" data-reveal aria-label="Delete"></button></td></tr>
+            <tr><td>Lisbon</td><td>64</td><td><button data-variant="ghost" data-icon="trash-2" data-reveal aria-label="Delete"></button></td></tr>
+          </tbody>
+        </table>
+        </div>
       </div>
-      <div class="code" data-for="0,1,2,3"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+      <div class="code" data-for="0,1,2,3,4,5"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
     </div>
   </section>
 
@@ -218,7 +233,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
         <fieldset style="grid-column:1/-1"><legend id="f-up-l">Attachments</legend><div class="g-file" id="uploader" data-g-file data-max-size="10"><label class="g-file__drop"><span data-icon="upload"></span><strong>Drop files here or choose</strong><small>PNG, JPG or PDF · up to 10 MB</small><input type="file" multiple accept="image/png,image/jpeg,application/pdf" aria-labelledby="f-up-l"></label><ul class="g-file__list" hidden></ul></div></fieldset>
         <div class="g-field" style="grid-column:1/-1"><label for="f-msg">Message</label><textarea id="f-msg" placeholder="Tell us what you need" data-max-rows="6"></textarea></div>
       </form>
-      <div class="code" data-for="3"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+      <div class="code" data-for="6"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
     </div>
 
     <div class="pair">
@@ -232,7 +247,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
         <div class="g-field"><label for="s-show">Show (with counts)</label>
           <select id="s-show" data-g-select><option value="now" selected>Active now <small>57</small></option><option value="users">Users only <small>812</small></option><option value="bots">Bots only <small>23 104</small></option><option value="all">All visitors <small>23 916</small></option></select></div>
       </div>
-      <div class="code" data-for="4"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+      <div class="code" data-for="7"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
     </div>
 
     <div class="pair">
@@ -250,7 +265,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
         <div class="g-field"><label for="sl">Volume</label><input id="sl" type="range" min="0" max="100" value="62"></div>
         <fieldset style="grid-column:1/-1"><legend>Amenities</legend><div role="group"><label><input type="checkbox" checked> Air conditioning</label><label><input type="checkbox"> Gym</label><label><input type="checkbox"> Clubhouse</label><label><input type="checkbox"> Pool</label><label><input type="checkbox"> Balcony</label><label><input type="checkbox"> Parking</label></div></fieldset>
       </div>
-      <div class="code" data-for="5"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+      <div class="code" data-for="8"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
     </div>
   </section>
 
@@ -289,7 +304,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
           </div>
         </div>
       </div>
-      <div class="code" data-for="6,7"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+      <div class="code" data-for="9,10"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
     </div>
     <div class="code"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0">&lt;nav data-position="sticky"&gt;
   &lt;a href="/"&gt;Brand&lt;/a&gt;
@@ -319,7 +334,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
         </article>
         <a href="#data"><article><h3>Interactive card</h3><p>The whole card is a link. It lifts on hover and shows a focus ring on keyboard focus.</p></article></a>
       </div>
-      <div class="code" data-for="8"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+      <div class="code" data-for="11"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
     </div>
     <div class="pair">
       <div class="demo" data-code>
@@ -328,7 +343,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
         <data>18 739</data>
         <data>9 322</data>
       </div>
-      <div class="code" data-for="9"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+      <div class="code" data-for="12"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
     </div>
     <div class="pair">
       <div class="demo col" data-code>
@@ -337,7 +352,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
         <fieldset><legend>Working</legend><progress max="100"></progress></fieldset>
         <div class="drow"><span role="progressbar" aria-valuenow="72" aria-valuemin="0" aria-valuemax="100" aria-label="Upload">72%</span><span role="progressbar" aria-label="Loading"></span></div>
       </div>
-      <div class="code" data-for="10"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+      <div class="code" data-for="13"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
     </div>
     <div class="pair" style="grid-template-columns:minmax(0,1fr)">
       <figure data-code>
@@ -355,7 +370,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
           </td></tr></tfoot>
         </table>
       </figure>
-      <div class="code" data-for="11"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+      <div class="code" data-for="14"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
     </div>
     <div class="pair" style="grid-template-columns:minmax(0,1fr)">
       <div class="demo col" data-code>
@@ -417,7 +432,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
           <details><summary>Does it work offline?</summary><div>Most features do. Syncing resumes as soon as you reconnect.</div></details>
         </div>
       </div>
-      <div class="code" data-for="12"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+      <div class="code" data-for="15"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
     </div>
 </section>
 
@@ -452,7 +467,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
           <footer><button command="close" commandfor="dlg2" value="cancel">Cancel</button><button command="close" commandfor="dlg2" value="send" data-variant="primary">Send invite</button></footer>
         </dialog>
       </div>
-      <div class="code" data-for="13"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+      <div class="code" data-for="16"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
     </div>
     <div class="pair">
       <div class="demo">
@@ -495,7 +510,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
         <div class="g-shell__group"><details open><summary>Auto layout<small>Vertical</small></summary><div>Direction, spacing and padding of the children.</div></details><details><summary>Layout grid<small>3 columns</small></summary><div>Columns, rows and gutters.</div></details><details><summary>Stroke</summary><div>Colour, weight and position of the outline.</div></details><details><summary>Effects</summary><div>Shadows, blurs and blend modes.</div></details></div>
       </aside>
     </div></div>
-    <div class="code" data-for="14"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+    <div class="code" data-for="17"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
     <div class="sec__head"><h3>Grid</h3><p class="g-desc">The grid only sets the layout: any content lines up in even columns with one gap (<span class="inline-code">--g-gap</span>), as many as fit, up to 12, each at least 1/12 of the width; <span class="inline-code">--g-grid-min</span> sets a wider minimum (a grid of fields has 200 px).<span class="inline-code">data-grid="4"</span> caps the columns; <span class="inline-code">data-span</span> and <span class="inline-code">data-rows</span> on a child widen or heighten it. A tile is an <span class="inline-code">article data-tile</span>, a square card of its own (below).</p></div>
     <div class="demo col" data-code>
       <div data-grid>
@@ -524,7 +539,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
         <a href="#"><article data-tile><span data-icon="utensils"></span><h4>Meat</h4><data>50</data></article></a>
       </div>
     </div>
-    <div class="code" data-for="15"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+    <div class="code" data-for="18"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
 
     <div class="sec__head"><h3>Stack and cluster</h3><p class="g-desc"><span class="inline-code">g-stack</span> puts the children one under another with one <span class="inline-code">--g-gap</span>. <span class="inline-code">g-cluster</span> is a row that wraps and is centred on its line: chips, a key, a few buttons. <span class="inline-code">data-align="center | end | between"</span> places the row.</p></div>
     <div class="demo col" data-code>
@@ -539,7 +554,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
         <button data-variant="outline">Cancel</button><button data-variant="primary">Save</button>
       </div>
     </div>
-    <div class="code" data-for="16"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+    <div class="code" data-for="19"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
 
     <div class="sec__head"><h3>Tools layout</h3><p class="g-desc"><span class="inline-code">g-shell g-shell--tools</span>: a toolbar on the left and the workspace on the right. The panels touch, each scrolls on its own, and under 900 px they stack. Give the shell a height, or let it fill a column.</p></div>
     <div class="demo col" data-code>
@@ -551,7 +566,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
         <main><p>The workspace: results, an editor, a canvas.</p></main>
       </div>
     </div>
-    <div class="code" data-for="17"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+    <div class="code" data-for="20"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
   </section>
 
   <section class="sec g-glass g-anim-scroll" id="ruler" data-title="Ruler">
