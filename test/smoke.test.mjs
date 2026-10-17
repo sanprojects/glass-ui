@@ -122,13 +122,88 @@ test('busy: a form with no card around it waits on itself, and stops waiting whe
   const r = await page.evaluate(async () => {
     const f = document.createElement('form'); f.className = 'g-input-wrap'; f.innerHTML = '<input name="q">'; f.onsubmit = () => false; document.body.appendChild(f);
     f.requestSubmit();
-    const during = f.hasAttribute('data-g-busy');
+    const during = f.hasAttribute('aria-busy');   // it waits at once; its line shows only after --g-busy-box-delay
     await new Promise(r => setTimeout(r, 100));
     const out = { during, after: f.hasAttribute('data-g-busy') || f.hasAttribute('aria-busy') || !!f.querySelector('.g-busy-bar') };
     f.remove();
     return out;
   });
   assert.deepEqual(r, { during: true, after: false });
+});
+
+/* Glass.busy(box, true) the moment the content is asked for, false when it is all there: the kit waits --g-busy-box-delay before the line shows and fades it out */
+const busyBox = (id, top) => { const b = document.createElement('div'); b.id = id; b.textContent = 'old content'; b.style.cssText = `position: fixed; left: 10px; top: ${top}px; width: 300px; height: 60px;`; document.body.appendChild(b); return b; };
+
+test('busy: a quick answer shows nothing, a slow one gets the line after the delay, and it fades out', async () => {
+  const r = await page.evaluate(async busyBox_ => {
+    const busyBox = eval(busyBox_), seen = b => ({ wait: b.getAttribute('aria-busy'), line: b.hasAttribute('data-g-busy'), bar: !!b.querySelector(':scope > .g-busy-bar'), out: b.hasAttribute('data-g-busy-out') });
+    const sleep = ms => new Promise(r => setTimeout(r, ms)), out = {};
+    const q = busyBox('busy-q', 10);
+    Glass.busy(q, true); await sleep(100); Glass.busy(q, false); await sleep(400);
+    out.quick = seen(q);
+    const s = busyBox('busy-s', 100);
+    Glass.busy(s, true); out.asked = seen(s);
+    await sleep(400); out.slow = seen(s);
+    await sleep(500); Glass.busy(s, false); out.done = seen(s);   // its fade-in is over
+    await sleep(150); const o = +getComputedStyle(s.querySelector('.g-busy-bar')).opacity; out.fading = o > 0 && o < 1;
+    await sleep(600); out.gone = seen(s);
+    q.remove(); s.remove();
+    return out;
+  }, busyBox.toString());
+  assert.deepEqual(r, {
+    quick: { wait: null, line: false, bar: false, out: false },
+    asked: { wait: 'true', line: false, bar: false, out: false },
+    slow: { wait: 'true', line: true, bar: true, out: false },
+    done: { wait: null, line: false, bar: true, out: true },
+    fading: true,
+    gone: { wait: null, line: false, bar: false, out: false },
+  });
+});
+
+test('busy: a wait in steps is one line - the next box where the line is goes on with it, with no new delay', async () => {
+  const r = await page.evaluate(async busyBox_ => {
+    const busyBox = eval(busyBox_), seen = b => ({ line: b.hasAttribute('data-g-busy'), bar: !!b.querySelector(':scope > .g-busy-bar') });
+    const sleep = ms => new Promise(r => setTimeout(r, ms)), out = {};
+    // shown, then the next step: the new box has the line at once, the old one gives it up
+    const a = busyBox('busy-a', 200);
+    Glass.busy(a, true); await sleep(400);
+    Glass.busy(a, false); const b = busyBox('busy-b', 210); Glass.busy(b, true);
+    out.next = seen(b); out.before = seen(a);
+    Glass.busy(b, false); await sleep(700);
+    // not shown yet: the next step counts the delay from the first one, not from its own start
+    a.remove(); b.remove();
+    const c = busyBox('busy-c', 300);
+    Glass.busy(c, true); await sleep(200);
+    const d = busyBox('busy-d', 310); Glass.busy(d, true); Glass.busy(c, false);
+    await sleep(150); out.early = seen(d);
+    Glass.busy(d, false); await sleep(700);
+    // somewhere else on the page: its own wait
+    const e = busyBox('busy-e', 400); Glass.busy(e, true); await sleep(300);
+    const f = busyBox('busy-f', 600); Glass.busy(f, true); Glass.busy(e, false);
+    out.elsewhere = seen(f);
+    Glass.busy(f, false); await sleep(700);
+    [c, d, e, f].forEach(x => x.remove());
+    return out;
+  }, busyBox.toString());
+  assert.deepEqual(r, { next: { line: true, bar: true }, before: { line: false, bar: false }, early: { line: true, bar: true }, elsewhere: { line: false, bar: false } });
+});
+
+test('busy: Glass.busy(box, promise) waits until the promise settles, and returns it', async () => {
+  const r = await page.evaluate(async busyBox_ => {
+    const busyBox = eval(busyBox_), sleep = ms => new Promise(r => setTimeout(r, ms));
+    const b = busyBox('busy-p', 500);
+    let done; const p = new Promise(r => { done = r; });
+    const same = Glass.busy(b, p) === p;
+    await sleep(400); const during = b.hasAttribute('data-g-busy');
+    done(); await p; await sleep(0);
+    const after = b.hasAttribute('data-g-busy') || b.hasAttribute('aria-busy');
+    const failed = Glass.busy(b, Promise.reject(new Error('x'))).catch(() => 'caught');
+    const caught = await failed; await sleep(0);
+    const end = b.hasAttribute('aria-busy');
+    await sleep(700); b.remove();
+    return { same, during, after, caught, end };
+  }, busyBox.toString());
+  assert.deepEqual(r, { same: true, during: true, after: false, caught: 'caught', end: false });
 });
 
 test('morph: a row that fades out is not measured by data-g-fit, the columns take the width of the new words at once', async () => {

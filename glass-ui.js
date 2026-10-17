@@ -1150,9 +1150,13 @@
   }
   on('click', '.g-ruler__seg', (e, n) => { const q = n.closest('.g-ruler'), b = q.parentNode === document.body ? (document.scrollingElement || document.documentElement) : q.parentNode, r = mem(b, 'ruler'); if (r) { e.preventDefault(); r.go(+n.getAttribute('data-i'), e.clientY - n.getBoundingClientRect().top); } });
 
-  /* Busy box: Glass.busy(box, true) while its new content is on the way; Glass.busy(box, false), or Glass.morph into the box, when it is there.
-   * After --g-busy-box-delay a thin line runs along its top edge (the old content stays as it is); an empty box shows a few placeholder lines instead.
-   * An answer that comes sooner changes nothing on the screen. */
+  /* Busy box: Glass.busy(box, true) the moment its new content is asked for (the click, the submit); Glass.busy(box, false), or Glass.morph into the box,
+   * when all of it is there. Glass.busy(box, promise): until the promise settles (returns the promise).
+   * The rest is the kit's: an answer that comes within --g-busy-box-delay changes nothing on the screen; a slower one gets a thin line that fades in and runs
+   * along the top edge of the box (the old content stays as it is; an empty box also gets a few placeholder lines) and fades out when the box is done.
+   * aria-busy="true" is on the box from the start, [data-g-busy] only while the line is on the screen.
+   * A wait in steps is one line: a box that starts waiting where a line is, or was a moment ago (it is still fading out), goes on with that line - with no
+   * new delay and no gap (the form's request, then the request its answer starts, then a map that loads its tiles). */
   /* A form waits on the box its answer goes to (data-g-busy-for="#sel") while that box shows something, else on its own card. data-g-no-busy: no line */
   function formBox(form) {
     let t = null;
@@ -1162,29 +1166,80 @@
   }
   function busy(el, on) {
     if (typeof el === 'string') el = document.querySelector(el);
-    if (!el || !el.setAttribute) return;
+    if (!el || !el.setAttribute) return on;
+    if (on && typeof on.then === 'function') { const p = on, off = () => hold(el, p, false); hold(el, p, true); p.then(off, off); return p; }
     if (el.tagName === 'FORM') {   /* a form: the line goes on its box (formBox), and goes away from that same box */
-      if (!on) { const b = el._gBusyBox; el._gBusyBox = null; if (!b) return; if (b !== el) return busy(b, false); }   /* a form that is its own box (no card around it, the box in a header) is cleared below */
-      if (el.hasAttribute('data-g-no-busy') || (el._gBusyBox && el._gBusyBox.hasAttribute('data-g-busy'))) return;   /* already waiting (a box that Glass.morph has filled is not) */
+      const b = el._gBusyBox;
+      if (!on) { el._gBusyBox = null; if (b) busyEnd(b); return; }
+      if (el.hasAttribute('data-g-no-busy') || (b && WAITS.has(b))) return;   /* already waiting (a box that Glass.morph has filled is not) */
       el = el._gBusyBox = formBox(el);
     }
-    if (on) {
-      if (el.hasAttribute('data-g-busy')) return;
-      const empty = !el.children.length && !el.textContent.trim();
-      el.setAttribute('data-g-busy', empty ? 'empty' : ''); el.setAttribute('aria-busy', 'true');
-      const bar = document.createElement('i'); bar.className = 'g-busy-bar'; bar.setAttribute('aria-hidden', 'true'); el.prepend(bar);
-      if (empty) { const ph = document.createElement('div'); ph.className = 'g-busy-lines'; ph.setAttribute('aria-hidden', 'true'); ph.innerHTML = '<i></i><i></i><i></i>'; el.append(ph); }
-      return;
-    }
-    if (!el.hasAttribute('data-g-busy')) return;
-    el.removeAttribute('data-g-busy'); el.removeAttribute('aria-busy');
-    [...el.children].forEach(x => { if (AUX_BUSY.test(x.className)) x.remove(); });
+    if (on) busyStart(el); else busyEnd(el);
   }
-  const AUX_BUSY = /(^|\s)(g-busy-bar|g-busy-lines)(\s|$)/;
+  const WAITS = new Map();   /* box -> its wait: { t0: when it was asked for, timer: until the line shows, bar: the line once it shows } */
+  let ended = [];            /* the waits that ended a moment ago, while their line fades out: { t0, rect, bar, shown, at, fade } */
+  const msVar = (el, name, def) => { const v = getComputedStyle(el).getPropertyValue(name).trim(), n = parseFloat(v); return isNaN(n) ? def : /ms$/.test(v) ? n : n * 1000; };   /* "300ms", or ".3s" from a minifier */
+  const meets = (a, b) => a.width > 0 && b.width > 0 && a.left < b.right && b.left < a.right && a.top <= b.bottom && b.top <= a.bottom;
+  function busyStart(el) {
+    if (WAITS.has(el)) return;
+    WAITS.forEach((w, b) => { if (!b.isConnected) busyEnd(b); });   /* a box that left the page waiting (its content replaced with it) waits no more */
+    const now = performance.now(), r = el.getBoundingClientRect();
+    ended = ended.filter(e => now - e.at < e.fade);
+    /* the same wait going on in the same place: a box that waits, or did a moment ago, where this one is (a box around it, in it, the old content it replaces) */
+    let prev = null;
+    WAITS.forEach((w, b) => { if (!prev && meets(b.getBoundingClientRect(), r)) prev = { t0: w.t0, shown: !!w.bar, bar: null }; });
+    for (let i = ended.length; !prev && i--;) if (meets(ended[i].rect, r)) prev = ended[i];
+    const w = { t0: prev ? prev.t0 : now, timer: 0, bar: null };
+    WAITS.set(el, w);
+    el.setAttribute('aria-busy', 'true');
+    if (prev && prev.shown) {   /* its line is on the screen: this box goes on with it, from where its fade-out has got to */
+      let from = 1;
+      if (prev.bar && prev.bar.isConnected && prev.bar.parentNode !== el) { from = +getComputedStyle(prev.bar).opacity; prev.bar.remove(); }
+      prev.bar = null;
+      return busyShow(el, w, from);
+    }
+    const left = w.t0 + msVar(el, '--g-busy-box-delay', 300) - now;
+    if (left <= 0) busyShow(el, w); else w.timer = setTimeout(() => busyShow(el, w), left);
+  }
+  function busyShow(el, w, from) {
+    w.timer = 0;
+    const empty = !el.children.length && !el.textContent.trim();
+    el.removeAttribute('data-g-busy-out');
+    el.setAttribute('data-g-busy', empty ? 'empty' : '');
+    let bar = el.querySelector(':scope > .g-busy-bar');
+    if (bar) { bar._gOut = null; bar.classList.remove('g-busy-out'); }   /* it was fading out of this box: it comes back from where it got to */
+    else {
+      bar = document.createElement('i'); bar.className = 'g-busy-bar'; bar.setAttribute('aria-hidden', 'true');
+      bar.setAttribute('data-g-part', '');   /* a morph into the box leaves it to fade out */
+      /* every line keeps one beat (a running time of the page): one that takes over from another goes on from where that one was */
+      bar.style.setProperty('--g-busy-at', -(performance.now() % msVar(el, '--g-busy-run', 1600)) + 'ms');
+      if (from != null) bar.style.opacity = from;   /* instead of fading in from nothing (@starting-style) */
+      el.prepend(bar);
+      if (from != null) { getComputedStyle(bar).opacity; bar.style.opacity = ''; }
+    }
+    w.bar = bar;
+    if (empty) { const ph = document.createElement('div'); ph.className = 'g-busy-lines'; ph.setAttribute('aria-hidden', 'true'); ph.setAttribute('data-g-part', ''); ph.innerHTML = '<i></i><i></i><i></i>'; el.append(ph); }
+  }
+  function busyEnd(el) {
+    const w = WAITS.get(el);
+    if (!w) return;
+    WAITS.delete(el);
+    clearTimeout(w.timer);
+    el.removeAttribute('data-g-busy'); el.removeAttribute('aria-busy');
+    [...el.children].forEach(x => { if (/(^|\s)g-busy-lines(\s|$)/.test(x.className)) x.remove(); });   /* the content takes their place */
+    const bar = w.bar && w.bar.parentNode === el ? w.bar : null, now = performance.now(), fade = msVar(el, '--g-busy-fade', 400);
+    ended = ended.filter(e => now - e.at < e.fade);
+    ended.push({ t0: w.t0, rect: el.getBoundingClientRect(), bar, shown: !!w.bar, at: now, fade });
+    if (!bar) return;
+    el.setAttribute('data-g-busy-out', '');   /* keeps the box the line is placed by while it fades out */
+    bar.classList.add('g-busy-out');
+    const out = bar._gOut = {};
+    setTimeout(() => { if (bar._gOut !== out) return; bar.remove(); if (!WAITS.has(el)) el.removeAttribute('data-g-busy-out'); }, fade);
+  }
   /* The line of a form is on while anything of it is on its way: the requests of each of its submits (busyForms), the kit's own load of its answer
      (Address: 'load', 'post'). It goes off when the last of them is in, not when one of them is: a submit sent again while the first one is on its way
      (typing in a live form; a page that aborts its older request and sends a newer one) left the newer answer with no line. */
-  const holds = new WeakMap();   /* form -> what holds its line */
+  const holds = new WeakMap();   /* form (or box: Glass.busy(box, promise)) -> what holds its line */
   function hold(form, key, on) {
     let s = holds.get(form);
     if (!s) holds.set(form, s = new Set());

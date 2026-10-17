@@ -1087,16 +1087,27 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> i
    stands at --g-lazy-h, once drawn at its real height. Keep in mind it keeps its CSS counters to itself (a numbering through several of them: counter-set on its first row) */
 [data-g-lazy] { content-visibility: auto; contain-intrinsic-block-size: auto var(--g-lazy-h, 500px); }
 
-/* ---------- Busy box: Glass.busy(box, true | false) ----------
- * While new content is on the way: after --g-busy-box-delay a thin line runs along the top edge of the box (the content stays as it is);
- * an empty box gets three placeholder lines. A quick answer shows nothing. Glass.morph into the box ends it. */
-:root { --g-busy-box-delay: 300ms; }
-:where([data-g-busy]) { position: relative; }
-@keyframes g-busy-run { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+/* ---------- Busy box: Glass.busy(box, true | false | promise) ----------
+ * While new content is on the way: after --g-busy-box-delay a thin line fades in and runs along the top edge of the box (the content stays as it is), and
+ * fades out (--g-busy-fade) when the box is done; an empty box also gets three placeholder lines. A quick answer shows nothing. Glass.morph into the box ends it.
+ * aria-busy="true": the box waits; [data-g-busy]: its line is on the screen; [data-g-busy-out]: the line fades out. */
+:root { --g-busy-box-delay: 300ms; --g-busy-fade: .45s; --g-busy-run: 1.6s; }   /* and --g-busy-color: the line's colour (the accent) */
+:where([data-g-busy], [data-g-busy-out]) { position: relative; }
+/* the light fades in as it comes in at the left and out as it goes at the right, so the next run follows it with hardly a pause */
+@keyframes g-busy-run { from { transform: translateX(-80%); opacity: 0; } 12% { opacity: 1; } 80% { opacity: 1; } to { transform: translateX(180%); opacity: 0; } }
 @keyframes g-busy-pulse { to { opacity: .45; } }
-.g-busy-bar { position: absolute; z-index: 2; inset: 0 0 auto; height: 2px; overflow: hidden; pointer-events: none; border-radius: 2px; animation: g-fade var(--g-dur) var(--g-busy-box-delay) backwards; }
-.g-busy-bar::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 35%; border-radius: inherit; background: linear-gradient(90deg, transparent, var(--g-accent), transparent); animation: g-busy-run 1.1s ease-in-out infinite; }
-.g-busy-lines { display: grid; gap: .6em; padding-block: .4em; animation: g-fade var(--g-dur) var(--g-busy-box-delay) backwards; }
+/* the line comes out of the left edge and dies away into the right one (the mask), so it is never cut off by the box nor seen to start over */
+.g-busy-bar { position: absolute; z-index: 2; inset: 0 0 auto; height: 2px; overflow: hidden; pointer-events: none; transition: opacity var(--g-busy-fade) ease;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent); mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent); }
+@starting-style { .g-busy-bar { opacity: 0; } }
+.g-busy-bar.g-busy-out { opacity: 0; }
+/* a box in it waits too, with its own line: that one is the line (the two would run one over the other) */
+:where([data-g-busy]):has([data-g-busy]) > .g-busy-bar { opacity: 0; transition: none; }
+/* a light with a tail that fades out behind it; every line runs in one beat (--g-busy-at, set by the kit), so one that takes over from another goes on from where that one was */
+.g-busy-bar::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 40%; border-radius: 2px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--g-busy-color, var(--g-accent)) 45%, transparent) 60%, var(--g-busy-color, var(--g-accent)) 92%, transparent);
+  animation: g-busy-run var(--g-busy-run) linear var(--g-busy-at, 0s) infinite; }
+.g-busy-lines { display: grid; gap: .6em; padding-block: .4em; transition: opacity var(--g-busy-fade) ease; }
+@starting-style { .g-busy-lines { opacity: 0; } }
 .g-busy-lines > i { display: block; height: .8em; border-radius: 4px; background: var(--g-fill); animation: g-busy-pulse 1.4s ease-in-out infinite alternate; }
 .g-busy-lines > i:nth-child(2) { width: 85%; }
 .g-busy-lines > i:nth-child(3) { width: 60%; }
