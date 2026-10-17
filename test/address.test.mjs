@@ -394,3 +394,54 @@ test('data-default names the default of a field when the server\'s is not the fi
   await page.click('#bare'); await settle();   // an address that does not name it: the default, as the server has it
   assert.deepEqual(await page.evaluate(() => [document.querySelector('select[name=min]').value, document.getElementById('out').textContent]), ['3', 'min 3']);
 });
+
+/* The busy line of a form (Glass.busy): on while anything of the form is on its way, off when the last answer is in - not when one of them is */
+const busyBoxes = () => page.evaluate(() => [...document.querySelectorAll('[data-g-busy]')].map(b => b.tagName.toLowerCase() + (b.id ? '#' + b.id : '')));
+
+test('the busy line stays until the answer is in: Enter while the typed address is still on its way', async () => {
+  slow.set('/find/лес', 1500);
+  await page.fill('input[name=word]', 'лес');
+  await page.waitForFunction(() => document.querySelector('[data-g-busy]'));   // the request of the typed word is on its way
+  await page.keyboard.press('Enter');   // the same address: no second request
+  await page.waitForTimeout(500);
+  assert.deepEqual(await busyBoxes(), ['aside'], 'the line is still on');
+  await page.waitForFunction(() => /^лес-/.test(document.querySelector('#result li')?.textContent || ''), null, { timeout: 5000 });
+  await settle();
+  assert.deepEqual(await busyBoxes(), []);
+  assert.equal(fetches().length, 1);
+  assert.deepEqual(errors, []);
+});
+
+test('the busy line stays while a newer submit is answered, when the page aborted the older request', async () => {
+  const own = '<!doctype html><script defer src="/glass-ui.js"></script><script defer src="/glass-morph.js"></script><main><article><form id="b" method="get" action="/own"><input name="w"><button>Go</button></form></article><p id="out"></p></main>'
+    + '<script>let x; document.getElementById("b").addEventListener("submit", e => { e.preventDefault(); if (x) x.abort(); x = new XMLHttpRequest(); x.open("GET", "/slow?w=" + e.target.w.value); x.onload = () => { out.textContent = x.responseText; }; x.send(); });</script>';
+  await page.route(ORIGIN + '/own**', route => route.fulfill({ contentType: 'text/html', body: own }));
+  await page.route(ORIGIN + '/slow**', async route => { await new Promise(r => setTimeout(r, 1200)); return route.fulfill({ contentType: 'text/plain', body: new URL(route.request().url()).searchParams.get('w') }).catch(() => {}); });
+  await page.goto(ORIGIN + '/own');
+  await page.waitForFunction(() => window.Glass);
+  await page.fill('#b input', 'y');
+  await page.click('#b button');
+  await page.waitForTimeout(300);
+  await page.fill('#b input', 'z');
+  await page.click('#b button');   // the page aborts the request for y and asks for z
+  await page.waitForTimeout(500);
+  assert.deepEqual(await busyBoxes(), ['article'], 'the line is on while z is on its way');
+  await page.waitForFunction(() => document.getElementById('out').textContent === 'z', null, { timeout: 5000 });
+  await page.waitForTimeout(100);
+  assert.deepEqual(await busyBoxes(), []);
+  assert.deepEqual(errors, []);
+});
+
+test('a select that loads its list (data-load-list) has the busy line on the list while the server answers', async () => {
+  const own = '<!doctype html><script defer src="/glass-ui.js"></script><main><form id="c" method="get" action="/sel"><select name="city" data-g-select data-searchable data-load-list="/list"><option value="">Any</option></select></form></main>';
+  await page.route(ORIGIN + '/sel**', route => route.fulfill({ contentType: 'text/html', body: own }));
+  await page.route(ORIGIN + '/list**', async route => { await new Promise(r => setTimeout(r, 1000)); return route.fulfill({ contentType: 'application/json', body: JSON.stringify([['Москва', 'msk'], ['Лимасол', 'lim']]) }).catch(() => {}); });
+  await page.goto(ORIGIN + '/sel');
+  await page.waitForFunction(() => document.querySelector('.g-select__trigger'));
+  await page.click('.g-select__trigger');
+  await page.waitForTimeout(400);
+  assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('[role="listbox"][data-g-busy] > .g-busy-bar')].length), 1, 'the line runs along the list');
+  await page.waitForFunction(() => document.querySelectorAll('[role="listbox"] [role="option"]').length >= 2, null, { timeout: 5000 });
+  assert.deepEqual(await busyBoxes(), []);
+  assert.deepEqual(errors, []);
+});

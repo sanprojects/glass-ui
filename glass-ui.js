@@ -234,8 +234,10 @@
       commit(sel);
     }
     function load(q) {   // replace the options by the server's list, keeping the empty one and the chosen one
-      const n = ++seq;
+      const n = ++seq, done = () => { if (n === seq) busy(list, false); };   /* the busy line along the list while the server answers (it shows when that is slow); a newer request keeps it */
+      busy(list, true);
       fetch(url + (url.includes('?') ? '&' : '?') + 'value=' + encodeURIComponent(q)).then(r => r.json()).then(rows => {
+        done();
         if (n !== seq || !isOpen()) return;
         const empty = sel.querySelector('option[value=""]'), cur = sel.value;
         sel.replaceChildren(...(empty ? [empty] : []));
@@ -244,7 +246,7 @@
         (rows || []).forEach(r => add(String(r[0]), String(r[1] ?? r[0])));
         if (cur && !seen.has(cur)) { const o = new Option(cur, cur, true, true); sel.appendChild(o); }
         sel.value = cur; build(); setActive(visible()[0]);
-      }).catch(() => {});
+      }).catch(done);
     }
     function filter() {
       if (url) { clearTimeout(timer); timer = setTimeout(() => load((search.value || '').trim()), 200); return; }
@@ -1170,12 +1172,23 @@
     [...el.children].forEach(x => { if (AUX_BUSY.test(x.className)) x.remove(); });
   }
   const AUX_BUSY = /(^|\s)(g-busy-bar|g-busy-lines)(\s|$)/;
+  /* The line of a form is on while anything of it is on its way: the requests of each of its submits (busyForms), the kit's own load of its answer
+     (Address: 'load', 'post'). It goes off when the last of them is in, not when one of them is: a submit sent again while the first one is on its way
+     (typing in a live form; a page that aborts its older request and sends a newer one) left the newer answer with no line. */
+  const holds = new WeakMap();   /* form -> what holds its line */
+  function hold(form, key, on) {
+    let s = holds.get(form);
+    if (!s) holds.set(form, s = new Set());
+    if (on) { s.add(key); busy(form, true); }
+    else if (s.delete(key) && !s.size) busy(form, false);
+  }
   /* Every form waits for the server with the busy line, nothing to set up: from its submit until the requests that submit started (fetch, XMLHttpRequest)
      are answered; a form the browser sends itself, until the next page. A quick answer shows nothing (the line comes after --g-busy-box-delay).
      A form sent by a script with no submit event (form.submit(), a request of its own): Glass.busy(form, true / false) */
   function busyForms() {
     let watch = null;   /* the form whose submit is running now: what is requested meanwhile is its answer */
-    const end = w => { if (--w.n <= 0 && !w.open) busy(w.form, false); };
+    const done = w => hold(w.form, w, false);
+    const end = w => { if (--w.n <= 0 && !w.open) done(w); };
     const take = () => { const w = watch; if (w) w.n++; return w; };
     if (window.XMLHttpRequest) {
       const send = XMLHttpRequest.prototype.send;
@@ -1188,18 +1201,18 @@
     document.addEventListener('submit', e => {   /* capture: before the page's own handlers, which start the requests */
       const form = e.target;
       if (!(form instanceof HTMLFormElement) || form.hasAttribute('data-g-no-busy')) return;
-      busy(form, true);
       const w = watch = { form, n: 0, open: true };
+      hold(form, w, true);
       setTimeout(() => {   /* the submit and its handlers are over */
         if (watch === w) watch = null;
         w.open = false;
         if (w.n) return;
         const blank = ((e.submitter && e.submitter.getAttribute('formtarget')) || form.target) === '_blank';
-        if (e.defaultPrevented || blank) busy(form, false);   /* handled by the page with no request (or one the line cannot see), or opened elsewhere: nothing to wait for */
-        else setTimeout(() => busy(form, false), 30000);   /* the browser sends it: the next page ends it; an answer that is a download leaves this page as it is */
+        if (e.defaultPrevented || blank) done(w);   /* handled by the page with no request (or one the line cannot see), or opened elsewhere: nothing to wait for */
+        else setTimeout(() => done(w), 30000);   /* the browser sends it: the next page ends it; an answer that is a download leaves this page as it is */
       });
     }, true);
-    addEventListener('pageshow', e => { if (e.persisted) $$('form').forEach(f => busy(f, false)); });   /* back to a page kept in memory: it waits for nothing */
+    addEventListener('pageshow', e => { if (e.persisted) $$('form').forEach(f => { holds.delete(f); busy(f, false); }); });   /* back to a page kept in memory: it waits for nothing */
   }
 
   /* ---------- Address: a GET form and the address of the page are one state ----------
@@ -1441,7 +1454,7 @@
       clearTimeout(timer);
       if (ctl) { ctl.abort(); ctl = null; pending = ''; }
       shown = url;
-      busy(form, false);
+      hold(form, 'load', false);
       fire(document, 'g:navigate', { url: location.href, title: document.title });
       return true;
     }
@@ -1450,12 +1463,12 @@
       clearTimeout(timer);
       if (url === pending) return;
       if (ctl) { ctl.abort(); ctl = null; pending = ''; }
-      if (url === shown && !fresh) { busy(form, false); return; }
+      if (url === shown && !fresh) { hold(form, 'load', false); return; }
       if (!told && own(url)) return;
       if (fresh) { cache.delete(url); cache.delete('mine|' + url); }
       const c = ctl = new AbortController();
       pending = url;
-      busy(form, true);
+      hold(form, 'load', true);
       fetchPage(url, c.signal, mine).then(r => {
         if (ctl !== c) return;   /* a newer one is on its way */
         ctl = null; pending = '';
@@ -1464,7 +1477,7 @@
         shown = url;
         if (r.url !== url && here() === url) { history.replaceState(history.state, '', r.url); shown = r.url; }   /* the server put the address right (a redirect) */
         if (put === 'fields' && here() === shown) history.replaceState(remember(), '');   /* what the server wrote into hidden fields: back to this address puts it back too */
-        busy(form, false);
+        hold(form, 'load', false);
         fire(document, 'g:navigate', { url: new URL(shown, location.href).href, title: document.title });
       }, () => { if (ctl === c) { ctl = null; pending = ''; go(); } });
     }
@@ -1479,8 +1492,8 @@
       by = by && by.form === f ? by : null;
       const data = by ? new FormData(f, by) : new FormData(f);
       const body = (f.enctype || '').toLowerCase() === 'multipart/form-data' ? data : new URLSearchParams([...data].filter(p => typeof p[1] === 'string'));
-      const native = () => { if (posts.get(f) !== c) return; posts.delete(f); busy(f, false); passing.add(f); try { if (by) f.requestSubmit(by); else f.requestSubmit(); } finally { passing.delete(f); } };
-      busy(f, true);
+      const native = () => { if (posts.get(f) !== c) return; posts.delete(f); hold(f, 'post', false); passing.add(f); try { if (by) f.requestSubmit(by); else f.requestSubmit(); } finally { passing.delete(f); } };
+      hold(f, 'post', true);
       fetch(f.action, { method: 'POST', body, headers: { 'X-G-Fetch': '1' }, signal: c.signal, credentials: 'same-origin' }).then(res => {
         const u = new URL(res.url), to = u.pathname + u.search;
         if (posts.get(f) !== c) return;
@@ -1491,7 +1504,7 @@
           posts.delete(f);
           if (res.redirected && to !== here()) history.pushState(null, '', to);
           if (!apply(html, f)) return native();
-          busy(f, false);
+          hold(f, 'post', false);
           fire(document, 'g:navigate', { url: location.href, title: document.title });
         });
       }).catch(err => { if (err && err.name !== 'AbortError') native(); });
