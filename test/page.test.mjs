@@ -360,4 +360,24 @@ test('page: a browser that does not keep up gets less motion, step by step, and 
   assert.ok(r.unmarked);
 });
 
+test('page: a table written anew keeps its columns in place: the kit sets their widths before the rows are read, ghost cells are no columns', async () => {
+  const r = await page.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    scrollTo(0, 0); await wait(400);
+    const row = (id, a, b, c) => `<tr id="${id}"><td>${a}</td><td>${b ? '<a>' + b + '</a>' : ''}</td><td>${c ? '<a>' + c + '</a>' : ''}</td></tr>`;
+    const box = document.createElement('div');
+    box.innerHTML = '<table id="fitT"><thead><tr><th>code</th><th>country</th><th>city</th></tr></thead><tbody>' +
+      Array.from({ length: 8 }, (_, i) => row('t' + i, '+35' + i, 'a long country name ' + i, 'city ' + i)).join('') + '</tbody></table>';
+    document.querySelector('main').prepend(box); await wait(1200);
+    const t = box.querySelector('table'), frames = [];
+    let on = true; const tick = () => { const cg = t.querySelector(':scope > colgroup'); frames.push(cg ? cg.children.length : 0); if (on) requestAnimationFrame(tick); };
+    /* the first row stays and loses its long cells (they fade out in it), the rest are new */
+    t.tBodies[0].innerHTML = row('t0', '+350', '', '') + Array.from({ length: 6 }, (_, i) => row('n' + i, '+357 ' + i, 'Cy', 'a much longer city name than before ' + i)).join('');
+    requestAnimationFrame(tick);
+    await wait(1000); on = false; await wait(50); box.remove(); await wait(600);
+    return { frames: [...new Set(frames)] };
+  });
+  assert.deepEqual(r.frames, [3], JSON.stringify(r));   // a frame without the kit's columns (the browser's widths), then 5 of them while the ghost cells were in the row
+});
+
 test('page: the page still runs without script errors', () => { assert.deepEqual(errors, []); });

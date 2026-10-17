@@ -917,13 +917,15 @@
   const FIT_T = '.g-root table:not([data-scroll-body], [data-no-fit], [data-wrap])';
   function tableFit(t) {
     if (!t.isConnected || !t.parentElement || !t.tBodies[0] || t.closest('[data-no-fit], [data-wrap]')) return;
-    const row = [...t.tBodies[0].rows].find(r => r.cells.length > 1 && ![...r.cells].some(c => c.colSpan > 1)); if (!row) return;
+    /* the cells of a row that the table lays out: not the ghosts of cells that go (glass-morph puts them in the row, out of the flow, while they fade) */
+    const cells = r => [...r.cells].filter(c => !c.classList.contains('g-morph-ghost'));
+    const row = [...t.tBodies[0].rows].find(r => cells(r).length > 1 && !cells(r).some(c => c.colSpan > 1)); if (!row) return;
     const old = t.querySelector(':scope > colgroup[data-g-fit]'); if (old) old.remove();
     t.style.tableLayout = '';
     const cs = getComputedStyle(t.parentElement), avail = t.parentElement.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
     if (avail <= 0) return;
     t.setAttribute('data-g-fit-measure', '');   /* CSS: as wide as the content asks, no cell is cut (not glass-morph's data-g-measure: the same name on <main> invalidated every cell under it) */
-    const w = [...row.cells].map(c => c.getBoundingClientRect().width);
+    const w = cells(row).map(c => c.getBoundingClientRect().width);
     t.removeAttribute('data-g-fit-measure');
     const need = w.reduce((a, b) => a + b, 0), out = w.slice();   /* it fits: the columns keep their proportions and share the spare room (no equal split by a wide colspan header) */
     let free = avail, rest = need <= avail + 1 ? [] : w.map((_, i) => i);
@@ -1612,6 +1614,7 @@
   global.Glass = Object.assign(global.Glass || {}, {
     init, animate, busy, fileProgress, ruler, setTheme, toast, setProgress, validate, nav: navAuto,
     fit: box => { if (box._gFit) box._gFit(); else mount1(box, ['[data-g-fit]', initFit]); },   /* measure a [data-g-fit] box now (glass-morph.js, in the reads of an update) */
+    fitTable: t => { if (t.matches(FIT_T)) tableFit(t); },   /* the columns of a table fit its box now (glass-morph.js, in the reads of an update) */
     /* for glass-morph.js: the kit's parts that run by themselves (their own animations, built and changed by the kit): not content to animate */
     morphSkip: (global.Glass && global.Glass.morphSkip ? global.Glass.morphSkip + ', ' : '') +   /* what the page set before (ads, other scripts' widgets) stays */
       '.g-select, .g-tooltip, .g-toasts, .g-more, .g-clamp__btn, .g-ruler, .g-input-wrap, .g-busy-bar, .g-busy-lines, [data-g-pager], [data-g-file], ' +

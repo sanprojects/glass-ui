@@ -444,6 +444,8 @@
           scope.forEach(s => s.setAttribute('data-g-measure', ''));
           /* the columns of a [data-g-fit] take the width of the new words first (else they would after this, and the rows would not end where they are read) */
           new Set(scope.flatMap(s => [...$$('[data-g-fit]', s), s.closest('[data-g-fit]')])).forEach(b => { if (b) fitBox(b); });
+          /* so do the columns of a table (the kit's colgroup: else the new rows are read at the browser's widths, and the cells jump to the kit's in the next frame) */
+          if (kit.fitTable) new Set(scope.flatMap(s => [...$$('table', s), s.closest('table')])).forEach(t => { if (t) kit.fitTable(t); });
           const at = new Map();   /* where in the viewport each element that is animated starts: the wave reaches it from there */
           const kept = [];   /* [element, its rect]: where what stays stands in the new layout, without the ghosts (see placed) */
           const enter = o.enter !== false ? ctx.entering.filter(e => { if ((ctx.floats && ctx.floats(e)) || said(e)) return false; const r = e.getBoundingClientRect(); at.set(e, [r.left, r.top]); kept.push([e, r]); return onScreen(r); }).slice(0, MAX) : [];
