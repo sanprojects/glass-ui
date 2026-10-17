@@ -46,7 +46,7 @@ test('select: opens as a listbox and picks an option', async () => {
   assert.equal(await page.evaluate(() => document.getElementById('s-role').value), 'Designer');
 });
 
-test('select: the markup of an option (a dimmed count) goes into the list and the trigger, and follows a script that changes it', async () => {
+test('select: the markup of an option (a dimmed count at the right end) goes into the list and the trigger, and follows a script that changes it', async () => {
   const r = await page.evaluate(async () => {
     const tick = () => new Promise(res => setTimeout(res, 0));
     const box = document.createElement('div'); box.className = 'g-root'; document.body.appendChild(box);
@@ -62,11 +62,14 @@ test('select: the markup of an option (a dimmed count) goes into the list and th
     const list = [...lb.querySelectorAll('[role="option"]')].map(d => d.innerHTML);
     sel.options[1].querySelector('small').textContent = '6'; await tick();
     const open = [...lb.querySelectorAll('[role="option"]')].map(d => d.innerHTML);
+    const column = new Set([...lb.querySelectorAll('[role="option"] > small')].map(s => Math.round(s.getBoundingClientRect().right))).size === 1;   /* the counts at one right edge, the checked row too */
+    const vs = value.querySelector('small'), end = Math.abs(vs.getBoundingClientRect().right - value.getBoundingClientRect().right) < 1;   /* in the trigger at the right end */
     trigger.click();
     box.remove();
-    return { first, dimmed, closed, list, open };
+    return { first, dimmed, closed, list, open, column, end };
   });
-  assert.deepEqual(r, { first: 'Users <small>3</small>', dimmed: true, closed: 'Users <small>4</small>', list: ['Users <small>4</small>', 'Bots <small>5</small>'], open: ['Users <small>4</small>', 'Bots <small>6</small>'] });
+  const u = n => `<span class="g-select__text">Users </span><small>${n}</small>`, b = n => `<span class="g-select__text">Bots </span><small>${n}</small>`;
+  assert.deepEqual(r, { first: u(3), dimmed: true, closed: u(4), list: [u(4), b(5)], open: [u(4), b(6)], column: true, end: true });
 });
 
 test('table: rows select, Clear empties the selection', async () => {

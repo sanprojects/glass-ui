@@ -7,7 +7,7 @@
  *
  *   <select data-g-select multiple>   -> multi-select: list stays open, toggles options, shows "A, B" or "3 selected"
  *   <select data-g-select>            -> glass dropdown (add data-searchable for a combobox filter)
- *   <option value="bots">Bots <small>12</small></option> -> the markup of an option goes into the list and the trigger, as <selectedcontent> does; a <small> in it is a dimmed side note, such as a count
+ *   <option value="bots">Bots <small>12</small></option> -> the markup of an option goes into the list and the trigger, as <selectedcontent> does; a <small> in it is a dimmed side note at the right end, such as a count
  *     (give it a value: without one the value is the whole text, the count too). Options changed by a script are followed
  *   <select data-g-select data-searchable data-load-list="/url">  -> the options come from the server: GET /url?value=<typed text> returns [[text, value?], ...] (opens with value=""; the empty <option> is the "any" row, labelled data-clear-label)
  *   (automatic) every text <input> in a .g-field gets this cross; data-g-no-clear on the input or a container turns it off. Written by hand:
@@ -189,6 +189,10 @@
     const visible = () => opts.filter(d => !d.hidden && !isDisabled(d));
     const placeholder = () => sel.querySelector('option[value=""]')?.textContent.trim() || data(sel, 'placeholder', 'Select…');
     const copy = o => [...o.childNodes].map(n => n.cloneNode(true));   // an option as it is written: its text and its markup
+    const content = o => {   // ... and with a side note (<small>) the text in a span of its own, which gives way with an ellipsis, the note after it at the right end
+      const c = copy(o); if (!o.querySelector(':scope > small')) return c;
+      const t = el('span', 'g-select__text'); t.append(...c); return [t, ...t.querySelectorAll(':scope > small')];
+    };
 
     const url = sel.getAttribute('data-load-list'); let seq = 0, timer = 0;   /* remote options: the server filters, the kit only draws */
     function build() {   // the options are read from the <select> each time it opens
@@ -196,7 +200,7 @@
       $$('option', sel).forEach((o, i) => {
         if (o.hidden || (o.value === '' && !(url && search))) return;
         const d = attrs(el('div'), { id: id + '-o' + i, role: 'option', tabindex: -1 });
-        if (o.value === '') d.textContent = data(sel, 'clear-label', '—'); else d.append(...copy(o)); if (o.disabled) d.setAttribute('aria-disabled', 'true');
+        if (o.value === '') d.textContent = data(sel, 'clear-label', '—'); else d.append(...content(o)); if (o.disabled) d.setAttribute('aria-disabled', 'true');
         mem(d, 'o', o); mem(d, 'label', o.textContent.toLowerCase());
         holder.appendChild(d); opts.push(d);
       });
@@ -205,7 +209,7 @@
     function paint() {   // the trigger text and the selected marks
       const on = $$('option', sel).filter(o => o.selected && o.value !== ''), ph = !on.length;
       if (ph || on.length > 2) valueEl.textContent = ph ? placeholder() : on.length + ' ' + data(sel, 'selected-label', 'selected');
-      else valueEl.replaceChildren(...on.flatMap((o, i) => i ? [', ', ...copy(o)] : copy(o)));
+      else valueEl.replaceChildren(...(on.length > 1 ? on.flatMap((o, i) => i ? [', ', ...copy(o)] : copy(o)) : content(on[0])));   /* two of a multi-select: their notes stay inline */
       valueEl.classList.toggle('is-placeholder', ph);
       opts.forEach(d => aria(d, 'selected', optOf(d).selected && !ph));
     }
