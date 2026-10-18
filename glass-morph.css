@@ -5,7 +5,7 @@
  * At once: a row that is gone fades out where it stood, a new one slides in, the rest glides, new words of a text light up, a number turns its digits.
  * The tuning is custom properties; set them on the box: <div id="result" style="--g-morph-leave: 120ms"> (the script reads them in ms; ms or s, as a minifier may write them).
  * !important: a row that is still entering has the rules of .g-list rows (and of the site) with a higher specificity. */
-:root { --g-morph-leave: 180ms; --g-morph-enter: 250ms; --g-morph-stagger: 20ms; --g-morph-reel: 320ms; --g-morph-reel-stagger: 35ms; --g-morph-move: 320ms; }
+:root { --g-morph-leave: 200ms; --g-morph-enter: 300ms; --g-morph-stagger: 20ms; --g-morph-reel: 320ms; --g-morph-reel-stagger: 35ms; --g-morph-move: 400ms; }
 @keyframes g-morph-out { to { opacity: 0; transform: translateX(-24px); } }
 /* what comes in is whole early (opacity at 40% of the run) and slides on to its place till the end: a half-transparent thing reads as a hole */
 @keyframes g-morph-in { 0% { opacity: 0; transform: translateX(-24px); } 40% { opacity: 1; } 100% { opacity: 1; transform: none; } }

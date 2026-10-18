@@ -427,7 +427,7 @@
     const time = v => { const m = /^\s*([-+]?(?:\d+\.?\d*|\.\d+))(ms|s)?\s*$/i.exec(v || ''); return m ? parseFloat(m[1]) * (/^s$/i.test(m[2] || '') ? 1000 : 1) : NaN; };
     function timings(target) {
       const cs = getComputedStyle(target), css = (name, def) => time(cs.getPropertyValue(name)) || def;
-      return { leave: css('--g-morph-leave', 180), enter: css('--g-morph-enter', 250), stagger: css('--g-morph-stagger', 20), reel: css('--g-morph-reel', 320), reelStagger: css('--g-morph-reel-stagger', 35), move: css('--g-morph-move', 320), word: css('--g-morph-word', 1200), ease: cs.getPropertyValue('--g-ease').trim() || 'ease-out' };
+      return { leave: css('--g-morph-leave', 200), enter: css('--g-morph-enter', 300), stagger: css('--g-morph-stagger', 20), reel: css('--g-morph-reel', 320), reelStagger: css('--g-morph-reel-stagger', 35), move: css('--g-morph-move', 400), word: css('--g-morph-word', 1200), ease: cs.getPropertyValue('--g-ease').trim() || 'ease-out' };
     }
     /* What an update of `target` animates and how: filled while the update is read (entering, moves, words, ...), played by flush() once the DOM is in its
        new state. One for Glass.morph (which patches the box itself) and for a watched box (data-g-morph: someone else changed it) */
