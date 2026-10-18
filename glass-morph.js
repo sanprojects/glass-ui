@@ -375,7 +375,7 @@
       /* parent -> [how many ghosts it still holds, static, its own isolation]. Meanwhile a static parent is positioned for them, and isolated: the
          ghosts stand under its content (z-index -1), what comes in at their place covers them, and they stay over its background */
       const held = new Map(), all = [], byParent = new Map();
-      list.forEach(([e, p, x, y, w, h, flat, vx, vy]) => {
+      list.forEach(([e, p, x, y, w, h, flat, vx, vy, disp]) => {
         if (!p.isConnected) return;
         if (!held.has(p)) { held.set(p, [0, flat, p.style.isolation]); p.style.isolation = 'isolate'; }
         const hp = held.get(p); hp[0]++;
@@ -387,7 +387,11 @@
         const d = wave(vx, vy);
         e.style.setProperty('--g-morph-d', d + 'ms'); e.style.setProperty('--g-morph-run', run(d) + 'ms');
         e.classList.add('g-morph-ghost'); e.setAttribute('aria-hidden', 'true'); e.inert = true;
+        /* not a row of the layout: the columns of a .g-list count the rows shown (:nth-child(n):not([hidden]) in glass-ui.css). A ghost that counted
+           made the columns follow it, the rows that stay reflowed, and placed() took the ghost away at once. [hidden] would hide it, so its display is put back */
         p.appendChild(e);
+        const shown = disp || getComputedStyle(e).display;   /* a copy of a watched box (no read before) is read in its place */
+        if (shown) { e.hidden = true; e.style.display = shown; }
         e._done = () => { if (!e.parentNode) return; e.remove(); if (!--hp[0]) { if (hp[1]) p.style.position = ''; p.style.isolation = hp[2]; } };
         all.push(e);
         if (!byParent.has(p)) byParent.set(p, []);
@@ -457,7 +461,7 @@
           if (o.move !== false) {
             const raw = new Map(), gliding = new Map(), came = new Set();
             ctx.moves.forEach((f, e) => {
-              if (!e.isConnected || !e.animate || said(e, true)) return;
+              if (!e.isConnected || !e.animate || said(e, true) || movingNow().has(e)) return;
               const l = e.getBoundingClientRect();
               kept.push([e, l]);
               /* where it went: by the side of it that stayed (the least of the moves of its two edges and its middle). One that only grew or shrank
@@ -595,7 +599,7 @@
             moved.forEach(e => { if (!ctx.moves.has(e) && e.isConnected) ctx.pre.set(e, at(e)); });
           }
           const flat = new Map(), isFlat = p => { if (!flat.has(p)) flat.set(p, getComputedStyle(p).position === 'static'); return flat.get(p); };
-          ghosts = leaving.slice(0, MAX).map(e => { const p = e.parentElement; if (!p || skipped(e) || said(e)) return null; const r = e.getBoundingClientRect(); if (!onScreen(r)) return null; const pr = p.getBoundingClientRect(); return [e, p, r.left - pr.left - p.clientLeft + p.scrollLeft, r.top - pr.top - p.clientTop + p.scrollTop, r.width, r.height, isFlat(p), r.left, r.top]; }).filter(Boolean);
+          ghosts = leaving.slice(0, MAX).map(e => { const p = e.parentElement; if (!p || skipped(e) || said(e)) return null; const r = e.getBoundingClientRect(); if (!onScreen(r)) return null; const pr = p.getBoundingClientRect(); return [e, p, r.left - pr.left - p.clientLeft + p.scrollLeft, r.top - pr.top - p.clientTop + p.scrollTop, r.width, r.height, isFlat(p), r.left, r.top, getComputedStyle(e).display]; }).filter(Boolean);
         }
         /* the height of the last update, if it still runs, is let go now (it was read as where this one starts): the new height is then read as it
            is, not halfway, and the box gets its own overflow back at once (an event later, the next height would take the clip for its own) */
@@ -697,6 +701,24 @@
         if (x.m41 || x.m42) m.set(t, [x.m41, x.m42]);
       }
       return m;
+    }
+    /* what a CSS transition or the page's own animation moves in the layout right now (a marker that follows a pointer, a bar that grows):
+       it is the page's motion, not a change of its content, and it changes every frame while it runs - a glide would start again on each one.
+       Such an element is left out of the moves (the morph's own glides and the animations that are not about the layout are not counted) */
+    const LAYOUT = /^(left|top|right|bottom|inset|width|height|margin|padding)/;
+    let moving = null, movingAt = -1;
+    function movingNow() {
+      const now = performance.now();
+      if (moving && now === movingAt) return moving;
+      moving = new Set(); movingAt = now;
+      if (!document.getAnimations) return moving;
+      for (const a of document.getAnimations()) {
+        const t = a.effect && a.effect.target;
+        if (!t || t.nodeType !== 1 || a.effect.pseudoElement || a.id === 'g-morph') continue;
+        const props = a.transitionProperty ? [a.transitionProperty] : a.effect.getKeyframes().flatMap(k => Object.keys(k));
+        if (props.some(p => LAYOUT.test(p))) moving.add(t);
+      }
+      return moving;
     }
     /* how far what runs now moves an element: its own animation and the ones of the boxes it is in */
     const shiftOf = (e, sh, box) => { let x = 0, y = 0; for (let p = e; p && p !== box; p = p.parentElement) { const s = sh.get(p); if (s) { x += s[0]; y += s[1]; } } return [x, y]; };

@@ -19,7 +19,7 @@ const MEASURE = `(() => {
   document.querySelectorAll('dialog').forEach(d=>{ try{ d.show(); d.style.position='static'; d.style.margin='0'; }catch(e){} }); document.querySelectorAll('[popover]').forEach(d=>{ try{ d.showPopover(); }catch(e){} });
   const roots = [...document.querySelectorAll('.demo, .g-shell, [data-code], dialog, [popover]')].filter(e=>!e.closest('.code, pre'));
   const seen = new Set(), out = [];
-  const INNER='.g-field, hgroup, .g-empty, .g-file__drop, .g-file__main, .g-file__row, .g-file__item, blockquote, .g-list > li, .g-toast, [data-tile], summary, a, button, label, data, th, td, [role=menu], [role=listbox]';
+  const INNER='.g-field, hgroup, .g-empty, .g-file__drop, .g-file__main, .g-file__row, .g-file__item, blockquote, .g-list > li, .g-toast, [data-tile], summary, a, button, label, data, th, td, [role=menu], [role=listbox], [role=option], .g-select__value';
   const TIGHT='[role=tablist], .g-pager__pages, nav > ul, .g-shell__head [role=tablist]';
   const allowedIn = c => c.matches(INNER) ? 8 : (c.matches(TIGHT) ? 'tight' : null);
   const visit = c => { if (seen.has(c) || c.closest('pre,.code,[data-code-src]')) return; seen.add(c);

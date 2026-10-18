@@ -1,5 +1,5 @@
 // Minimal browser tests: node --test test/smoke.test.mjs   (needs: npm i && npx playwright install chromium)
-import { test, before, after } from 'node:test';
+import { test, before, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import { fileURLToPath } from 'node:url';
@@ -15,6 +15,9 @@ before(async () => {
   await page.goto(page_url); await page.waitForTimeout(1200);
   await page.evaluate(() => Glass.init(document));   // build select / pager / more parts right away
 });
+// The morph's step of motion is kept for the tab and goes down when a browser draws under 30 frames a second: this page is one tab for
+// all the tests, so a slow stretch of one must not turn the motion off for the next. Each test starts at the full motion.
+beforeEach(async () => { await page.evaluate(() => Glass.morph.motion(0)); });
 after(async () => { await browser.close(); });
 
 test('the page runs without script errors', () => { assert.deepEqual(errors, []); });
@@ -94,8 +97,9 @@ test('morph: a row that stays is the same node, a gone one slides out, a new one
   const r = await page.evaluate(async () => {
     const box = document.createElement('div'); box.innerHTML = '<p><b>199</b> words</p><ol class="g-list"><li data-key="a">a</li><li data-key="b">b</li></ol>'; box.style.cssText = 'position:fixed;top:8px;left:8px;z-index:9999'; document.body.appendChild(box);   // in the viewport: only what is on the screen is animated
     const a = box.querySelector('[data-key=a]'), out = {};
+    let leaving = 0; const seen = new MutationObserver(() => { leaving = Math.max(leaving, box.querySelectorAll('li.g-morph-ghost').length); }); seen.observe(box, { childList: true, subtree: true });   // the gone row fades out where it stood; it is gone at 40% of its run, so it is counted as it comes, not at the end
     const p = Glass.morph(box, '<p><b>203</b> words</p><ol class="g-list"><li data-key="a">a</li><li data-key="c">c</li></ol>');
-    await p; out.leaving = box.querySelectorAll('li.g-morph-ghost').length;   // the gone row fades out where it stood (the morph runs after the next frame: waited for, not timed)
+    await p; seen.disconnect(); out.leaving = leaving;
     await new Promise(r => setTimeout(r, 40));
     out.keys = [...box.querySelectorAll('li:not(.g-morph-ghost)')].map(l => l.dataset.key).join(); out.same = box.querySelector('[data-key=a]') === a;
     out.entering = box.querySelector('[data-key=c]').classList.contains('g-morph-enter'); out.reel = box.querySelectorAll('.g-reel__strip').length;
@@ -213,8 +217,9 @@ test('morph: a row that fades out is not measured by data-g-fit, the columns tak
     await new Promise(r => setTimeout(r, 100));
     const width = () => parseFloat(box.querySelector('[data-g-fit]').style.getPropertyValue('--g-text-w'));
     const w0 = width();
-    await Glass.morph(box, list(['ab', 'cd']));
-    const out = { ghosts: box.querySelectorAll('.g-morph-ghost').length, narrower: width() < w0 / 2 };
+    let seen = 0; const obs = new MutationObserver(() => { seen = Math.max(seen, box.querySelectorAll('.g-morph-ghost').length); }); obs.observe(box, { childList: true, subtree: true });   // the gone row is a ghost while it fades; at 40% of its run it is gone, so it is counted as it comes
+    await Glass.morph(box, list(['ab', 'cd'])); obs.disconnect();
+    const out = { ghosts: seen, narrower: width() < w0 / 2 };
     box.remove();
     return out;
   });
