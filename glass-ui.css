@@ -654,6 +654,8 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) [role="tablist"] > :is(button, [role="tab"]):hover) { color: var(--g-text); } }
 :where(:is(.g-root,[role="listbox"]) [role="tablist"] > :is(button, [role="tab"])[data-g-hover]) { color: var(--g-text); }
 :where(:is(.g-root,[role="listbox"]) [role="tablist"] > :is(button, [role="tab"]), :is(.g-root,[role="listbox"]) nav a) { --g-icon-size: var(--g-icon-sm); }
+:where(:is(.g-root,[role="listbox"]) [role="tablist"][data-block]) { display: flex; width: 100%; }   /* data-block: the tabs share the full width, each one the same share */
+:where(:is(.g-root,[role="listbox"]) [role="tablist"][data-block] > :is(button, [role="tab"])) { flex: 1 1 0; }
 :where(:is(.g-root,[role="listbox"]) [role="tablist"][data-variant="underline"]) { display: flex; width: 100%; background: none; box-shadow: none; padding: 0; gap: var(--g-gap); border-radius: 0; border-bottom: 1px solid var(--g-line); }
 :where(:is(.g-root,[role="listbox"]) [role="tablist"][data-variant="underline"] > *) { height: var(--g-h-md); padding: 0 2px; border-radius: 0; box-shadow: none; background: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
 :where(:is(.g-root,[role="listbox"]) [role="tablist"][data-variant="underline"] > [aria-selected="true"], :is(.g-root,[role="listbox"]) [role="tablist"][data-variant="underline"]:not(:has([aria-selected="true"])) > :first-child) { background: none; color: var(--g-text); border-bottom-color: var(--g-ink); box-shadow: none; }
@@ -881,7 +883,11 @@ ul.g-list:not(:has(> li[data-icon])) > li::before { content: ""; flex: none; wid
 /* Plain rows (data-plain): no frame, no fill, no hover; a hairline between the rows, like a place card. Works on any .g-list. */
 /* lines only between the rows: each row carries its bottom line and overlaps the next by 1px, so the last row's line falls outside the list and is clipped */
 .g-list[data-plain] { overflow: hidden; }
-.g-list[data-plain] > li { border-bottom: 1px solid rgba(var(--g-ov), .35); border-radius: 0; margin-bottom: -1px; }
+.g-list[data-plain] > li { border-bottom: 1px solid rgba(var(--g-ov), .35); border-radius: 0; margin-bottom: -1px; padding-top: var(--g-gap-inner); padding-bottom: var(--g-gap-inner); padding-left: 0; padding-right: 0; }
+.g-list[data-plain] > li:is(:hover, [data-g-hover]) { background: none; cursor: default; }   /* a plain list has no hover fill: the hairline is the only mark */
+/* a switch row with a description: the title on top, the description under it, the switch on the right; the text wraps instead of cutting off */
+.g-list[data-plain] > li > label:has(> input[role="switch"]) > span { white-space: normal; text-align: start; }
+.g-list[data-plain] > li > label:has(> input[role="switch"]) > span > small { display: block; font-size: var(--g-fs-footnote); color: var(--g-text-3); white-space: normal; }
 
 
 
