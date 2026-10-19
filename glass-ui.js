@@ -1077,6 +1077,9 @@
       if (!manual) {
         const next = anchors();
         if (next.length === list.length && next.every((s, i) => s.label === list[i].label)) { list = next; place(); openByHash(); return; }   // same names: only the places moved, the marks stay (no redraw)
+        if (segs.length === next.length && next.every((s, i) => s.id && s.id === list[i].id)) {   // the same sections with other names (a count went up): the marks take the new names in place, and glide
+          list = next; segs.forEach((n, i) => { n.textContent = list[i].label; n.setAttribute('aria-label', list[i].label); }); place(); openByHash(); return;
+        }
         list = next;
         list.forEach(s => { if (!s.id) { s.id = s.el.id = freeId(slug(s.label), n => document.getElementById(n)); s.el.setAttribute('data-ruler-auto', ''); } });   // an element without an id gets one: it is the section's link (#id)
       } else {
@@ -1150,7 +1153,7 @@
     }
     if (window.ResizeObserver) { const ro = new ResizeObserver(later); ro.observe(page ? document.body : box); [...(page ? document.body : box).children].forEach(c => { if (c !== root) ro.observe(c); }); }
     // a section that gets shown or hidden (a tab) changes the marks: its hidden attribute is watched, the ruler's own marks are not
-    if (window.MutationObserver) new MutationObserver(recs => { if (!manual && recs.some(r => !root.contains(r.target))) later(); }).observe(page ? document.body : box, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['hidden'] });
+    if (window.MutationObserver) new MutationObserver(recs => { if (!manual && recs.some(r => !root.contains(r.target))) later(); }).observe(page ? document.body : box, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['hidden', 'data-ruler'] });
     (page ? window : box).addEventListener('scroll', mark, { passive: true });
     addEventListener('resize', later); addEventListener('load', later);
     addEventListener('hashchange', () => {   // the marks may be behind the tab that the address has just opened: they are read again before the address is given up

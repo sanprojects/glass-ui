@@ -91,6 +91,16 @@ test('the ruler is read again when the address moves to a tab it could not see',
   await page.close();
 });
 
+test('a count that changes renames its mark in place: the same mark, the new name', async () => {
+  const page = await open('#visitors');
+  await page.evaluate(() => { document.querySelector('.g-ruler__seg').dataset.kept = '1'; document.getElementById('svc-shop').setAttribute('data-ruler', 'shop · 2'); Glass.init(document); });   // what a refresh of the page does
+  await page.waitForTimeout(100);
+  const s = await page.evaluate(() => ({ kept: document.querySelectorAll('.g-ruler__seg[data-kept]').length, labels: [...document.querySelectorAll('#box .g-ruler__seg')].map(n => n.textContent) }));
+  assert.equal(s.kept, 1, 'the mark is the same element');
+  assert.deepEqual(s.labels, ['shop · 2', 'blog · 1']);
+  await page.close();
+});
+
 test('elapsed and remaining time show their number in a drum span and count', async () => {
   const page = await open('#messages');
   const read = () => page.evaluate(() => ({ ago: document.querySelector('#ago .g-age__n').textContent + ' ' + document.querySelector('#ago .g-age__u').textContent, left: document.querySelector('#left .g-age__n').textContent + ' ' + document.querySelector('#left .g-age__u').textContent }));
