@@ -81,7 +81,7 @@
        a moment, to draw its thumbnail). Where things stand is read meanwhile in the background (settle), so the first change once the tab is back
        is animated at once */
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) document.getAnimations().forEach(a => { if (a.id === 'g-morph' || /^g-(morph|reel|a-highlight$)/.test(a.animationName || '')) try { a.finish(); } catch (e) { /* one that never ends */ } });
+      if (document.hidden && document.getAnimations) document.getAnimations().forEach(a => { if (a.id === 'g-morph' || /^g-(morph|reel|a-highlight$)/.test(a.animationName || '')) try { a.finish(); } catch (e) { /* one that never ends */ } });
     });
     const quiet = () => document.hidden;
     const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;   /* less motion: nothing slides, glides or turns; what is new or changed fades */

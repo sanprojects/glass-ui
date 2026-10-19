@@ -880,7 +880,7 @@
     if (!window.MutationObserver || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
     const done = e => { e.target.removeAttribute('data-g-new'); };
     /* a tab that is not shown draws nothing: its new rows do not come in (they would when it is shown again), and the ones coming in are put in place */
-    document.addEventListener('visibilitychange', () => { if (document.hidden) document.getAnimations().forEach(a => { if (a.animationName === 'g-slide-in') a.finish(); }); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden && document.getAnimations) document.getAnimations().forEach(a => { if (a.animationName === 'g-slide-in') a.finish(); }); });
     new MutationObserver(recs => {
       if (document.hidden) return;
       const n = new Map();
