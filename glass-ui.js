@@ -1179,7 +1179,11 @@
   /* The distance from now to a moment, on the standard <time>: <time datetime="2026-10-19T09:00:00.000Z"> or <time datetime="1760864400.123">
      (Unix seconds). The kit writes the distance (45 s, 3 min, 2 h) and keeps it counting; the moment may be past or ahead, the distance is the same.
      The number is its own span (.g-age__n) and drums when it changes, the unit is .g-age__u. One timer for the page, paused while the tab is hidden;
-     it stops when no such element is left. */
+     it stops when no such element is left. The distance is counted on the server's clock: the page tells it (Glass.syncClock) from the server's time,
+     so a browser clock that runs apart shows the same distance as the server. */
+  let ageSkew = 0;   // the browser's clock minus the server's, ms
+  function ageNow() { return Date.now() - ageSkew; }
+  function syncClock(serverMs, browserMs) { ageSkew = browserMs - serverMs; ageNodes().forEach(ageDraw); }
   function ageParts(ms) {
     const a = Math.max(0, Math.abs(ms));
     return a < 60000 ? [Math.round(a / 1000), 's'] : a < 3600000 ? [Math.round(a / 60000), 'min'] : [Math.round(a / 3600000), 'h'];
@@ -1187,7 +1191,7 @@
   function ageAt(s) { return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) * 1000 : Date.parse(s); }
   function ageNodes() { return $$('time').filter(n => mem(n, 'num')); }
   function ageDraw(node) {
-    const [n, u] = ageParts(Date.now() - mem(node, 'at'));
+    const [n, u] = ageParts(ageNow() - mem(node, 'at'));
     const digit = mem(node, 'num'), unit = mem(node, 'unit'), was = mem(node, 'shown');
     if (was === n && unit.textContent === u) return;
     digit.textContent = n; unit.textContent = u; mem(node, 'shown', n);
@@ -1795,7 +1799,7 @@
   function popBy(sel) { return document.querySelector(sel); }
   /* glass-morph.js (Glass.morph, Glass.watch) may be on the page before or after this file: both add to one Glass */
   global.Glass = Object.assign(global.Glass || {}, {
-    init, animate, busy, fileProgress, ruler, setTheme, toast, setProgress, validate, nav: navAuto,
+    init, animate, busy, fileProgress, ruler, setTheme, toast, setProgress, validate, nav: navAuto, syncClock,
     fit: box => { if (box._gFit) box._gFit(); else mount1(box, ['[data-g-fit]', initFit]); },   /* measure a [data-g-fit] box now (glass-morph.js, in the reads of an update) */
     fitTable: t => { if (t.matches(FIT_T)) tableFit(t); },   /* the columns of a table fit its box now (glass-morph.js, in the reads of an update) */
     /* for glass-morph.js: the kit's parts that run by themselves (their own animations, built and changed by the kit): not content to animate */

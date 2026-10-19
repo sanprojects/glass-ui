@@ -101,4 +101,12 @@ test('elapsed and remaining time show their number in a drum span and count', as
   await page.close();
 });
 
+test('the times count on the server clock once the page has it', async () => {
+  const page = await open('#messages');
+  await page.evaluate(() => Glass.syncClock(Date.now() + 120000, Date.now()));   // the browser runs 2 min behind the server
+  const s = await page.evaluate(() => ({ ago: document.querySelector('#ago .g-age__n').textContent + ' ' + document.querySelector('#ago .g-age__u').textContent, left: document.querySelector('#left .g-age__n').textContent + ' ' + document.querySelector('#left .g-age__u').textContent }));
+  assert.deepEqual(s, { ago: '3 min', left: '2 min' }, 'the server sees 165 s and 90 s, the rounded minutes are 3 and 2');
+  await page.close();
+});
+
 test('the page runs without script errors', () => { assert.deepEqual(errors, []); });
