@@ -211,7 +211,7 @@
     function paint() {   // the trigger text and the selected marks
       const on = $$('option', sel).filter(o => o.selected && o.value !== ''), ph = !on.length;
       if (ph || on.length > 2) valueEl.textContent = ph ? placeholder() : on.length + ' ' + data(sel, 'selected-label', 'selected');
-      else valueEl.replaceChildren(...(on.length > 1 ? on.flatMap((o, i) => i ? [', ', ...copy(o)] : copy(o)) : content(on[0])));   /* two of a multi-select: their notes stay inline */
+      else { valueEl.textContent = ''; valueEl.append(...(on.length > 1 ? on.flatMap((o, i) => i ? [', ', ...copy(o)] : copy(o)) : content(on[0]))); }   /* two of a multi-select: their notes stay inline */
       valueEl.classList.toggle('is-placeholder', ph);
       opts.forEach(d => aria(d, 'selected', optOf(d).selected && !ph));
     }
@@ -242,7 +242,7 @@
         done();
         if (n !== seq || !isOpen()) return;
         const empty = sel.querySelector('option[value=""]'), cur = sel.value;
-        sel.replaceChildren(...(empty ? [empty] : []));
+        sel.textContent = ''; sel.append(...(empty ? [empty] : []));
         const seen = new Set(['']);
         const add = (text, value) => { if (seen.has(value)) return; seen.add(value); sel.appendChild(new Option(text, value, false, value === cur)); };
         (rows || []).forEach(r => add(String(r[0]), String(r[1] ?? r[0])));
