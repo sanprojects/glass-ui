@@ -1045,7 +1045,7 @@
     root.appendChild(track);
     if (page) { root.classList.add('g-ruler--page'); document.body.appendChild(root); } else box.insertBefore(root, box.firstChild);
     function anchors() {   // the sections written in the markup
-      const top = page ? -scrollY : box.getBoundingClientRect().top - box.scrollTop, all = $$('[data-ruler]', page ? document : box);
+      const top = page ? -scrollY : box.getBoundingClientRect().top - box.scrollTop, all = $$('[data-ruler]', page ? document : box).filter(a => a.getClientRects().length);   // a section that is not shown (a hidden tab) has no mark
       return all.map((a, i) => {
         const y = a.getBoundingClientRect().top - top, next = all[i + 1];
         return { label: a.getAttribute('data-ruler') || (a.hasAttribute('data-ruler-auto') ? '' : a.id) || a.textContent.trim() || a.id, id: a.id, el: a, from: y, to: next ? next.getBoundingClientRect().top - top : sHeight() };
@@ -1071,6 +1071,7 @@
       if (parseFloat(box.style.getPropertyValue('--g-ruler-w')) !== fit) box.style.setProperty('--g-ruler-w', fit + 'px');
     }
     function place() {
+      if (!root.isConnected) (page ? document.body : box).insertBefore(root, page ? null : box.firstChild);   // the box's markup was written again (a refresh replaces its content): the ruler goes back in, its marks stay
       fitWidth();
       const cs = getComputedStyle(box), t = getComputedStyle(track);
       gap = parseFloat(t.marginRight) || 0;
