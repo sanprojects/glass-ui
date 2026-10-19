@@ -1177,44 +1177,64 @@
     return ruler(document.scrollingElement || document.documentElement);   // nothing in between scrolls: the page does
   }
   /* The distance from now to a moment, on the standard <time>: <time datetime="2026-10-19T09:00:00.000Z"> or <time datetime="1760864400.123">
-     (Unix seconds). The kit writes the distance (45 s, 3 min, 2 h) and keeps it counting; the moment may be past or ahead, the distance is the same.
-     The number is its own span (.g-age__n) and drums when it changes, the unit is .g-age__u. One timer for the page, paused while the tab is hidden;
-     it stops when no such element is left. The distance is counted on the server's clock: the page tells it (Glass.syncClock) from the server's time,
-     so a browser clock that runs apart shows the same distance as the server. */
-  let ageSkew = 0;   // the browser's clock minus the server's, ms
+     (Unix seconds). The kit writes the distance (45 s, 3 min, 2 h). The number is its own span (.g-age__n) and drums only when a tick changes it;
+     a re-sync or a fresh render moves it silently. One timer for the page, and it counts only the times on screen (one IntersectionObserver for all of
+     them): a hidden tab or a scrolled-away row costs nothing. The distance is on the server's clock (Glass.syncClock). */
+  let ageSkew = 0, ageTimer = 0;
+  const ageSamples = [], ageShown = new Set(), ageAll = new Set();
+  const ageIO = typeof IntersectionObserver === 'undefined' ? null : new IntersectionObserver(entries => {
+    for (const e of entries) { if (e.isIntersecting) { ageShown.add(e.target); ageDraw(e.target, false); } else ageShown.delete(e.target); }
+    ageSchedule();
+  });
   function ageNow() { return Date.now() - ageSkew; }
-  function syncClock(serverMs, browserMs) { ageSkew = browserMs - serverMs; ageNodes().forEach(ageDraw); }
+  // the page gives the server's time (the Date of a response, to the second): the skew is the median of the last five samples, so one noisy sample moves nothing
+  function syncClock(serverMs, browserMs) {
+    ageSamples.push(browserMs - serverMs); if (ageSamples.length > 5) ageSamples.shift();
+    const s = ageSamples.slice().sort((a, b) => a - b);
+    ageSkew = s[s.length >> 1];
+    ageShown.forEach(node => ageDraw(node, false));   // a correction is not a tick: the numbers move without a drum
+  }
   function ageParts(ms) {
     const a = Math.max(0, Math.abs(ms));
     return a < 60000 ? [Math.round(a / 1000), 's'] : a < 3600000 ? [Math.round(a / 60000), 'min'] : [Math.round(a / 3600000), 'h'];
   }
   function ageAt(s) { return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) * 1000 : Date.parse(s); }
-  function ageNodes() { return $$('time').filter(n => mem(n, 'num')); }
-  function ageDraw(node) {
+  function ageDraw(node, tick) {
     const [n, u] = ageParts(ageNow() - mem(node, 'at'));
     const digit = mem(node, 'num'), unit = mem(node, 'unit'), was = mem(node, 'shown');
     if (was === n && unit.textContent === u) return;
     digit.textContent = n; unit.textContent = u; mem(node, 'shown', n);
-    if (was !== undefined) { digit.classList.remove('g-drum'); void digit.offsetWidth; digit.classList.add('g-drum'); }
+    if (tick && was !== undefined) { digit.classList.remove('g-drum'); void digit.offsetWidth; digit.classList.add('g-drum'); }
   }
-  let ageTimer = 0;
-  function ageRun() {
-    if (ageTimer) return;
-    ageTimer = setInterval(() => {
-      const nodes = ageNodes();
-      if (!nodes.length) { clearInterval(ageTimer); ageTimer = 0; return; }
-      if (!document.hidden) nodes.forEach(ageDraw);
-    }, 1000);
+  // the next tick lands just after the next whole second of the server's clock; no timer runs with nothing on screen or a hidden page
+  function ageSchedule() {
+    if (ageTimer || document.hidden || !ageShown.size) return;
+    ageTimer = setTimeout(ageTick, 1005 - (ageNow() % 1000));
   }
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) ageNodes().forEach(ageDraw); });
+  function ageTick() {
+    ageTimer = 0;
+    for (const node of ageShown) {
+      if (node.isConnected) ageDraw(node, true);
+      else { ageShown.delete(node); ageAll.delete(node); if (ageIO) ageIO.unobserve(node); }
+    }
+    ageSchedule();
+  }
   function initAge(node) {
     const at = ageAt(node.getAttribute('datetime') || '');
     if (isNaN(at)) return;   // not a moment the browser can read: the text stays as the author wrote it
     mem(node, 'at', at);
     node.textContent = '';
     node.append(mem(node, 'num', el('span', 'g-age__n')), mem(node, 'unit', el('span', 'g-age__u')));
-    ageDraw(node); ageRun();
+    ageDraw(node, false);
+    for (const n of ageAll) if (!n.isConnected) { ageAll.delete(n); ageShown.delete(n); if (ageIO) ageIO.unobserve(n); }   // the nodes a refresh replaced
+    ageAll.add(node);
+    if (ageIO) ageIO.observe(node); else ageShown.add(node);
+    ageSchedule();
   }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { clearTimeout(ageTimer); ageTimer = 0; return; }   // a hidden page counts nothing
+    ageShown.forEach(node => ageDraw(node, false)); ageSchedule();
+  });
 
   on('click', '.g-ruler__seg', (e, n) => { const q = n.closest('.g-ruler'), b = q.parentNode === document.body ? (document.scrollingElement || document.documentElement) : q.parentNode, r = mem(b, 'ruler'); if (r) { e.preventDefault(); r.go(+n.getAttribute('data-i'), e.clientY - n.getBoundingClientRect().top); } });
 

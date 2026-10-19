@@ -109,4 +109,33 @@ test('the times count on the server clock once the page has it', async () => {
   await page.close();
 });
 
+test('a re-sync moves the numbers silently: only a tick drums', async () => {
+  const page = await open('#messages');
+  const drums = await page.evaluate(async () => {
+    let n = 0;
+    const mo = new MutationObserver(rs => { for (const r of rs) if (r.target.classList.contains('g-drum')) n++; });
+    mo.observe(document.getElementById('ago'), { subtree: true, attributes: true, attributeFilter: ['class'] });
+    for (let k = 0; k < 4; k++) { Glass.syncClock(Date.now() + 120000 + (k % 2) * 1000, Date.now()); await new Promise(r => setTimeout(r, 30)); }
+    mo.disconnect();
+    return n;
+  });
+  assert.equal(drums, 0, 'no drum from the re-sync');
+  await page.close();
+});
+
+test('a tick that changes the number drums it; a hidden time is not counted', async () => {
+  const page = await open('#messages');
+  assert.equal(await page.evaluate(() => document.querySelector('#ago .g-age__n').classList.contains('g-drum')), false);
+  await page.waitForFunction(() => document.querySelector('#ago .g-age__n').textContent !== '45', null, { timeout: 3000 });
+  assert.equal(await page.evaluate(() => document.querySelector('#ago .g-age__n').classList.contains('g-drum')), true, 'the tick drums');
+  await page.close();
+  const off = await open('#visitors');   // the Messages panel is hidden: its times are not on screen, so no tick touches them
+  await off.waitForTimeout(2200);
+  assert.equal(await off.evaluate(() => document.querySelector('#ago .g-age__n').textContent), '45', 'a hidden time does not count');
+  await off.click('#messages');
+  await off.waitForTimeout(200);
+  assert.notEqual(await off.evaluate(() => document.querySelector('#ago .g-age__n').textContent), '45', 'shown again, it is brought up to date');
+  await off.close();
+});
+
 test('the page runs without script errors', () => { assert.deepEqual(errors, []); });
