@@ -673,6 +673,13 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 :where(:is(.g-root,[role="listbox"]) nav[data-position="fixed"]) { position: fixed; z-index: 50; top: calc(12px + env(safe-area-inset-top, 0px)); left: 16px; right: 16px; max-width: var(--g-page-w); margin-inline: auto; }
 /* The page column: --g-page-w, centred. Any container takes it with .g-page; the bar, the content and the footer that sit directly in <body class="g-root"> take it without a class (the fixed bar has its own rule above). Zero specificity: a page can widen any of them. */
 :where(.g-page, body.g-root > :is(nav:not([data-position="fixed"]), main, footer)) { width: 100%; max-width: var(--g-page-w); box-sizing: border-box; margin-inline: auto; }
+/* The frame of a themed page (body.g-root): the body is a column at least one screen tall, the footer sits at its bottom and the main takes the room between.
+   A page whose workspace is a fixed shell (.g-shell--tools, .g-shell[data-fixed]) is exactly one screen tall: the shell scrolls inside itself, the bars stay where they are.
+   Zero specificity: a page can change any of it. */
+:where(body.g-root) { margin: 0; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; gap: var(--g-gap); padding: var(--g-gap); }   /* dvh: the footer of a short page sits above Safari's toolbar, not under it */
+:where(.g-root) main { flex: 1; display: flex; flex-direction: column; }   /* the spacing between its blocks is the page's (a gap here stops the morph from gliding what is below a change: test/page.test.mjs) */
+:where(body.g-root):has(.g-shell--tools, .g-shell[data-fixed]) { height: 100dvh; min-height: 0; overflow: hidden; }
+:where(body.g-root):has(.g-shell--tools, .g-shell[data-fixed]) > main { min-height: 0; }
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > a) { display: flex; align-items: center; gap: var(--g-gap-inner); flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; font-weight: 700; font-size: var(--g-fs-body); letter-spacing: -.01em; color: var(--g-text); text-decoration: none; margin-right: auto; }   /* on the narrowest bars the name is clipped before anything overlaps */
 /* Logo dot for the brand link: <nav><a href="/"><span class="g-brand-dot"></span>Name</a>…</nav> */
 .g-brand-dot { width: 22px; height: 22px; border-radius: 50%; background: conic-gradient(from 200deg, #fff, var(--g-accent), #9be7ff, #fff); box-shadow: inset 0 0 0 1px rgba(255,255,255,.5); }

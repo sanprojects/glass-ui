@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The frame of a themed page: the footer at the bottom, a fixed shell scrolls inside</title>
+<link rel="stylesheet" href="../glass-ui.css">
+</head>
+<body class="g-root">
+<nav><a href="#">home</a></nav>
+<main>
+  <div class="g-shell" data-fixed id="shell"><aside>panel</aside><main id="work"><article style="height: 3000px">in the shell</article></main></div>
+  <p id="short">short</p>
+  <p id="tall" style="height: 3000px">tall</p>
+</main>
+<footer id="footer"><a href="#">licence</a></footer>
+<script>
+  // the case decides which part is in the page at all (a hidden shell would still match the :has() of the frame)
+  const keep = { fixed: '#shell', short: '#short', long: '#tall' }[new URLSearchParams(location.search).get('case') || 'short'];
+  for (const id of ['shell', 'short', 'tall']) if ('#' + id !== keep) document.getElementById(id).remove();
+</script>
+</body>
+</html>
