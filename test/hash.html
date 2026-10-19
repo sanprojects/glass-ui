@@ -20,11 +20,17 @@
       <section id="svc-blog" data-ruler="blog · 1"><h6>blog</h6><p>two</p></section>
     </section>
     <section role="tabpanel" id="pTab-msgs" hidden>
-      <p><span id="ago" data-g-ago="45000">45 s</span> ago</p>
-      <p><span id="left" data-g-left="30000">30 s</span> left</p>
+      <p><time id="ago" datetime="">45 s</time></p>
+      <p><time id="left" datetime="">30 s</time></p>
     </section>
   </div>
   <div role="tablist" id="loose"><button type="button">A</button><button type="button">B</button></div>
 </main>
+<script>
+  // the moments of this run, written before the kit mounts (the kit is deferred): 45 s ago as an ISO string, 30 s ahead as Unix seconds
+  var now = Date.now();
+  document.getElementById('ago').setAttribute('datetime', new Date(now - 45000).toISOString());
+  document.getElementById('left').setAttribute('datetime', ((now + 30000) / 1000).toFixed(3));
+</script>
 </body>
 </html>

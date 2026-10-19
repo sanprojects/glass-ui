@@ -858,7 +858,7 @@
     ['.g-root input:not([type]), .g-root input:is([type="text"], [type="search"], [type="email"], [type="url"], [type="tel"])', initAutoClear], ['select[data-g-select]', initSelect],
     ['[data-g-menu]', initMenu], ['[role="tablist"]', initTabs], ['input[type="range"]', initSlider],
     ['table[data-g-selectable]', initTable], ['table', initSort], ['[data-g-more]', initMore], ['[data-g-pager]', pagerRender],
-    ['[data-g-anim-loop]', initAnimLoop], ['[data-g-anim-random]', initAnimRandom], ['[data-g-clamp]', initClamp], ['[data-g-ruler]', n => ruler(n)], ['[data-ruler]', rulerOf], ['[data-g-ago], [data-g-left]', initAge]
+    ['[data-g-anim-loop]', initAnimLoop], ['[data-g-anim-random]', initAnimRandom], ['[data-g-clamp]', initClamp], ['[data-g-ruler]', n => ruler(n)], ['[data-ruler]', rulerOf], ['time', initAge]
   ];
   if (!(window.CSS && CSS.supports && CSS.supports('width', 'attr(x type(<length>))'))) MOUNTS.push(['[role="progressbar"][aria-valuenow]', initRing]);
   /* The "?" marker (data-hint) by default on every element whose title becomes a tooltip, so the tooltip can be found. Left out where a marker
@@ -1176,16 +1176,18 @@
     }
     return ruler(document.scrollingElement || document.documentElement);   // nothing in between scrolls: the page does
   }
-  /* Elapsed or remaining time: <span data-g-ago="45000"> is "45 s" ago, <span data-g-left="90000"> is "1 min" left (the value: ms at render).
-     The kit counts from there (the clock of the page and of the server need not agree): the number is its own span (.g-age__n) and drums when it changes,
-     the unit is .g-age__u. One timer for the page, paused while the tab is hidden; it stops when no such element is left. */
+  /* The distance from now to a moment, on the standard <time>: <time datetime="2026-10-19T09:00:00.000Z"> or <time datetime="1760864400.123">
+     (Unix seconds). The kit writes the distance (45 s, 3 min, 2 h) and keeps it counting; the moment may be past or ahead, the distance is the same.
+     The number is its own span (.g-age__n) and drums when it changes, the unit is .g-age__u. One timer for the page, paused while the tab is hidden;
+     it stops when no such element is left. */
   function ageParts(ms) {
-    const a = Math.max(0, ms);
+    const a = Math.max(0, Math.abs(ms));
     return a < 60000 ? [Math.round(a / 1000), 's'] : a < 3600000 ? [Math.round(a / 60000), 'min'] : [Math.round(a / 3600000), 'h'];
   }
-  function ageNodes() { return $$('[data-g-ago], [data-g-left]').filter(n => mem(n, 't0') !== undefined); }
+  function ageAt(s) { return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) * 1000 : Date.parse(s); }
+  function ageNodes() { return $$('time').filter(n => mem(n, 'num')); }
   function ageDraw(node) {
-    const left = node.hasAttribute('data-g-left'), t0 = mem(node, 't0'), [n, u] = ageParts(left ? t0 - Date.now() : Date.now() - t0);
+    const [n, u] = ageParts(Date.now() - mem(node, 'at'));
     const digit = mem(node, 'num'), unit = mem(node, 'unit'), was = mem(node, 'shown');
     if (was === n && unit.textContent === u) return;
     digit.textContent = n; unit.textContent = u; mem(node, 'shown', n);
@@ -1202,8 +1204,9 @@
   }
   document.addEventListener('visibilitychange', () => { if (!document.hidden) ageNodes().forEach(ageDraw); });
   function initAge(node) {
-    const left = node.hasAttribute('data-g-left'), ms = num(node, left ? 'data-g-left' : 'data-g-ago', 0);
-    mem(node, 't0', left ? Date.now() + ms : Date.now() - ms);
+    const at = ageAt(node.getAttribute('datetime') || '');
+    if (isNaN(at)) return;   // not a moment the browser can read: the text stays as the author wrote it
+    mem(node, 'at', at);
     node.textContent = '';
     node.append(mem(node, 'num', el('span', 'g-age__n')), mem(node, 'unit', el('span', 'g-age__u')));
     ageDraw(node); ageRun();
