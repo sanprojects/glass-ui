@@ -94,10 +94,34 @@ test('the ruler is read again when the address moves to a tab it could not see',
 test('a count that changes renames its mark in place: the same mark, the new name', async () => {
   const page = await open('#visitors');
   await page.evaluate(() => { document.querySelector('.g-ruler__seg').dataset.kept = '1'; document.getElementById('svc-shop').setAttribute('data-ruler', 'shop · 2'); Glass.init(document); });   // what a refresh of the page does
-  await page.waitForTimeout(100);
+  await page.waitForFunction(() => document.querySelector('#box .g-ruler__seg').textContent === 'shop · 2', null, { timeout: 3000 });   // the marks are read once the page's own animations have ended
   const s = await page.evaluate(() => ({ kept: document.querySelectorAll('.g-ruler__seg[data-kept]').length, labels: [...document.querySelectorAll('#box .g-ruler__seg')].map(n => n.textContent) }));
   assert.equal(s.kept, 1, 'the mark is the same element');
   assert.deepEqual(s.labels, ['shop · 2', 'blog · 1']);
+  await page.close();
+});
+
+test('a refresh with the same markup moves no mark: the ruler stays and nothing glides', async () => {
+  const page = await open('#visitors'); await page.waitForTimeout(700);   // the first layout settles before the count
+  const r = await page.evaluate(async () => {
+    const box = document.getElementById('box'), root = box.querySelector('.g-ruler'), seg = box.querySelector('.g-ruler__seg');
+    let glides = 0; document.addEventListener('transitionrun', e => { if (e.target.classList.contains('g-ruler__seg')) glides++; }, true);
+    const same = [...box.children].filter(c => !c.classList.contains('g-ruler')).map(c => c.outerHTML).join('');
+    Glass.morph(box, same, { key: e => e.id || null }); await new Promise(r => setTimeout(r, 600));
+    return { glides, sameRoot: box.querySelector('.g-ruler') === root, sameSeg: box.querySelector('.g-ruler__seg') === seg };
+  });
+  assert.equal(r.glides, 0, 'no mark glides'); assert.equal(r.sameRoot, true, 'the ruler is not taken out'); assert.equal(r.sameSeg, true, 'the marks are the same');
+  await page.close();
+});
+
+test('a section that really grows moves its mark, and the move glides', async () => {
+  const page = await open('#visitors'); await page.waitForTimeout(700);
+  const glides = await page.evaluate(async () => {
+    let n = 0; document.addEventListener('transitionrun', e => { if (e.target.classList.contains('g-ruler__seg')) n++; }, true);
+    document.getElementById('svc-shop').style.minHeight = '420px';
+    await new Promise(r => setTimeout(r, 600)); return n;
+  });
+  assert.ok(glides > 0, 'the change is animated');
   await page.close();
 });
 

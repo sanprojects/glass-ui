@@ -1065,6 +1065,7 @@
     let list = [], manual = false, segs = [], h = 1, gap = 16, timer = 0, now = -1, shown = [], eff = [];
     attrs(root, { role: 'navigation', 'aria-label': box.getAttribute('aria-label') || 'Sections' });
     root.appendChild(track);
+    root.setAttribute('data-g-part', '');   // the kit's own part: a morph of the box (a refresh) leaves it where it stands, not in the content it compares
     if (page) { root.classList.add('g-ruler--page'); document.body.appendChild(root); } else box.insertBefore(root, box.firstChild);
     function anchors() {   // the sections written in the markup
       const top = page ? -scrollY : box.getBoundingClientRect().top - box.scrollTop, all = $$('[data-ruler]', page ? document : box).filter(a => a.getClientRects().length);   // a section that is not shown (a hidden tab) has no mark
@@ -1129,8 +1130,13 @@
       need = hs.reduce((a, v, i) => a + (shown[i] ? Math.max(0, MIN - v) : 0), 0); spare = hs.reduce((a, v) => a + Math.max(0, v - MIN), 0);
       const k = spare > need ? 1 - need / spare : 0;
       let y = ys.length ? ys[0] : 0;
-      list.forEach((s, i) => { segs[i].hidden = !shown[i]; if (!shown[i]) return; const v = hs[i] < MIN ? MIN : MIN + (hs[i] - MIN) * k; segs[i].style.top = y + 'px'; segs[i].style.height = v + 'px'; y += v; });
+      list.forEach((s, i) => { segs[i].hidden = !shown[i]; if (!shown[i]) return; const v = hs[i] < MIN ? MIN : MIN + (hs[i] - MIN) * k; put(segs[i], 'top', y); put(segs[i], 'height', v); y += v; });
       mark();
+    }
+    function put(n, p, v) {   // a mark moves only when its place really changes: a drift under a pixel (the rounding of a refresh) is no change, so it does not glide
+      const cur = parseFloat(n.style[p]);
+      if (Number.isFinite(cur) && Math.abs(cur - v) < 1) return;
+      n.style[p] = v + 'px';
     }
     function mark() {   // the section at the top of the view (the last one when the box is scrolled to its end) is the current one
       const at = sTop() + lead + 1, end = sTop() + cHeight() >= sHeight() - 1;
@@ -1139,7 +1145,12 @@
       while (cur > 0 && shown[cur] === false) cur--;   // a section without a mark of its own is lit through the mark before it
       if (cur !== now) { if (segs[now]) segs[now].removeAttribute('aria-current'); if (segs[cur]) segs[cur].setAttribute('aria-current', 'true'); now = cur; }
     }
-    function later() { clearTimeout(timer); timer = setTimeout(manual ? place : build, 30); }
+    function later() { clearTimeout(timer); timer = setTimeout(manual ? place : settle, 30); }
+    function settle() {   // a morph fades its new sections in: the marks are measured when those animations have ended, not in the middle of their movement
+      const moving = box.getAnimations({ subtree: true }).filter(a => a.playState === 'running' && !root.contains(a.effect && a.effect.target) && Number.isFinite(a.effect.getComputedTiming().endTime));
+      if (!moving.length) return build();
+      Promise.all(moving.map(a => a.finished.catch(() => {}))).then(later);
+    }
     function jump(i, y, own, smooth) {   // y: the click's distance from the top of the section's mark, in px; own: the section itself, not the group of hidden ones that its mark stands for; smooth: it scrolls there (a click, back / forward), else it is there at once (the page opens on it)
       const s = own ? list[i] : eff[i] || list[i], k = segs[i].getBoundingClientRect().height || 1, offset = num(box, 'data-ruler-offset', lead);
       const at = y <= 14 ? s.from : s.from + Math.min(.999, y / k) * (s.to - s.from);
@@ -1153,7 +1164,11 @@
     }
     if (window.ResizeObserver) { const ro = new ResizeObserver(later); ro.observe(page ? document.body : box); [...(page ? document.body : box).children].forEach(c => { if (c !== root) ro.observe(c); }); }
     // a section that gets shown or hidden (a tab) changes the marks: its hidden attribute is watched, the ruler's own marks are not
-    if (window.MutationObserver) new MutationObserver(recs => { if (!manual && recs.some(r => !root.contains(r.target))) later(); }).observe(page ? document.body : box, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['hidden', 'data-ruler'] });
+    if (window.MutationObserver) new MutationObserver(recs => {
+      const host = page ? document.body : box;
+      if (!root.isConnected) host.insertBefore(root, page ? null : box.firstChild);   // a refresh replaces the box's content: the ruler goes back in at once, before a frame is painted without it
+      if (!manual && recs.some(r => !root.contains(r.target) && !(r.target === host && [...r.addedNodes, ...r.removedNodes].every(n => n === root)))) later();
+    }).observe(page ? document.body : box, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['hidden', 'data-ruler'] });
     (page ? window : box).addEventListener('scroll', mark, { passive: true });
     addEventListener('resize', later); addEventListener('load', later);
     addEventListener('hashchange', () => {   // the marks may be behind the tab that the address has just opened: they are read again before the address is given up
