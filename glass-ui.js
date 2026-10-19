@@ -312,8 +312,23 @@
     const f = e.target; setTimeout(() => { $$('select[data-g-select], [data-g-file]', f).forEach(n => { if (mem(n, 'st')) mem(n, 'st').paint(); if (mem(n, 'f')) mem(n, 'f').reset(); }); }, 0);
   });
 
-  /* ---------- Tabs: one delegated click / keydown handler; the roles and ids are (re)written from the DOM whenever it is needed ---------- */
+  /* ---------- Tabs: one delegated click / keydown handler; the roles and ids are (re)written from the DOM whenever it is needed ----------
+     The address: a tab with an id of its own names itself in the hash (#visitors), and so does its panel (its id), and any place inside the panel
+     (a section, a link to it: #svc-shop opens the tab that holds it). On load, on a change of the hash and when the markup is written again, that tab is
+     the one shown. A click writes the tab's id into the address with replaceState (no history entry), unless the address already names a place in that
+     panel. A hash that names no tab is left to the control it belongs to (the ruler's sections, an anchor). */
   function tabsOf(list) { return [...list.children].filter(c => c.getAttribute('role') === 'tab' || c.tagName === 'BUTTON'); }
+  function curHash() { let h = location.hash.slice(1); try { h = decodeURIComponent(h); } catch (e) {} return h; }
+  function tabOfHash(list, h) {
+    if (!h) return null;
+    const tabs = tabsOf(list), place = document.getElementById(h);
+    return tabs.find(t => t.id === h || (mem(t, 'panel') && mem(t, 'panel').id === h)) || (place && tabs.find(t => mem(t, 'panel') && mem(t, 'panel').contains(place))) || null;
+  }
+  function writeHash(t) {
+    const p = mem(t, 'panel'), h = curHash(), place = h && document.getElementById(h);
+    if (!history.replaceState || !p || !t.id || mem(t, 'idGen') || h === t.id || h === p.id || (place && p.contains(place))) return;
+    history.replaceState(history.state, '', '#' + encodeURIComponent(t.id));
+  }
   function initTabs(list) {   // idempotent wiring of roles / ids / panels; run at idle, on first touch, or by Glass.init
     const tabs = tabsOf(list), n = mem(list, 'n') || mem(list, 'n', ++uid);
     /* panels: role="tabpanel" siblings of the tablist, matched to the tabs by order (or by aria-controls when given) */
@@ -322,12 +337,12 @@
     tabs.forEach((t, i) => {
       if (t.getAttribute('role') !== 'tab') owns(t, 'role').setAttribute('role', 'tab');
       owns(t, 'tabindex');
-      if (!t.id) owns(t, 'id').id = 'g-tab-' + n + '-' + i;
+      if (!t.id) { owns(t, 'id').id = 'g-tab-' + n + '-' + i; mem(t, 'idGen', 1); }
       const p = (t.getAttribute('aria-controls') && document.getElementById(t.getAttribute('aria-controls'))) || (panels.length === tabs.length ? panels[i] : null);
       mem(t, 'panel', p);
       if (p) { if (!p.id) owns(p, 'id').id = 'g-panel-' + n + '-' + i; owns(t, 'aria-controls').setAttribute('aria-controls', p.id); owns(p, 'aria-labelledby').setAttribute('aria-labelledby', t.id); }
     });
-    selectTab(list, tabs.find(t => t.getAttribute('aria-selected') === 'true') || tabs[0], false, true);
+    selectTab(list, tabOfHash(list, curHash()) || tabs.find(t => t.getAttribute('aria-selected') === 'true') || tabs[0], false, true);
     list.setAttribute('data-g-ready', '');   // from here on JS owns the panels (before: CSS shows the first one)
   }
   function selectTab(list, t, focus, silent) {
@@ -341,15 +356,22 @@
   }
   on('click', '[role="tablist"] > *', (e, t) => {
     const list = t.parentNode; if (!list.hasAttribute('data-g-ready')) initTabs(list);
-    if (tabsOf(list).includes(t)) selectTab(list, t, false);
+    if (tabsOf(list).includes(t)) { selectTab(list, t, false); writeHash(t); }
   });
   on('keydown', '[role="tablist"] > *', (e, t) => {
     const list = t.parentNode, tabs = tabsOf(list), i = tabs.indexOf(t); if (i < 0) return;
     const k = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
     if (!list.hasAttribute('data-g-ready')) initTabs(list);
-    if (k) { e.preventDefault(); selectTab(list, tabs[(i + k + tabs.length) % tabs.length], true); }
-    else if (e.key === 'Home') { e.preventDefault(); selectTab(list, tabs[0], true); }
-    else if (e.key === 'End') { e.preventDefault(); selectTab(list, tabs[tabs.length - 1], true); }
+    let to = null;
+    if (k) to = tabs[(i + k + tabs.length) % tabs.length];
+    else if (e.key === 'Home') to = tabs[0];
+    else if (e.key === 'End') to = tabs[tabs.length - 1];
+    if (!to) return;
+    e.preventDefault(); selectTab(list, to, true); writeHash(to);
+  });
+  addEventListener('hashchange', () => {   // a link, the ruler or the back button named another tab (or a place in one)
+    const h = curHash();
+    $$('[role="tablist"][data-g-ready]').forEach(list => { const t = tabOfHash(list, h); if (t && t.getAttribute('aria-selected') !== 'true') selectTab(list, t, false); });
   });
 
   /* ---------- Delegated behaviour: toggle button, removable button, dialog helpers (no per-element setup) ---------- */
@@ -836,7 +858,7 @@
     ['.g-root input:not([type]), .g-root input:is([type="text"], [type="search"], [type="email"], [type="url"], [type="tel"])', initAutoClear], ['select[data-g-select]', initSelect],
     ['[data-g-menu]', initMenu], ['[role="tablist"]', initTabs], ['input[type="range"]', initSlider],
     ['table[data-g-selectable]', initTable], ['table', initSort], ['[data-g-more]', initMore], ['[data-g-pager]', pagerRender],
-    ['[data-g-anim-loop]', initAnimLoop], ['[data-g-anim-random]', initAnimRandom], ['[data-g-clamp]', initClamp], ['[data-g-ruler]', n => ruler(n)], ['[data-ruler]', rulerOf]
+    ['[data-g-anim-loop]', initAnimLoop], ['[data-g-anim-random]', initAnimRandom], ['[data-g-clamp]', initClamp], ['[data-g-ruler]', n => ruler(n)], ['[data-ruler]', rulerOf], ['[data-g-ago], [data-g-left]', initAge]
   ];
   if (!(window.CSS && CSS.supports && CSS.supports('width', 'attr(x type(<length>))'))) MOUNTS.push(['[role="progressbar"][aria-valuenow]', initRing]);
   /* The "?" marker (data-hint) by default on every element whose title becomes a tooltip, so the tooltip can be found. Left out where a marker
@@ -1054,7 +1076,7 @@
     function build() {
       if (!manual) {
         const next = anchors();
-        if (next.length === list.length && next.every((s, i) => s.label === list[i].label)) { list = next; place(); return; }   // same names: only the places moved, the marks stay (no redraw)
+        if (next.length === list.length && next.every((s, i) => s.label === list[i].label)) { list = next; place(); openByHash(); return; }   // same names: only the places moved, the marks stay (no redraw)
         list = next;
         list.forEach(s => { if (!s.id) { s.id = s.el.id = freeId(slug(s.label), n => document.getElementById(n)); s.el.setAttribute('data-ruler-auto', ''); } });   // an element without an id gets one: it is the section's link (#id)
       } else {
@@ -1063,6 +1085,7 @@
       }
       track.textContent = ''; now = -1; segs = list.map((s, i) => { const n = el('a', 'g-ruler__seg'); n.href = '#' + encodeURIComponent(s.id); n.textContent = s.label; n.setAttribute('aria-label', s.title || s.label); n.setAttribute('data-i', i); track.appendChild(n); return n; });
       place();
+      openByHash();   // a no-op until the address names one of these marks
     }
     const maxW = parseFloat(getComputedStyle(box).getPropertyValue('--g-ruler-w')) || 96;   // the width in the stylesheet is the widest the ruler gets
     function fitWidth() {   // as wide as the longest name, but not over the width of the stylesheet
@@ -1126,21 +1149,25 @@
       if (location.hash !== h && history.pushState) history.pushState(null, '', h);
     }
     if (window.ResizeObserver) { const ro = new ResizeObserver(later); ro.observe(page ? document.body : box); [...(page ? document.body : box).children].forEach(c => { if (c !== root) ro.observe(c); }); }
-    if (window.MutationObserver) new MutationObserver(recs => { if (!manual && recs.some(r => !root.contains(r.target))) later(); }).observe(page ? document.body : box, { childList: true, subtree: true, characterData: true });
+    // a section that gets shown or hidden (a tab) changes the marks: its hidden attribute is watched, the ruler's own marks are not
+    if (window.MutationObserver) new MutationObserver(recs => { if (!manual && recs.some(r => !root.contains(r.target))) later(); }).observe(page ? document.body : box, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['hidden'] });
     (page ? window : box).addEventListener('scroll', mark, { passive: true });
     addEventListener('resize', later); addEventListener('load', later);
-    addEventListener('hashchange', () => { const i = indexOfHash(); if (i >= 0) jump(i, 0, true, true); });
-    let opened = false;   // the address of the page names a section: it is shown once, when the sections are known
+    addEventListener('hashchange', () => {   // the marks may be behind the tab that the address has just opened: they are read again before the address is given up
+      let i = indexOfHash(); if (i < 0) { build(); i = indexOfHash(); }
+      if (i >= 0) jump(i, 0, true, true);
+    });
+    let opened = false;   // the address of the page names a section: it is shown once, when the section is among the marks
     function openByHash() {
-      if (opened || !list.length) return; opened = true;
-      const i = indexOfHash(); if (i < 0) return;
+      if (opened || !list.length) return;
+      const i = indexOfHash(); if (i < 0) return; opened = true;
       let moved = false; const stop = () => { moved = true; };
       ['wheel', 'touchstart', 'keydown', 'pointerdown'].forEach(t => addEventListener(t, stop, { once: true, passive: true, capture: true }));
       const again = () => { if (moved || indexOfHash() !== i) return; (manual ? place : build)(); jump(i, 0, true); };   // the page settles (fonts, images) and moves the section: aim again, unless the reader has taken over
       setTimeout(() => { jump(i, 0, true); setTimeout(again, 500); setTimeout(again, 1500); }, 0);
     }
-    build(); openByHash();
-    return { set(l) { manual = true; list = l; build(); openByHash(); }, refresh: later, jump, go };
+    build();
+    return { set(l) { manual = true; list = l; build(); }, refresh: later, jump, go };
   }
   function rulerOf(a) {   // a [data-ruler] element anywhere: the nearest scrolling ancestor gets the ruler
     for (let p = a.parentElement; p && p !== document.documentElement; p = p.parentElement) {
@@ -1149,6 +1176,39 @@
     }
     return ruler(document.scrollingElement || document.documentElement);   // nothing in between scrolls: the page does
   }
+  /* Elapsed or remaining time: <span data-g-ago="45000"> is "45 s" ago, <span data-g-left="90000"> is "1 min" left (the value: ms at render).
+     The kit counts from there (the clock of the page and of the server need not agree): the number is its own span (.g-age__n) and drums when it changes,
+     the unit is .g-age__u. One timer for the page, paused while the tab is hidden; it stops when no such element is left. */
+  function ageParts(ms) {
+    const a = Math.max(0, ms);
+    return a < 60000 ? [Math.round(a / 1000), 's'] : a < 3600000 ? [Math.round(a / 60000), 'min'] : [Math.round(a / 3600000), 'h'];
+  }
+  function ageNodes() { return $$('[data-g-ago], [data-g-left]').filter(n => mem(n, 't0') !== undefined); }
+  function ageDraw(node) {
+    const left = node.hasAttribute('data-g-left'), t0 = mem(node, 't0'), [n, u] = ageParts(left ? t0 - Date.now() : Date.now() - t0);
+    const digit = mem(node, 'num'), unit = mem(node, 'unit'), was = mem(node, 'shown');
+    if (was === n && unit.textContent === u) return;
+    digit.textContent = n; unit.textContent = u; mem(node, 'shown', n);
+    if (was !== undefined) { digit.classList.remove('g-drum'); void digit.offsetWidth; digit.classList.add('g-drum'); }
+  }
+  let ageTimer = 0;
+  function ageRun() {
+    if (ageTimer) return;
+    ageTimer = setInterval(() => {
+      const nodes = ageNodes();
+      if (!nodes.length) { clearInterval(ageTimer); ageTimer = 0; return; }
+      if (!document.hidden) nodes.forEach(ageDraw);
+    }, 1000);
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) ageNodes().forEach(ageDraw); });
+  function initAge(node) {
+    const left = node.hasAttribute('data-g-left'), ms = num(node, left ? 'data-g-left' : 'data-g-ago', 0);
+    mem(node, 't0', left ? Date.now() + ms : Date.now() - ms);
+    node.textContent = '';
+    node.append(mem(node, 'num', el('span', 'g-age__n')), mem(node, 'unit', el('span', 'g-age__u')));
+    ageDraw(node); ageRun();
+  }
+
   on('click', '.g-ruler__seg', (e, n) => { const q = n.closest('.g-ruler'), b = q.parentNode === document.body ? (document.scrollingElement || document.documentElement) : q.parentNode, r = mem(b, 'ruler'); if (r) { e.preventDefault(); r.go(+n.getAttribute('data-i'), e.clientY - n.getBoundingClientRect().top); } });
 
   /* Busy box: Glass.busy(box, true) the moment its new content is asked for (the click, the submit); Glass.busy(box, false), or Glass.morph into the box,

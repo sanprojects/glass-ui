@@ -1246,6 +1246,13 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> i
 :is(.g-shell--tools, .g-shell:where([data-fixed])).g-shell--stack > aside { max-height: 45dvh; }
 @media (max-width: 900px) { :is(.g-shell--tools, .g-shell:where([data-fixed])) { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); } :is(.g-shell--tools, .g-shell:where([data-fixed])) > aside { max-height: 45dvh; } }
 
+/* ---------- Elapsed / remaining time (data-g-ago, data-g-left; the kit counts): the number drums when it changes ---------- */
+.g-age__n { display: inline-block; transform-origin: 50% 100%; font-variant-numeric: tabular-nums; }
+.g-age__u { margin-inline-start: .25em; }
+.g-age__n.g-drum { animation: g-drum var(--g-dur-md) var(--g-ease); }
+@keyframes g-drum { from { transform: perspective(160px) rotateX(-100deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .g-age__n.g-drum { animation: none; } }
+
 /* ---------- Ruler: a section index inside a scrolling box (data-g-ruler; Glass.ruler) ----------
    A hairline per section with its name under it, as tall as the section's share of the scroll height; the section in view is lit; a click jumps there. The browser's own scroll bar stays as it is.
    It stays at the right edge of the box, left of the scroll bar; it floats over the content and takes no room. To keep the content clear of it, give the box padding-inline-end: calc(var(--g-ruler-w) + 2 * var(--g-gap)). No fill, no panel. The box is a block or a flex container (the ruler is a 0 x 0 sticky item). */
