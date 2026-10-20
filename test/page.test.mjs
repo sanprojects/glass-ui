@@ -207,6 +207,24 @@ test('page: new words light up once (putting the text back is no change: it used
   assert.deepEqual({ words: r.made.words, text: await page.evaluate(() => [document.getElementById('below').childNodes.length, document.getElementById('below').textContent]) }, { words: 1, text: [1, 'Воды лечебно-столовые'] });
 });
 
+test('page: a long text written anew (too long to mark by words) lights up, as it does in Glass.morph (it used to change with nothing shown)', async () => {
+  const long = w => Array.from({ length: 120 }, (_, i) => w + i).join(' ');   /* 120 words: more than words() marks (it pairs words of the two texts, up to 40000 pairs) */
+  await page.evaluate(t => { document.getElementById('below').textContent = t; }, long('host'));
+  await page.waitForTimeout(1600);
+  const lit = await page.evaluate(async t => {
+    const e = document.getElementById('below'); let seen = false;
+    const mo = new MutationObserver(() => { if (/g-morph-flash|g-anim-highlight/.test(e.className)) seen = true; });
+    mo.observe(e, { attributes: true, attributeFilter: ['class'] });
+    e.textContent = t;
+    await new Promise(r => setTimeout(r, 300)); mo.disconnect();
+    return [seen, e.childNodes.length, e.textContent === t];
+  }, long('addr'));
+  await page.waitForTimeout(1800);
+  await page.evaluate(() => { document.getElementById('below').textContent = 'below'; });
+  await page.waitForTimeout(1600);
+  assert.deepEqual(lit, [true, 1, true]);
+});
+
 test('page: what another script runs (an ad slot it fills, data-g-part; auto ads, Glass.morphSkip set by the page before the kit) is not animated, nor is what it pushes', async () => {
   assert.match(await page.evaluate(() => Glass.morphSkip), /^\.ad-auto, \.g-select/);   // the page's selector stays, the kit adds its own
   const fill = await change(`const f = document.createElement('div'); f.id = 'filled'; f.style.height = '60px'; f.textContent = 'an ad'; document.querySelector('#slot ins').appendChild(f);`);

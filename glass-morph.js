@@ -976,7 +976,7 @@
         if (!seen) return;   /* not on the screen: the new text is there, nothing turns or lights up */
         const split = o.reel !== false ? numSplit(from, to) : null;
         if (split && turns < 100) { t.nodeValue = from; const d = reelsOf(split, T); t.replaceWith(d.frag); boards.push(...d.boards); turns += d.boards.length; e._gRun = { to, nodes: d.nodes, at: performance.now() }; }   /* measured with the reads of the update */
-        else if (o.flash !== false) { t.nodeValue = from; const f = words(t, to, ctx); if (f) { const nodes = [...f.childNodes]; t.replaceWith(f); e._gRun = { to, nodes, at: performance.now() }; } else t.nodeValue = to; }
+        else if (o.flash !== false) { t.nodeValue = from; const f = words(t, to, ctx); if (f) { const nodes = [...f.childNodes]; t.replaceWith(f); e._gRun = { to, nodes, at: performance.now() }; } else { t.nodeValue = to; ctx.flashing.push(e); } }   /* too long to mark by words: it lights up, as in Glass.morph */
       });
       /* where each one stood: its own place, or the place of the old one it is (page coordinates to the viewport), and on it what runs now (a glide
          of the last update, its own or of the box it is in: where it is drawn now) */
