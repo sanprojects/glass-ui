@@ -643,7 +643,7 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 .g-input-wrap > input[aria-busy="true"] ~ [data-g-clear-input] { animation: g-busy-cross var(--g-dur) var(--g-busy-delay) backwards; }
 @keyframes g-busy-look { from { background: var(--g-fill-recessed); box-shadow: var(--g-recess); } }
 @keyframes g-busy-cross { from { opacity: 1; } }
-.g-input-wrap:has(> input[aria-busy="true"])::after { content: ""; position: absolute; right: 11px; top: calc((var(--g-h-md) - 18px) / 2); width: 18px; height: 18px; box-sizing: border-box; border: 2px solid var(--g-line); border-top-color: var(--g-accent); border-radius: 50%; pointer-events: none; animation: g-spin .8s linear infinite, g-fade var(--g-dur) var(--g-busy-delay) backwards; }
+.g-input-wrap:has(> input[aria-busy="true"])::after { content: ""; position: absolute; right: 11px; top: calc((var(--g-h-md) - 18px) / 2); width: 18px; height: 18px; box-sizing: border-box; border: 2px solid var(--g-line); border-top-color: var(--g-ink); border-radius: 50%; pointer-events: none; animation: g-spin .8s linear infinite, g-fade var(--g-dur) var(--g-busy-delay) backwards; }
 @media (prefers-reduced-motion: reduce) { .g-input-wrap:has(> input[aria-busy="true"])::after { animation: g-fade var(--g-dur) var(--g-busy-delay) backwards; border-top-color: var(--g-line); } }
 
 /* ---------- Tabs / segmented control: role="tablist" > role="tab", panels with role="tabpanel" ----------
