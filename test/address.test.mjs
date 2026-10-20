@@ -541,3 +541,48 @@ test('data-g-script-types: a script of a type the site runs itself runs with the
   await page.goBack(); await page.waitForTimeout(300);
   assert.deepEqual(await page.evaluate(() => window.got), ['b', 'a']);   // the page's own script of the first address (its runner, not the kit, ran it on load: not here)
 });
+
+test('an answer that differs only by its script: the box is not morphed, its script runs over it, its request holds the field; a failed one marks the field', async () => {
+  const pg = host => `<!doctype html><title>n ${esc(host)}</title><link rel="stylesheet" href="/glass-ui.css"><link rel="stylesheet" href="/glass-morph.css"><script defer src="/glass-ui.js"></script><script defer src="/glass-morph.js"></script><body class="g-root"><main id="m"><form method="get" action="/n/{host}" data-error-answer="no answer"><div class="g-field"><input name="host" value="${esc(host)}"></div><button>Go</button></form><section id="res"><pre id="out"></pre><script>fetch('/d/${esc(host)}').then(r => r.ok ? r.text() : '').then(t => { if (t) document.getElementById('out').textContent = t; })</script></section></main></body>`;
+  await page.route(ORIGIN + '/n/**', route => { const u = new URL(route.request().url()); requests.push({ url: u.pathname, fetchMode: route.request().headers()['x-g-fetch'] === '1' }); return route.fulfill({ contentType: 'text/html', body: pg(decodeURIComponent(u.pathname.split('/')[2] || '')) }); });
+  await page.route(ORIGIN + '/d/**', async route => {
+    const host = decodeURIComponent(new URL(route.request().url()).pathname.split('/')[2]);
+    if (host !== 'a') await new Promise(r => setTimeout(r, 800));
+    return route.fulfill(host === 'bad' ? { status: 500, body: '' } : { contentType: 'text/plain', body: host + '-data' }).catch(() => {});
+  });
+  await page.goto(ORIGIN + '/n/a');
+  await page.waitForFunction(() => window.Glass && document.getElementById('out').textContent === 'a-data');
+  await page.evaluate(() => {   // what the box goes through: never empty, never a morph of it (the page's own writes are its own change)
+    window.seen = [];
+    const out = document.getElementById('out');
+    new MutationObserver(() => { if (!out.textContent) window.seen.push('empty'); if (document.querySelector('#res.g-morph, #res .g-morph, #res[class*="g-morph"]')) window.seen.push('morph'); }).observe(document.getElementById('res'), { subtree: true, childList: true, characterData: true, attributes: true });
+  });
+  await page.fill('input[name=host]', 'b');
+  await page.click('form > button');
+  await page.waitForTimeout(400);
+  assert.equal(await page.textContent('#out'), 'a-data');   // the old answer stays while the new one is asked
+  assert.equal(await page.getAttribute('input[name=host]', 'aria-busy'), 'true');   // the field waits with the script's request
+  await page.waitForFunction(() => document.getElementById('out').textContent === 'b-data');
+  await page.waitForTimeout(200);
+  assert.equal(await page.getAttribute('input[name=host]', 'aria-busy'), null);
+  assert.deepEqual(await page.evaluate(() => window.seen), []);
+  assert.equal(await page.evaluate(() => location.pathname), '/n/b');
+
+  await page.fill('input[name=host]', 'bad');
+  await page.click('form > button');
+  await page.waitForFunction(() => document.querySelector('input[name=host]').getAttribute('aria-invalid') === 'true');
+  assert.equal(await page.textContent('.g-field small[role=alert]'), 'no answer');
+  assert.equal(await page.textContent('#out'), 'b-data');   // the old answer stays
+  assert.equal(await page.getAttribute('input[name=host]', 'aria-busy'), null);
+  await page.click('input[name=host]'); await page.keyboard.press('End'); await page.keyboard.type('x');
+  assert.equal(await page.getAttribute('input[name=host]', 'aria-invalid'), null);   // typing takes the error away
+
+  await page.fill('input[name=host]', 'b');
+  await page.click('form > button');
+  await page.waitForFunction(() => document.getElementById('out').textContent === 'b-data' && !document.querySelector('input[name=host]').hasAttribute('aria-busy'));
+  const n = (await page.evaluate(() => performance.getEntriesByType('resource').filter(e => e.name.endsWith('/d/b')).length));
+  await page.click('form > button');   // the same address again (a submit button: asked anew): its script runs again
+  await page.waitForTimeout(1200);
+  assert.equal(await page.evaluate(() => performance.getEntriesByType('resource').filter(e => e.name.endsWith('/d/b')).length), n + 1);
+  assert.deepEqual(errors, []);
+});

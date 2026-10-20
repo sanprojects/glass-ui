@@ -1353,21 +1353,46 @@
     else if (s.delete(key) && !s.size) busy(form, false);
   }
   /* Every form waits for the server with the busy line, nothing to set up: from its submit until the requests that submit started (fetch, XMLHttpRequest)
-     are answered; a form the browser sends itself, until the next page. A quick answer shows nothing (the line comes after --g-busy-box-delay).
+     are answered - the whole body of a fetch, a reply that streams is in when its last part is; a form the browser sends itself, until the next page.
+     A quick answer shows nothing (the line comes after --g-busy-box-delay).
      A form sent by a script with no submit event (form.submit(), a request of its own): Glass.busy(form, true / false) */
+  let answerWait = null;   /* busyForms: answerWait(form) -> { run(fn), close() }: what the scripts of an answer request as they run (Address) is the form's answer too */
   function busyForms() {
     let watch = null;   /* the form whose submit is running now: what is requested meanwhile is its answer */
-    const done = w => hold(w.form, w, false);
+    const done = w => { if (w.over) return; w.over = true; hold(w.form, w, false); if (w.then) w.then(w.bad); };
     const end = w => { if (--w.n <= 0 && !w.open) done(w); };
     const take = () => { const w = watch; if (w) w.n++; return w; };
+    /* a request that failed (no answer, or an error status; not one the page aborted) is a failed answer: w.bad */
+    const failed = (w, e) => { if (!e || e.name !== 'AbortError') w.bad = true; };
     if (window.XMLHttpRequest) {
       const send = XMLHttpRequest.prototype.send;
-      XMLHttpRequest.prototype.send = function () { const w = take(); if (w) this.addEventListener('loadend', () => setTimeout(() => end(w)), { once: true }); return send.apply(this, arguments); };
+      XMLHttpRequest.prototype.send = function () {
+        const w = take();
+        if (w) {
+          let cut = false;
+          this.addEventListener('abort', () => { cut = true; }, { once: true });
+          this.addEventListener('loadend', () => { if (!cut && (!this.status || this.status >= 400)) w.bad = true; setTimeout(() => end(w)); }, { once: true });
+        }
+        return send.apply(this, arguments);
+      };
     }
     if (window.fetch) {
       const f = window.fetch;
-      window.fetch = function () { const w = take(), p = f.apply(this, arguments); if (w) p.then(() => {}, () => {}).then(() => setTimeout(() => end(w))); return p; };
+      window.fetch = function () {
+        const w = take(), p = f.apply(this, arguments);
+        /* its body is read here too (a copy of it): the page reads its own as it comes */
+        if (w) p.then(r => { if (!r.ok) w.bad = true; return r.body && !r.bodyUsed && !r.body.locked ? r.clone().arrayBuffer() : null; }).catch(e => failed(w, e)).then(() => setTimeout(() => end(w)));
+        return p;
+      };
     }
+    answerWait = form => {
+      const w = { form, n: 0, open: true, bad: false };
+      hold(form, w, true);
+      return {
+        run(fn) { const was = watch; watch = w; try { return fn(); } finally { watch = was; } },
+        close() { return new Promise(r => { w.then = r; w.open = false; if (w.n <= 0) done(w); }); },
+      };
+    };
     document.addEventListener('submit', e => {   /* capture: before the page's own handlers, which start the requests */
       const form = e.target;
       if (!(form instanceof HTMLFormElement) || form.hasAttribute('data-g-no-busy')) return;
@@ -1407,7 +1432,10 @@
    *                                description follow; the scripts that came in run. A change outside every element with an id, an error or an answer that is not
    *                                HTML: the page is loaded the usual way. Back to an address seen before: no request.
    *                                The scripts of an answer run once it is in; <html data-g-script-types="text/delayscript"> names the types a site gives
-   *                                its inline scripts to run them later itself (they are run as scripts too).
+   *                                its inline scripts to run them later itself (they are run as scripts too). A script whose text alone is new (the box is the
+   *                                same, it asks another address) changes no markup: it runs over the box as it is, and what it writes there is the page's own
+   *                                change (a watched page morphs it). What the scripts request as they run is the answer too: the form's line and the
+   *                                spinner of its field stay until it is in, and a request of theirs that fails marks the field (the kit's error, below).
    *                                When the user changed the form (typed, chose, cleared, sent) the request also says X-G-Form: <its id>: the form on the
    *                                page is what the answer would draw, so the server may send it back empty as <form id="..." data-g-same>, with only its
    *                                <output> elements (results, put in by id) and hidden fields (put in by name). Not after a link or back / forward.
@@ -1587,7 +1615,7 @@
       $$('input', c).forEach(i => { i.removeAttribute('value'); i.removeAttribute('checked'); });
       $$('option', c).forEach(o => o.removeAttribute('selected'));
       $$('textarea', c).forEach(t => { t.textContent = ''; });
-      $$('script', c).forEach(s => s.removeAttribute('type'));
+      $$('script', c).forEach(s => { if (runnable(s) && !s.src) s.textContent = ''; s.removeAttribute('type'); });   /* a script is not drawn: one whose text alone is new is run, not morphed in (apply) */
       return c.outerHTML;
     }
     /* a and b: one element in the last answer and in the new one. true when they differ only inside elements with an id; the new ones of those go to out */
@@ -1601,19 +1629,23 @@
     /* <html data-g-script-types="text/delayscript">: the types a site gives its scripts to run them later itself are scripts too */
     const extraTypes = () => (document.documentElement.getAttribute('data-g-script-types') || '').split(/\s+/).filter(Boolean);
     const runnable = s => !s.type || /javascript|module/i.test(s.type) || extraTypes().includes(s.type);
-    function runScripts(list) {   /* a script that came with markup does not run: a new one with the same source and attributes does, in order */
+    function runScripts(list, wait) {   /* a script that came with markup does not run: a new one with the same source and attributes does, in order; wait: what it requests is the answer's */
       return list.reduce((p, s) => p.then(() => {
         const n = document.createElement('script');
         [...s.attributes].forEach(a => n.setAttribute(a.name, a.value));
         if (extraTypes().includes(s.type)) n.removeAttribute('type');
-        if (!s.src) { n.textContent = s.textContent; document.head.appendChild(n); n.remove(); return; }
+        if (!s.src) { n.textContent = s.textContent; const put = () => { document.head.appendChild(n); n.remove(); }; if (wait) wait.run(put); else put(); return; }
         n.async = false;
         return new Promise(done => { n.onload = n.onerror = done; document.head.appendChild(n); });
       }), Promise.resolve());
     }
     /* the answer onto the page; false when it cannot be placed. sent: the POST form whose answer it is - it cannot be asked again the usual way, so a change
-       outside every element with an id morphs <main> as a whole, and that form stays as it is (what is typed in it, the kit's parts of its fields) */
-    function apply(html, sent) {
+       outside every element with an id morphs <main> as a whole, and that form stays as it is (what is typed in it, the kit's parts of its fields).
+       fresh: asked anew (a submit button): its scripts run again even where they are the same.
+       The answer is in when the requests its scripts start as they run are answered too (a page that fills its box itself: a report it streams):
+       `answered` is then a promise of true when one of them failed */
+    let answered = Promise.resolve(false);
+    function apply(html, sent, fresh) {
       const doc = new DOMParser().parseFromString(html, 'text/html'), main = document.querySelector('main');
       const next = main && ((main.id && doc.getElementById(main.id)) || doc.querySelector('main'));
       if (!snap || !next || next.tagName !== 'MAIN') return false;
@@ -1638,15 +1670,24 @@
       const live = out.map(n => [n === next ? main : document.getElementById(n.id), n]);
       if (live.some(([l]) => !l || !main.contains(l))) return false;
       if (same.length) live.splice(0, live.length, ...live.filter(([l]) => !same.includes(l.id)));   /* the form itself, if it is one of the regions, is not patched at all */
+      /* the scripts outside what is morphed in (that markup is the same as the last answer's, script by script): one whose text is new runs (the same box,
+         other data: the address its script asks), and every one when the answer was asked anew. The box stays as it is: what the script writes into it
+         comes in as the page's own change (a watched page: data-g-morph) */
+      const outside = (root, rs) => $$('script', root).filter(x => !rs.some(r => r && r.contains(x)));
+      const was = outside(snap, out.map(n => n === next ? snap : snap.querySelector('#' + CSS.escape(n.id)))), now = outside(next, out);
+      const again = out.includes(next) ? [] : now.filter((x, i) => runnable(x) && !x.closest('[data-g-part]') && (fresh || !was[i] || was[i].textContent !== x.textContent || was[i].getAttribute('src') !== x.getAttribute('src')));
       snap = next.cloneNode(true);
       same.forEach(id => { const e = snap.querySelector('#' + CSS.escape(id)); if (e) { const u = document.createElement(e.tagName); u.id = id; u.setAttribute('data-g-same', ''); e.replaceWith(u); } });   /* not known: an empty one, the next full answer differs from it */
       const t = doc.querySelector('title');
       if (t) document.title = t.textContent;
       [['link[rel=canonical]', 'href'], ['meta[name=description]', 'content']].forEach(([s, a]) => { const o = document.head.querySelector(s), n = doc.querySelector(s); if (o && n) o.setAttribute(a, n.getAttribute(a)); });
-      live.forEach(([l, n]) => {
+      const wait = answerWait && (sent || form) ? answerWait(sent || form) : null;
+      const jobs = live.map(([l, n]) => {
         const run = $$('script', n).filter(s => runnable(s) && !s.closest('[data-g-part]'));   /* a script's part is not put in (glass-morph): nor is its script run */
-        morph(l, n, sent || same.length ? { keep: e => e === sent || (!!e.id && same.includes(e.id)) } : undefined).then(() => { init(l); return runScripts(run); });   /* a form sent back as it is stays as it is, inside a region that changes too */
+        return Promise.resolve(morph(l, n, sent || same.length ? { keep: e => e === sent || (!!e.id && same.includes(e.id)) } : undefined)).then(() => { init(l); return runScripts(run, wait); });   /* a form sent back as it is stays as it is, inside a region that changes too */
       });
+      const all = Promise.all(jobs).then(() => runScripts(again, wait)).catch(() => {});
+      answered = wait ? all.then(() => wait.close()) : all.then(() => false);
       let wrote = false;
       parts.forEach(([id, x]) => {
         const f = document.getElementById(id);
@@ -1658,12 +1699,39 @@
       return wrote ? 'fields' : true;   /* 'fields': the server wrote hidden fields of this form */
     }
     const go = () => location.replace(here());   /* what cannot be done in place: the page the usual way */
+    /* The field the answer is about (the one the user changed last, else the first one of the address) waits with it: aria-busy (the kit's spinner after
+       --g-busy-delay) from the request until the answer is in, the requests of its scripts too. An answer that failed there (no answer, an error status):
+       the old one stays and the field shows the kit's error, data-error-answer="…" on the field or the form (else "No answer, try again"); typing in
+       it, or the next answer, takes it away */
+    let asked = null, spun = null, failed = null, asking = 0;
+    function answerField() {
+      if (asked && asked.form === form && asked.isConnected) return asked;
+      return (tpl && tpl.vars.length && named(form, tpl.vars[0])) || fieldsOf(form).find(isText) || null;
+    }
+    function spin(on) {
+      if (spun) { spun.removeAttribute('aria-busy'); spun = null; }
+      const c = on && answerField();
+      if (c && !c.hasAttribute('aria-busy')) { c.setAttribute('aria-busy', 'true'); spun = c; }
+    }
+    function unfail() {
+      if (failed && failed.getAttribute('aria-invalid') === 'true') failed.removeAttribute('aria-invalid');
+      failed = null;
+    }
+    function fail() {
+      const c = answerField(), m = c && chkMsg(c);
+      if (!m) return;
+      m.setAttribute('data-custom', '');
+      m.textContent = c.getAttribute('data-error-answer') || form.getAttribute('data-error-answer') || 'No answer, try again';
+      c.setAttribute('aria-invalid', 'true');
+      failed = c;
+    }
     /* true when the page shows the answer to url itself: it cancelled g:answer */
     function own(url) {
       if (form.dispatchEvent(new CustomEvent('g:answer', { bubbles: true, cancelable: true, detail: { url: new URL(url, location.href).href } }))) return false;
       clearTimeout(timer);
       if (ctl) { ctl.abort(); ctl = null; pending = ''; }
       shown = url;
+      asking++; spin(false); unfail();
       hold(form, 'load', false);
       fire(document, 'g:navigate', { url: location.href, title: document.title });
       return true;
@@ -1676,14 +1744,16 @@
       if (url === shown && !fresh) { hold(form, 'load', false); return; }
       if (!told && own(url)) return;
       if (fresh) { cache.delete(url); cache.delete('mine|' + url); }
-      const c = ctl = new AbortController();
+      const c = ctl = new AbortController(), t = ++asking;
       pending = url;
       hold(form, 'load', true);
+      unfail(); spin(true);
       fetchPage(url, c.signal, mine).then(r => {
         if (ctl !== c) return;   /* a newer one is on its way */
         ctl = null; pending = '';
-        const put = r && apply(r.html);
+        const put = r && apply(r.html, null, fresh);
         if (!put) return go();
+        answered.then(bad => { if (t !== asking) return; spin(false); if (bad) fail(); });
         shown = url;
         if (r.url !== url && here() === url) { history.replaceState(history.state, '', r.url); shown = r.url; }   /* the server put the address right (a redirect) */
         if (put === 'fields' && here() === shown) history.replaceState(remember(), '');   /* what the server wrote into hidden fields: back to this address puts it back too */
@@ -1723,8 +1793,9 @@
     function ours(e) {
       const t = e.target;
       if (applying || !t || !t.name || !ready()) return null;
-      if (t.form === form) return t;
-      return copies.includes(t.form) && t.isConnected ? lead(t) : null;
+      if (t.form === form) return (asked = t);
+      const m = copies.includes(t.form) && t.isConnected ? lead(t) : null;
+      return m ? (asked = m) : null;
     }
     /* the fields are kept in step whether or not the form answers as it is typed in; true: it does, the event is the form's to answer */
     function step(e) {
@@ -1749,6 +1820,7 @@
       cache.set(shown, Promise.resolve({ url: shown, html: d.documentElement.outerHTML }));
     }
     document.addEventListener('input', e => {
+      if (failed && e.target.name === failed.name && (e.target === failed || copies.includes(e.target.form))) unfail();   /* the field is being put right */
       if (!isText(e.target) || !step(e)) return;   /* a box or a select: its change */
       const was = here(), url = write(!editing);
       if (url !== was) editing = true;   /* the edit's entry is made by the first key that changes the address: a key that leaves it as it is (a field the server filled, cleared) made none */
