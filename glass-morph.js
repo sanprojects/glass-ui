@@ -96,7 +96,11 @@
        The step is kept for the tab (sessionStorage) and shown on <html data-g-motion="1|2|3"> for the page's own CSS; Glass.morph.motion() reads it,
        Glass.morph.motion(n) sets it (a setting of the site, a test) */
     let MOTION = 0, motionAt = 0, BAD = 0, GOOD = 0, gauging = false;
-    try { MOTION = Math.min(3, Math.max(0, parseInt(sessionStorage.getItem('g-motion'), 10) || 0)); } catch (e) { /* storage off */ }
+    try {
+      const nav = performance.getEntriesByType('navigation')[0];
+      if (nav && nav.type === 'reload') sessionStorage.removeItem('g-motion');   /* a reload starts at all of it again: the step is the tab's, a reload is the user's retry */
+      MOTION = Math.min(3, Math.max(0, parseInt(sessionStorage.getItem('g-motion'), 10) || 0));
+    } catch (e) { /* storage off */ }
     const motionMark = () => { const r = document.documentElement; if (MOTION) r.setAttribute('data-g-motion', String(MOTION)); else r.removeAttribute('data-g-motion'); };
     function setMotion(m) {
       m = Math.min(3, Math.max(0, m | 0)); BAD = GOOD = 0; motionAt = performance.now();
