@@ -624,6 +624,9 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
  * Drawn by ::before / ::after as a mask in currentColor: no inline svg, no aria-hidden, one size and one alignment everywhere.
  * Tune with --g-icon-size and --g-icon-color on the element or any container. */
 :where([data-icon], [data-icon-end]) { display: inline-flex; align-items: center; gap: var(--g-gap-inner); }
+/* a standalone icon in a line of text has no text baseline of its own: its bottom edge sits on the line's baseline and the glyph rides high.
+ * The offset puts the icon's centre on the centre of the capitals around it, for any --g-icon-size and font. (td/th: vertical-align on a cell is its alignment, not this) */
+:where([data-icon]:empty, [data-icon-end]:empty):not(td, th) { vertical-align: -0.2em; vertical-align: calc((1cap - var(--g-icon-size, 1.15em)) / 2); }
 :where([data-icon]:empty, [data-icon-end]:empty) { justify-content: center; }   /* only an icon-only element centres its glyph; a row, a link or a heading with text starts at the left (buttons and tabs centre theirs themselves) */
 :where([data-icon])::before { content: ""; flex: none; width: var(--g-icon-size, 1.15em); height: var(--g-icon-size, 1.15em); background: var(--g-icon-color, currentColor);
   -webkit-mask: var(--g-is, linear-gradient(#0000, #0000)) center / contain no-repeat; mask: var(--g-is, linear-gradient(#0000, #0000)) center / contain no-repeat; transition: transform var(--g-dur) var(--g-ease); }
