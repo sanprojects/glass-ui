@@ -966,6 +966,10 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint]), label:has(> i
 .g-tooltip:popover-open { opacity: 1; transform: none; }
 @starting-style { .g-tooltip:popover-open { opacity: 0; transform: translateY(4px) scale(.98); } }
 
+/* ---------- Parts of one line: a centred dot between the parts that are not empty; the first part has none ---------- */
+/* <span class="g-parts"><b>12 ms</b><span>Kyiv</span><span>host</span></span>   An empty part (no text, no spaces) gets no dot */
+.g-parts > :not(:empty) ~ :not(:empty)::before { content: "\00a0\2022\00a0"; }   /* the dot with a space either side in the text itself */
+
 /* ---------- Group: a glass plate of rows (checkboxes, radios, switches) split by hairlines ---------- */
 /* <div role="group"><label><input type="checkbox"> Gym</label> … </div>   One column: data-columns="1" */
 .g-root [role="group"] { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--g-gap); padding: 4px var(--g-pad); border-radius: var(--g-radius-card); min-width: 0; }
