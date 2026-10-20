@@ -1273,7 +1273,7 @@
   function busy(el, on) {
     if (typeof el === 'string') el = document.querySelector(el);
     if (!el || !el.setAttribute) return on;
-    if (on && typeof on.then === 'function') { const p = on, off = () => hold(el, p, false); hold(el, p, true); p.then(off, off); return p; }
+    if (on && typeof on.then === 'function') { const p = on, off = () => hold(el, p, false); hold(el, p, true); p.then(off, off); if (busyJoin) busyJoin(p); return p; }
     if (el.tagName === 'FORM') {   /* a form: the line goes on its box (formBox), and goes away from that same box */
       const b = el._gBusyBox;
       if (!on) { el._gBusyBox = null; if (b) busyEnd(b); return; }
@@ -1355,8 +1355,10 @@
   /* Every form waits for the server with the busy line, nothing to set up: from its submit until the requests that submit started (fetch, XMLHttpRequest)
      are answered - the whole body of a fetch, a reply that streams is in when its last part is; a form the browser sends itself, until the next page.
      A quick answer shows nothing (the line comes after --g-busy-box-delay).
-     A form sent by a script with no submit event (form.submit(), a request of its own): Glass.busy(form, true / false) */
+     A form sent by a script with no submit event (form.submit(), a request of its own): Glass.busy(form, true / false). A script of the answer that goes on
+     after its requests (draws a map of what came) says so with Glass.busy(box, promise) as it runs: the form waits for that promise too */
   let answerWait = null;   /* busyForms: answerWait(form) -> { run(fn), close() }: what the scripts of an answer request as they run (Address) is the form's answer too */
+  let busyJoin = null;     /* busyForms: Glass.busy(box, promise) from a script of an answer (the map it draws after its report) holds the answer's form too */
   function busyForms() {
     let watch = null;   /* the form whose submit is running now: what is requested meanwhile is its answer */
     const done = w => { if (w.over) return; w.over = true; hold(w.form, w, false); if (w.then) w.then(w.bad); };
@@ -1364,6 +1366,7 @@
     const take = () => { const w = watch; if (w) w.n++; return w; };
     /* a request that failed (no answer, or an error status; not one the page aborted) is a failed answer: w.bad */
     const failed = (w, e) => { if (!e || e.name !== 'AbortError') w.bad = true; };
+    busyJoin = p => { const w = take(); if (w) p.catch(e => failed(w, e)).then(() => setTimeout(() => end(w))); };
     if (window.XMLHttpRequest) {
       const send = XMLHttpRequest.prototype.send;
       XMLHttpRequest.prototype.send = function () {

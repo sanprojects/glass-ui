@@ -542,8 +542,8 @@ test('data-g-script-types: a script of a type the site runs itself runs with the
   assert.deepEqual(await page.evaluate(() => window.got), ['b', 'a']);   // the page's own script of the first address (its runner, not the kit, ran it on load: not here)
 });
 
-test('an answer that differs only by its script: the box is not morphed, its script runs over it, its request holds the field; a failed one marks the field', async () => {
-  const pg = host => `<!doctype html><title>n ${esc(host)}</title><link rel="stylesheet" href="/glass-ui.css"><link rel="stylesheet" href="/glass-morph.css"><script defer src="/glass-ui.js"></script><script defer src="/glass-morph.js"></script><body class="g-root"><main id="m"><form method="get" action="/n/{host}" data-error-answer="no answer"><div class="g-field"><input name="host" value="${esc(host)}"></div><button>Go</button></form><section id="res"><pre id="out"></pre><script>fetch('/d/${esc(host)}').then(r => r.ok ? r.text() : '').then(t => { if (t) document.getElementById('out').textContent = t; })</script></section></main></body>`;
+test('an answer that differs only by its script: the box is not morphed, its script runs over it, its requests and Glass.busy hold the field; a failed one marks the field', async () => {
+  const pg = host => `<!doctype html><title>n ${esc(host)}</title><link rel="stylesheet" href="/glass-ui.css"><link rel="stylesheet" href="/glass-morph.css"><script defer src="/glass-ui.js"></script><script defer src="/glass-morph.js"></script><body class="g-root"><main id="m"><form method="get" action="/n/{host}" data-error-answer="no answer"><div class="g-field"><input name="host" value="${esc(host)}"></div><button>Go</button></form><section id="res"><pre id="out"></pre><script>{ const p = fetch('/d/${esc(host)}').then(r => r.ok ? r.text() : '').then(t => { if (t) document.getElementById('out').textContent = t; return t && new Promise(r => setTimeout(r, 600)); }); if (window.Glass) Glass.busy(document.getElementById('res'), p); }</script></section></main></body>`;
   await page.route(ORIGIN + '/n/**', route => { const u = new URL(route.request().url()); requests.push({ url: u.pathname, fetchMode: route.request().headers()['x-g-fetch'] === '1' }); return route.fulfill({ contentType: 'text/html', body: pg(decodeURIComponent(u.pathname.split('/')[2] || '')) }); });
   await page.route(ORIGIN + '/d/**', async route => {
     const host = decodeURIComponent(new URL(route.request().url()).pathname.split('/')[2]);
@@ -563,7 +563,8 @@ test('an answer that differs only by its script: the box is not morphed, its scr
   assert.equal(await page.textContent('#out'), 'a-data');   // the old answer stays while the new one is asked
   assert.equal(await page.getAttribute('input[name=host]', 'aria-busy'), 'true');   // the field waits with the script's request
   await page.waitForFunction(() => document.getElementById('out').textContent === 'b-data');
-  await page.waitForTimeout(200);
+  assert.equal(await page.getAttribute('input[name=host]', 'aria-busy'), 'true');   // and with what it does after (Glass.busy(box, promise): the map it draws)
+  await page.waitForTimeout(900);
   assert.equal(await page.getAttribute('input[name=host]', 'aria-busy'), null);
   assert.deepEqual(await page.evaluate(() => window.seen), []);
   assert.equal(await page.evaluate(() => location.pathname), '/n/b');
