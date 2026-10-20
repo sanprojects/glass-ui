@@ -306,17 +306,24 @@
       return { frag, nodes, boards };
     }
     /* A text that changed: the words that are new in it are wrapped for a moment (.g-morph-word: they come in out of a soft blur on a tint that fades),
-       the rest stays plain text. Returns a fragment for the old node `t`, or null when there is nothing new to show (only removed words) or the text is long. */
+       the rest stays plain text. Returns a fragment for the old node `t`, or null when there is nothing new to show (only removed words) or the part of the text that changed is long. */
     /* the kit put its text back (a board that turned, marked words): no change for the boxes that watch it. Seen, the merge of the text nodes
        (normalize) would tell a part of the text as the text the element had, and the words would light up again and again */
     function unseen(node) { WATCHED.forEach(W => { if (W.box.contains(node)) W.mo.takeRecords(); }); }
     function words(t, to, ctx) {
-      const a = t.nodeValue.split(/(\s+)/), b = to.split(/(\s+)/);
-      if (!to.trim() || a.length * b.length > 40000) return null;
-      const L = Array.from({ length: a.length + 1 }, () => new Uint16Array(b.length + 1));   /* the longest common run of words */
-      for (let i = a.length - 1; i >= 0; i--) for (let j = b.length - 1; j >= 0; j--) L[i][j] = a[i] === b[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+      const a0 = t.nodeValue.split(/(\s+)/), b = to.split(/(\s+)/);
+      if (!to.trim()) return null;
+      /* the words both texts start and end with are the same words: only what is between them is compared (a text that grows, a log written
+         again with a line more, marks its new tail however long it is) */
+      let p = 0, q = 0;
+      while (p < a0.length && p < b.length && a0[p] === b[p]) p++;
+      while (q < a0.length - p && q < b.length - p && a0[a0.length - 1 - q] === b[b.length - 1 - q]) q++;
+      const a = a0.slice(p, a0.length - q), m = b.length - p - q;
+      if (a.length * m > 40000) return null;
+      const L = Array.from({ length: a.length + 1 }, () => new Uint16Array(m + 1));   /* the longest common run of words */
+      for (let i = a.length - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = a[i] === b[p + j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
       const fresh = new Array(b.length).fill(false);
-      for (let i = 0, j = 0; j < b.length;) { if (i < a.length && a[i] === b[j]) { i++; j++; } else if (i < a.length && L[i + 1][j] >= L[i][j + 1]) i++; else fresh[j++] = true; }
+      for (let i = 0, j = 0; j < m;) { if (i < a.length && a[i] === b[p + j]) { i++; j++; } else if (i < a.length && L[i + 1][j] >= L[i][j + 1]) i++; else fresh[p + j++] = true; }
       const word = j => fresh[j] && b[j].trim() !== '';
       b.forEach((x, j) => { if (fresh[j] && !x.trim()) fresh[j] = j > 0 && j < b.length - 1 && word(j - 1) && word(j + 1); });   /* a space joins two new words, it does not stand alone */
       if (!b.some((x, j) => word(j))) return null;

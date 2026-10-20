@@ -225,6 +225,26 @@ test('page: a long text written anew (too long to mark by words) lights up, as i
   assert.deepEqual(lit, [true, 1, true]);
 });
 
+test('page: a long text that grows (a log written again with a line more) marks its new tail each time, it does not light up', async () => {
+  const lines = n => Array.from({ length: n }, (_, i) => 'line ' + i + ' of the log, it says what happened').join('\n');   /* 40 lines: ~320 words */
+  await page.evaluate(t => { document.getElementById('below').textContent = t; }, lines(40));
+  await page.waitForTimeout(1600);
+  const r = await page.evaluate(async lines => {
+    const e = document.getElementById('below'), out = { flash: 0, words: [] };
+    const mo = new MutationObserver(rs => rs.forEach(r => {
+      if (r.type === 'attributes' && /g-morph-flash|g-anim-highlight/.test(e.className) && !/g-morph-flash|g-anim-highlight/.test(r.oldValue || '')) out.flash++;
+      r.addedNodes.forEach(n => { if (n.nodeType === 1 && n.classList.contains('g-morph-word')) out.words.push(n.textContent.trim()); });
+    }));
+    mo.observe(e, { attributes: true, attributeFilter: ['class'], attributeOldValue: true, childList: true });
+    for (const n of [41, 42, 43]) { e.textContent = lines.slice(0, n).join('\n'); await new Promise(r => setTimeout(r, 300)); }
+    await new Promise(r => setTimeout(r, 1500)); mo.disconnect();
+    return { ...out, text: [e.childNodes.length, e.textContent === lines.slice(0, 43).join('\n')] };
+  }, Array.from({ length: 43 }, (_, i) => 'line ' + i + ' of the log, it says what happened'));
+  await page.evaluate(() => { document.getElementById('below').textContent = 'below'; });
+  await page.waitForTimeout(1600);
+  assert.deepEqual(r, { flash: 0, words: [40, 41, 42].map(i => 'line ' + i + ' of the log, it says what happened'), text: [1, true] });
+});
+
 test('page: what another script runs (an ad slot it fills, data-g-part; auto ads, Glass.morphSkip set by the page before the kit) is not animated, nor is what it pushes', async () => {
   assert.match(await page.evaluate(() => Glass.morphSkip), /^\.ad-auto, \.g-select/);   // the page's selector stays, the kit adds its own
   const fill = await change(`const f = document.createElement('div'); f.id = 'filled'; f.style.height = '60px'; f.textContent = 'an ad'; document.querySelector('#slot ins').appendChild(f);`);
