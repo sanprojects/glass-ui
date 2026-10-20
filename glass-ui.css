@@ -873,7 +873,7 @@ ol.g-list > li::before { content: counter(g-n) "."; flex: none; min-width: 2.4ch
 @media (hover: hover) { .g-list > li:hover { background: var(--g-fill-strong); cursor: pointer; } }
 .g-list > li[data-g-hover] { background: var(--g-fill-strong); cursor: pointer; }
 .g-list > li.is-active { background: var(--g-fill-active); box-shadow: var(--g-recess); }   /* a text field's sunken look: same fill, same dark top edge and light lower edge */
-ul.g-list:not(:has(> li[data-icon])) > li::before { content: ""; flex: none; width: 6px; height: 6px; margin: 0 9px; border-radius: 50%; background: var(--g-text-3); }
+ul.g-list:not([data-plain], :has(> li[data-icon])) > li::before { content: ""; flex: none; width: 6px; height: 6px; margin: 0 9px; border-radius: 50%; background: var(--g-text-3); }
 /* ---------- Expandable text: clamp to N lines with an inline "more" / "less" pill (data-g-clamp) ---------- */
 .g-clamp { display: flex; align-items: flex-end; gap: var(--g-gap); }
 .g-clamp__text { transition: max-height var(--g-dur-md) ease; flex: 1; min-width: 0; max-height: calc(var(--lines, 3) * 1.5em); overflow: hidden; font-size: var(--g-fs-body); line-height: 1.5; color: var(--g-text); }
@@ -890,11 +890,14 @@ ul.g-list:not(:has(> li[data-icon])) > li::before { content: ""; flex: none; wid
 /* Plain rows (data-plain): no frame, no fill, no hover; a hairline between the rows, like a place card. Works on any .g-list. */
 /* lines only between the rows: each row carries its bottom line and overlaps the next by 1px, so the last row's line falls outside the list and is clipped */
 .g-list[data-plain] { overflow: hidden; }
+/* in the columns mode a column ends at a break, where the last row's -1px is cut off: the list would end on a line; the list's last 2px are clipped instead (a 1px clip misses the line at a fractional bottom, where the border snaps to device pixels; rows have padding there) */
+.g-list[data-plain]:not([data-grid]) { clip-path: inset(0 0 2px 0); }
 .g-list[data-plain] > li { border-bottom: 1px solid rgba(var(--g-ov), .35); border-radius: 0; margin-bottom: -1px; padding-top: var(--g-gap-inner); padding-bottom: var(--g-gap-inner); padding-left: 0; padding-right: 0; }
 .g-list[data-plain] > li:is(:hover, [data-g-hover]) { background: none; cursor: default; }   /* a plain list has no hover fill: the hairline is the only mark */
-/* a switch row with a description: the title on top, the description under it, the switch on the right; the text wraps instead of cutting off */
-.g-list[data-plain] > li > label:has(> input[role="switch"]) > span { white-space: normal; text-align: start; }
-.g-list[data-plain] > li > label:has(> input[role="switch"]) > span > small { display: block; font-size: var(--g-fs-footnote); color: var(--g-text-3); white-space: normal; }
+/* a row with a description: the title on top, the description under it, the control on the right; the text wraps instead of cutting off.
+   A switch row (<label><span>Title<small>note</small></span><input role="switch"></label>) or a row of a name and an action (<span>Title<small>note</small></span><button>) */
+.g-list[data-plain] > li > label:has(> input[role="switch"]) > span, .g-list[data-plain] > li > span:has(> small) { white-space: normal; text-align: start; }
+.g-list[data-plain] > li > label:has(> input[role="switch"]) > span > small, .g-list[data-plain] > li > span:has(> small) > small { display: block; font-size: var(--g-fs-footnote); color: var(--g-text-3); white-space: normal; }
 
 
 
@@ -913,7 +916,7 @@ ul.g-list:not(:has(> li[data-icon])) > li::before { content: ""; flex: none; wid
 :where(:is(.g-root,[role="listbox"]) dialog:not([open])) { opacity: 0; }
 :where(:is(.g-root,[role="listbox"]) dialog)::backdrop { transition: opacity var(--g-dur) ease-in, overlay var(--g-dur) allow-discrete, display var(--g-dur) allow-discrete; }
 :where(:is(.g-root,[role="listbox"]) dialog:not([open]))::backdrop { opacity: 0; }
-dialog > [data-icon]:first-child { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; align-self: center; --g-icon-size: var(--g-icon-lg); background: var(--g-accent); color: var(--g-accent-fg); }
+dialog > [data-icon]:first-child { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; align-self: center; --g-icon-size: var(--g-icon-lg); background: var(--g-accent); color: var(--g-accent-fg); box-shadow: 0 2px 10px rgba(0,0,0,.12); }
 :where(:is(.g-root,[role="listbox"]) dialog > :is(h2, h3)) { font-size: var(--g-fs-title3); font-weight: 700; letter-spacing: -.01em; text-align: center; }
 :where(:is(.g-root,[role="listbox"]) dialog > p) { text-align: center; }
 :where(:is(.g-root,[role="listbox"]) dialog > footer) { display: flex; flex-direction: column; gap: var(--g-gap); }
