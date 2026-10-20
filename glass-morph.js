@@ -11,7 +11,8 @@
  *   - an element that is in both trees but stands in another place (a list that was sorted again) glides there from where it stood (opts.move);
  *   - in a text that changed the new words light up (.g-morph-word); a change that adds no word is highlighted (g-anim-highlight / .g-morph-flash);
  *   - a number that became another number (6 -> 13, 63% -> 71%) turns its changed digits like the reels of an odometer: units first, up when it grew,
- *     down when it fell (.g-reel).
+ *     down when it fell (.g-reel). Also inside a text: when only its numbers changed ("Осталось 5 мин" -> "6 мин") the words around them stay
+ *     and each changed number turns; a word that changed too is marked as words (.g-morph-word), not turned.
  * Returns a Promise: true when the DOM is patched, false when a newer call for the same target superseded this one.
  * How an old element is paired with a new one (siblings of one parent): 1) by key: opts.key(el), data-key or id (only when it is unique among
  * the siblings; the same id on every row is ignored), otherwise by tag + text (a list row is its word), and with no text by tag + src / href / name /
@@ -279,9 +280,30 @@
         const ws = $$('.g-reel__cell--new, .g-reel__cell--gone', board).map(c => [c, c.firstChild.getBoundingClientRect().width]);
         return () => { board.style.setProperty('--g-reel-h', h + 'px'); ws.forEach(([c, w]) => c.style.setProperty('--g-reel-w', w + 'px')); };
       };
-      board._finish = () => { clearTimeout(board._timer); if (board.parentNode) { const p = board.parentNode; p._gRun = null; p.replaceChild(document.createTextNode(to), board); unseen(p); } };
+      board._finish = () => { clearTimeout(board._timer); if (board.parentNode) { const p = board.parentNode; p._gRun = null; p.replaceChild(document.createTextNode(to), board); p.normalize(); unseen(p); } };   /* normalize: the text around a number that turned is one text again */
       settled(() => { if (board.parentNode) board._timer = setTimeout(board._finish, T.reel + Math.max(changed - 1, 0) * T.reelStagger + 60); });
       return board;
+    }
+    /* A text in which only numbers changed ("5 мин" -> "6 мин", "Загружено 3 из 10" -> "Загружено 4 из 10"): the words and separators around the numbers stay,
+       and each number that changed turns as a reel. The split keeps the numbers: the odd places of it are numbers, the even ones the text between them.
+       Returns the two splits, or null when a word or a separator differs (the text is then marked, as words are). */
+    const NUMBER = /(\d[\d\s.,]*\d|\d)/;
+    function numSplit(from, to) {
+      const a = from.split(NUMBER), b = to.split(NUMBER);
+      if (a.length !== b.length || a.length < 3) return null;
+      for (let i = 0; i < a.length; i += 2) if (a[i] !== b[i]) return null;
+      return [a, b];
+    }
+    /* the new text as nodes: the text pieces as they are, a number that changed as a board. frag holds them, nodes and boards are the same things */
+    function reelsOf([a, b], T) {
+      const frag = document.createDocumentFragment(), nodes = [], boards = [];
+      a.forEach((x, i) => {
+        let n;
+        if (i % 2 === 0 || x === b[i]) { if (!x) return; n = document.createTextNode(x); }
+        else { n = reel(document.createTextNode(x), b[i], T); boards.push(n); }
+        nodes.push(n); frag.appendChild(n);
+      });
+      return { frag, nodes, boards };
     }
     /* A text that changed: the words that are new in it are wrapped for a moment (.g-morph-word: they come in out of a soft blur on a tint that fades),
        the rest stays plain text. Returns a fragment for the old node `t`, or null when there is nothing new to show (only removed words) or the text is long. */
@@ -349,7 +371,8 @@
           if (t) {
             node = t;
             if (t.nodeValue !== nk.nodeValue) {
-              if (ctx.play && o.reel !== false && NUM.test(t.nodeValue) && NUM.test(nk.nodeValue) && t.parentElement && inView(t.parentElement)) node = reel(t, nk.nodeValue, ctx.T);   /* the old node stays at the cursor and goes below */
+              const parts = ctx.play && o.reel !== false && t.parentElement ? numSplit(t.nodeValue, nk.nodeValue) : null;   /* only numbers changed: they turn, the text around them stays */
+              if (parts && inView(t.parentElement)) { const d = reelsOf(parts, ctx.T); node = d.frag; (ctx.arms || (ctx.arms = [])).push(...d.boards); }   /* the old node stays at the cursor and goes below */
               else if (ctx.play && o.flash !== false && t.parentElement && (node = words(t, nk.nodeValue, ctx))) { /* the changed words are marked; the old node goes below */ }
               else { node = t; if (t.nodeValue.trim() || nk.nodeValue.trim()) textChanged = true; t.nodeValue = nk.nodeValue; }   /* not the whitespace between tags */
             }
@@ -951,7 +974,8 @@
         if (!t || t.nodeType !== 3 || e.childNodes.length !== 1 || from === to) return;
         const seen = shown(e);
         if (!seen) return;   /* not on the screen: the new text is there, nothing turns or lights up */
-        if (o.reel !== false && NUM.test(from) && NUM.test(to) && turns++ < 100) { t.nodeValue = from; const board = reel(t, to, T, true); t.replaceWith(board); boards.push(board); e._gRun = { to, nodes: [board], at: performance.now() }; }   /* measured with the reads of the update */
+        const split = o.reel !== false ? numSplit(from, to) : null;
+        if (split && turns < 100) { t.nodeValue = from; const d = reelsOf(split, T); t.replaceWith(d.frag); boards.push(...d.boards); turns += d.boards.length; e._gRun = { to, nodes: d.nodes, at: performance.now() }; }   /* measured with the reads of the update */
         else if (o.flash !== false) { t.nodeValue = from; const f = words(t, to, ctx); if (f) { const nodes = [...f.childNodes]; t.replaceWith(f); e._gRun = { to, nodes, at: performance.now() }; } else t.nodeValue = to; }
       });
       /* where each one stood: its own place, or the place of the old one it is (page coordinates to the viewport), and on it what runs now (a glide

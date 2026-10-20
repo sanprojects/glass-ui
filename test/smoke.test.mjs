@@ -275,6 +275,7 @@ const watched = async (html, change, wait = 40) => page.evaluate(async ([html, c
     entering: li.filter(e => e.classList.contains('g-morph-enter')).map(e => e.textContent.trim()).join(),
     gliding: li.filter(e => e.getAnimations().some(a => !(a instanceof CSSAnimation) && a.effect.getKeyframes().some(k => k.transform && k.transform !== 'none'))).map(e => e.textContent.trim()).join(),
     reels: box.querySelectorAll('.g-reel__strip').length,
+    words: box.querySelectorAll('.g-morph-word').length,
     boardSlides: !!box.querySelector('.g-reel.g-morph-enter, .g-morph-word.g-morph-enter'),   // the kit's own parts are not new content: a board turns in place
   });
   await new Promise(r => setTimeout(r, 1300));   // all over: plain again, and nothing moves on by itself (the kit's own writes are no change)
@@ -304,6 +305,35 @@ test('watch: rows taken out and put in one by one (as a framework does), and a r
 test('watch: a counter whose text a script sets turns its digits', async () => {
   const r = await watched('<p>Online: <b id="n">5</b></p>', `box.querySelector('#n').textContent = '17';`);
   assert.deepEqual({ reels: r.reels > 0, boardSlides: r.boardSlides, after: r.after }, { reels: true, boardSlides: false, after: { ghosts: 0, anims: 0, reels: 0, text: 'Online: 17' } });
+});
+
+test('watch: a text in which only a number changed turns the number, the words around it stay', async () => {
+  const r = await watched('<p>Осталось 5 мин</p>', `box.querySelector('p').textContent = 'Осталось 6 мин';`);
+  assert.deepEqual({ reels: r.reels, words: r.words, after: r.after }, { reels: 1, words: 0, after: { ghosts: 0, anims: 0, reels: 0, text: 'Осталось 6 мин' } });
+});
+
+test('watch: a text in which a word changed too is marked as words, not turned', async () => {
+  const r = await watched('<p>Осталось 5 мин</p>', `box.querySelector('p').textContent = 'Готово 6 мин';`);
+  assert.deepEqual({ reels: r.reels, words: r.words > 0, after: r.after }, { reels: 0, words: true, after: { ghosts: 0, anims: 0, reels: 0, text: 'Готово 6 мин' } });
+});
+
+test('morph: a line with a count and a date turns the numbers that changed, the date stays', async () => {
+  const r = await watched('<p>Загружено 3 из 10, 19.10.2026</p>', `Glass.morph(box, '<p>Загружено 4 из 11, 19.10.2026</p>');`, 120);
+  assert.deepEqual({ reels: r.reels, words: r.words, after: r.after }, { reels: 2, words: 0, after: { ghosts: 0, anims: 0, reels: 0, text: 'Загружено 4 из 11, 19.10.2026' } });
+});
+
+test('watch: a counter in a sentence written again while its number still turns ends in the last number, with nothing left over', async () => {
+  const r = await watched('<p>Осталось 5 мин</p>', `
+    const p = box.querySelector('p'); p.textContent = 'Осталось 6 мин';
+    setTimeout(() => { p.textContent = 'Осталось 7 мин'; }, 100);`, 300);
+  assert.deepEqual({ after: r.after }, { after: { ghosts: 0, anims: 0, reels: 0, text: 'Осталось 7 мин' } });
+});
+
+test('morph: a line that is morphed again while its number still turns ends in the last number, with nothing left over', async () => {
+  const r = await watched('<p>В очереди 3 задачи</p>', `
+    Glass.morph(box, '<p>В очереди 4 задачи</p>');
+    setTimeout(() => { Glass.morph(box, '<p>В очереди 5 задачи</p>'); }, 100);`, 300);
+  assert.deepEqual({ after: r.after }, { after: { ghosts: 0, anims: 0, reels: 0, text: 'В очереди 5 задачи' } });
 });
 
 test('watch: Glass.morph into a watched box is animated once, not twice', async () => {

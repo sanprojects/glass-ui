@@ -46,7 +46,8 @@
 @keyframes g-reel-blur { 0%, 24% { filter: url(#g-reel-blur-3); } 25%, 49% { filter: url(#g-reel-blur-2); } 50%, 74% { filter: url(#g-reel-blur-1); } 75%, 100% { filter: none; } }
 @keyframes g-reel-grow { from { max-width: 0; } to { max-width: var(--g-reel-w); } }
 @keyframes g-reel-shrink { from { max-width: var(--g-reel-w); } to { max-width: 0; } }
-.g-reel { display: inline-block; white-space: pre; font-variant-numeric: tabular-nums; }
+/* the digits are the host's figures (no tabular-nums here): at the end the board becomes plain text, and it must be as wide as that text */
+.g-reel { display: inline-block; white-space: pre; }
 .g-reel__cell { position: relative; display: inline-block; vertical-align: top; height: var(--g-reel-h); line-height: var(--g-reel-h); overflow: hidden; }
 .g-reel__size { visibility: hidden; }
 .g-reel__strip { position: absolute; inset: 0 0 auto; text-align: center; animation-duration: var(--g-morph-reel); animation-timing-function: cubic-bezier(.12,.75,.25,1), linear; animation-fill-mode: both; animation-delay: calc(var(--g-reel-d, 0ms) + var(--g-reel-shift, 0ms)); }
