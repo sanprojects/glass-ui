@@ -19,7 +19,7 @@
  *   <div class="g-file" data-g-file>   -> file upload: dropzone with a file list (add class g-file--field for a compact one-row version; data-max-size="10" in MB; `multiple` on the input accumulates files across picks, data-max-files caps the count)
  *   Glass.fileProgress('#uploader', fileOrIndex, 0..100)  -> show per-file upload progress (bar turns green at 100)
  *   Glass.morph / Glass.watch / data-g-morph -> glass-morph.js (a library of its own; with this file it measures [data-g-fit], highlights with the kit and ends the busy line)
- *   <button data-g-menu="#m" data-g-align="end"> + <div role="menu" id="m"> -> dropdown menu: buttons or links, <hr>; arrow keys, Esc, outside click
+ *   <button data-g-menu="#m" data-g-align="end"> + <div role="menu" id="m"> -> dropdown menu: buttons or links, <hr>; arrow keys, Esc, outside click; add data-g-menu-hover to open it on a mouse hover too
  *   <div role="tablist"><button>…</button>…</div> <div role="tabpanel">…</div>…  -> tabs / segmented control; roles, ids, aria-controls and hidden are filled in
  *   <button command="show-modal" commandfor="dlg"> -> opens <dialog id="dlg" closedby="any"> (closedby="any": a click on the backdrop closes it)
  *   <button command="close" commandfor="dlg" value="ok"> -> closes it (returnValue = button value)
@@ -142,11 +142,13 @@
     floats.slice().forEach(f => { if (f.o.items && f.panel.contains(t)) { const i = t.closest('button, a, [role="menuitem"]'); if (i && i.parentNode === f.panel) f.close(!!f.o.focusBack); } });
   });
 
-  /* <button data-g-menu="#m" data-g-align="end"> + <div role="menu" id="m"> with buttons or links and <hr> separators */
+  /* <button data-g-menu="#m" data-g-align="end"> + <div role="menu" id="m"> with buttons or links and <hr> separators.
+   * data-g-menu-hover: a mouse pointer over the trigger or the menu opens it too (no focus move), a click then keeps it open; a touch or the keyboard works as without it */
   function initMenu(trigger) {
     const panel = target(trigger, 'data-g-menu'); if (!panel) return;
     const id = panel.id || (panel.id = 'g-menu-' + (++uid));
-    mem(trigger, 'fp', floatPanel(trigger, panel, { auto: trigger.localName === 'button', align: trigger.getAttribute('data-g-align') || 'start', menu: true, items: true, focusBack: true }));
+    const fp = mem(trigger, 'fp', floatPanel(trigger, panel, { auto: trigger.localName === 'button', align: trigger.getAttribute('data-g-align') || 'start', menu: true, items: true, focusBack: true, onClose: () => { fp.byHover = false; } }));
+    if (trigger.hasAttribute('data-g-menu-hover')) hoverIntent([trigger, panel], () => { if (!fp.isOpen()) { fp.byHover = true; fp.open(); } }, () => { if (fp.byHover) fp.close(false); });
     panel.setAttribute('role', 'menu'); trigger.setAttribute('aria-haspopup', 'menu'); trigger.setAttribute('aria-controls', id); aria(trigger, 'expanded', false);
     menuItems(panel).forEach(i => { if (!i.hasAttribute('role')) i.setAttribute('role', 'menuitem'); i.tabIndex = -1; });
     $$('hr', panel).forEach(i => { i.setAttribute('role', 'separator'); });
@@ -157,6 +159,7 @@
   }
   on('click', '[data-g-menu]', (e, t) => {
     const fp = mem(t, 'fp');
+    if (fp && fp.byHover) { fp.byHover = false; e.preventDefault(); return; }   /* a click on a hover-opened menu pins it open */
     if (fp && !fp.o.auto) fp.isOpen() ? fp.close(true) : openMenu(fp);
   });
   on('keydown', '[data-g-menu]', (e, t) => {
