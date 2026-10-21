@@ -560,6 +560,7 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
   border-radius: var(--g-radius-sm); font-family: var(--g-font); font-size: var(--g-fs-subhead); font-weight: 500; line-height: inherit; text-align: left; text-decoration: none; cursor: pointer; color: var(--g-text);
 }
 [role="option"].is-active { background: var(--g-fill-strong); }
+[role="menu"] > [hidden] { display: none; }   /* the display: flex of an item above must not beat hidden: a page switches a row of its own menu off with the attribute */
 [role="option"][hidden] { display: none; }   /* filtered out by the search field */
 [role="option"] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }   /* an option never wraps: what does not fit ends with an ellipsis (its text shows as a tooltip) */
 /* a side note after the text of an option, such as a count: <option value="bots">Bots <small>12</small></option>. The same size, dimmed, at the right end:

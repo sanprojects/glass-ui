@@ -64,4 +64,13 @@ test('a row of the menu does what the button it stands for does', async () => {
   assert.equal(await page.evaluate(() => window.__hit), 1);
 });
 
+test('a row of the menu with the hidden attribute is not drawn', async () => {
+  const r = await page.evaluate(() => {
+    const row = document.createElement('button'); row.textContent = 'Ghost'; row.hidden = true;
+    const menu = document.querySelector(document.querySelector('.resizable nav [data-g-menu]').getAttribute('data-g-menu'));
+    menu.prepend(row); const d = getComputedStyle(row).display; row.remove(); return d;
+  });
+  assert.equal(r, 'none');
+});
+
 test('the page runs without script errors', () => { assert.deepEqual(errors, []); });
