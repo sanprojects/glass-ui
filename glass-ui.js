@@ -1839,8 +1839,8 @@
     document.addEventListener('input', e => {
       if (failed && e.target.name === failed.name && (e.target === failed || copies.includes(e.target.form))) unfail();   /* the field is being put right */
       if (!isText(e.target) || !step(e)) return;   /* a box or a select: its change */
-      const was = here(), url = write(!editing);
-      if (url !== was) editing = true;   /* the edit's entry is made by the first key that changes the address: a key that leaves it as it is (a field the server filled, cleared) made none */
+      const was = here(), url = write(!editing || !e.isTrusted);   /* a value a script put in (a cell of the page that keeps the field) is a pick, like a change: its own entry, not a key of an edit */
+      if (url !== was && e.isTrusted) editing = true;   /* the edit's entry is made by the first key that changes the address: a key that leaves it as it is (a field the server filled, cleared) made none */
       schedule(url, delayOf(e.target));
     });
     document.addEventListener('change', e => {
