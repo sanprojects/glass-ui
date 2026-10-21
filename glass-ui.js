@@ -411,6 +411,7 @@
     let tip, cur, prev, timer;
     function host(t) { return t.closest('dialog[open], [popover]:popover-open') || document.body; }
     function show(t) {
+      if (t.getAttribute('aria-expanded') === 'true') return;   /* its menu or list is open: the tip would take the anchor-name the panel hangs on */
       clearTimeout(timer); cur = t;
       if (!tip) { tip = document.createElement('div'); tip.className = 'g-tooltip'; tip.setAttribute('role', 'tooltip'); tip.setAttribute('popover', 'manual'); }
       const h = host(t); if (tip.parentNode !== h) h.appendChild(tip);

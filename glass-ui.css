@@ -569,6 +569,8 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 :is([role="option"], .g-select__value) > .g-select__text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 :is([role="option"], .g-select__value) > small { flex: none; }
 [role="option"]:has(> .g-select__text)::after { content: ""; width: 16px; flex: none; }
+/* a link with a data-icon / data-size / data-variant is also drawn as a button (the rule for buttons above, specificity 0): what that rule sets and this one does not is taken back */
+[role="menu"] > a { justify-content: flex-start; height: auto; box-shadow: none; backdrop-filter: none; transform: none; will-change: auto; letter-spacing: normal; transition: none; }
 @media (hover: hover) { [role="menu"] > :is(button, a, [role="menuitem"]):hover, [role="option"]:hover { background: var(--g-fill-strong); } }
 [role="menu"] > :is(button, a, [role="menuitem"])[data-g-hover], [role="option"][data-g-hover] { background: var(--g-fill-strong); }
 [role="menu"] > [aria-current="true"] { background: var(--g-fill-selected); }
