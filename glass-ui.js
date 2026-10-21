@@ -417,8 +417,9 @@
       const h = host(t); if (tip.parentNode !== h) h.appendChild(tip);
       tip.textContent = t.getAttribute('data-g-tip'); tip.id = tip.id || 'g-tooltip'; t.setAttribute('aria-describedby', tip.id);
       tip.setAttribute('data-pos', t.getAttribute('data-tip-position') === 'bottom' ? 'bottom' : 'top');   // CSS flips it when there is no room
-      if (prev && prev !== t) prev.style.removeProperty('anchor-name');
-      t.style.setProperty('anchor-name', '--g-tip'); prev = t;
+      if (prev) prev.style.removeProperty('anchor-name');
+      const names = getComputedStyle(t).anchorName;   /* the tip adds its name to the element's own (a selected tab keeps --g-tab, its pill hangs on it) */
+      t.style.setProperty('anchor-name', names && names !== 'none' ? names + ', --g-tip' : '--g-tip'); prev = t;
       if (tip.showPopover && !tip.matches(':popover-open')) tip.showPopover();
     }
     function hide() { if (!tip) return; if (cur) cur.removeAttribute('aria-describedby'); cur = null; if (tip.hidePopover && tip.matches(':popover-open')) tip.hidePopover(); }
@@ -962,9 +963,9 @@
   if (!(window.CSS && CSS.supports && CSS.supports('width', 'attr(x type(<length>))'))) MOUNTS.push(['[role="progressbar"][aria-valuenow]', initRing]);
   /* The "?" marker (data-hint) by default on every element whose title becomes a tooltip, so the tooltip can be found. Left out where a marker
      would only get in the way: icon-only controls (their title is their name), navigation, tabs, menus, summaries, abbreviations, inline text,
-     void / replaced elements (no ::before), and anything with data-no-hint. */
+     void / replaced elements (no ::before), and anything with data-no-hint or inside an element that has it. */
   function hintable(t) {
-    if (t.hasAttribute('data-hint') || t.hasAttribute('data-no-hint') || !t.closest('.g-root')) return false;
+    if (t.hasAttribute('data-hint') || t.closest('[data-no-hint]') || !t.closest('.g-root')) return false;
     if (/^(ABBR|IFRAME|IMG|INPUT|TEXTAREA|SELECT|SVG|BR|HR)$/i.test(t.tagName) || t.closest('svg, nav, [role="tablist"], [role="menu"], [role="menuitem"], [role="tab"], summary')) return false;
     if (t.tagName === 'BUTTON' && [...t.textContent.trim()].length <= 3) return false;   /* a round / square button with one glyph (a mark, a symbol): the marker would not fit in it */
     return !!t.textContent.trim() || t.classList.contains('g-input-wrap');
