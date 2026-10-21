@@ -103,6 +103,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
 .specimen__body{ display:flex; flex-direction:column; gap:12px; min-width:0; overflow-wrap:anywhere; }
 @media (max-width:860px){ .ts-row{ grid-template-columns:minmax(0,1fr); padding:18px 20px; } .specimen{ grid-template-columns:minmax(0,1fr); gap:16px; padding:22px; } }
 @media (prefers-reduced-motion:no-preference){ html{ scroll-behavior:smooth; } }
+.resizable{ resize:horizontal; overflow:hidden; min-width:300px; max-width:100%; width:100%; border-radius:var(--g-radius-pill); padding-bottom:2px; }
 @media (max-width:520px){ .hide-sm{display:none} nav{padding-left:16px;gap:8px} nav > a{font-size:15px} }
 @media (max-width:860px){ .pair{ grid-template-columns:minmax(0,1fr); } .sec{ padding:24px 20px; border-radius:var(--g-radius-card); } }
 </style>
@@ -281,6 +282,19 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
           </ul>
           <div><button aria-label="Search" data-icon="search" data-size="sm"></button><button aria-label="Notifications" data-icon="bell" data-size="sm"></button><a href="#navigation" role="button" data-size="sm" data-variant="primary" data-icon="plus">New</a></div>
         </nav>
+        <div class="resizable" title="Drag the corner">
+          <nav data-g-overflow aria-label="Bar with a field">
+            <a href="#navigation" role="button" data-icon="house" aria-label="Home" data-g-collapse></a>
+            <a href="#navigation"><span class="nav-brand-dot"></span>Brand</a>
+            <form class="g-input-wrap" onsubmit="return false"><span data-icon="search"></span><input type="search" placeholder="Search" aria-label="Search"></form>
+            <div>
+              <button type="button" data-icon="bell" aria-label="Notifications" data-size="sm"></button>
+              <button type="button" data-icon="star" aria-label="Favourites" data-size="sm"></button>
+              <a href="#navigation" role="button" data-icon="settings" aria-label="Settings" data-size="sm"></a>
+              <a href="#navigation" role="button" data-size="sm" data-variant="primary" data-icon="plus" data-g-priority="9">New</a>
+            </div>
+          </nav>
+        </div>
         <div data-code data-tabs-demo>
           <div>
             <div role="tablist">
@@ -321,6 +335,19 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
 &lt;!-- or build the links from page sections automatically --&gt;
 &lt;ul data-g-nav-auto data-sections=".sec[id]"&gt;&lt;/ul&gt;
 &lt;section class="sec" id="pricing" data-title="Pricing"&gt;…&lt;/section&gt;</pre></div>
+    <div class="code"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0">&lt;!-- a bar with a field: the field is never narrower than 200px (--g-nav-field-min),
+     what does not fit beside it goes into a menu, and the menu button is there only then.
+     Drag the corner of the bar above to see it. --&gt;
+&lt;nav data-g-overflow&gt;
+  &lt;a href="/" role="button" data-icon="house" aria-label="Home" data-g-collapse&gt;&lt;/a&gt;
+  &lt;a href="/"&gt;Brand&lt;/a&gt;
+  &lt;form class="g-input-wrap"&gt;&lt;span data-icon="search"&gt;&lt;/span&gt;&lt;input type="search" placeholder="Search"&gt;&lt;/form&gt;
+  &lt;div&gt;
+    &lt;button data-icon="bell" aria-label="Notifications"&gt;&lt;/button&gt;
+    &lt;a href="/settings" role="button" data-icon="settings" aria-label="Settings"&gt;&lt;/a&gt;
+    &lt;a href="/new" role="button" data-icon="plus" data-g-priority="9"&gt;New&lt;/a&gt;   &lt;!-- goes last --&gt;
+  &lt;/div&gt;
+&lt;/nav&gt;</pre></div>
   </section>
 
   <section class="sec g-glass g-anim-scroll" id="data" data-title="Data">

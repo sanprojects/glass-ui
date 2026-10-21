@@ -717,6 +717,20 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]):has(> .g-input-wrap) > ul) { grid-column: 4; flex: none; }
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]):has(> .g-input-wrap) > div) { grid-column: -2; justify-content: flex-end; }
 
+/* Overflow bar (data-g-overflow, glass-ui.js navOverflow): the field is never narrower than --g-nav-field-min (200px); what does not fit beside it moves into a menu.
+ * An item that is in the menu is data-g-off (nothing else of the bar's styles can bring it back); a list with no item left is data-g-off too, and takes no column. */
+:where(:is(.g-root,[role="listbox"]) nav[data-g-overflow]) [data-g-off] { display: none !important; }
+:where(:is(.g-root,[role="listbox"]) nav[data-g-overflow]) { --_title: min-content; }   /* the title keeps its width while anything else can still go into the menu; with nothing left to hide, the script sets data-g-squeeze and the title is clipped */
+:where(:is(.g-root,[role="listbox"]) nav[data-g-overflow][data-g-squeeze]) { --_title: 0px; column-gap: var(--g-gap-inner); }   /* and the gaps are the tight ones: a clipped title still has its gap */
+:where(:is(.g-root,[role="listbox"]) nav[data-g-overflow]:has(> .g-input-wrap)) { grid-template-columns: auto minmax(var(--_title), max-content) minmax(var(--g-nav-field-min, 200px), var(--g-nav-field-max, 300px)) minmax(max-content, 1fr); }
+:where(:is(.g-root,[role="listbox"]) nav[data-g-overflow]:has(> .g-input-wrap):has(> ul:not([data-g-off]))) { grid-template-columns: auto minmax(var(--_title), max-content) minmax(var(--g-nav-field-min, 200px), var(--g-nav-field-max, 300px)) minmax(0, 1fr) auto; }
+/* the home link is in the menu: its track goes, and its gap with it */
+:where(:is(.g-root,[role="listbox"]) nav[data-g-overflow]:has(> .g-input-wrap):has(> a:first-of-type[data-g-off])) { grid-template-columns: minmax(var(--_title), max-content) minmax(var(--g-nav-field-min, 200px), var(--g-nav-field-max, 300px)) minmax(max-content, 1fr); }
+:where(:is(.g-root,[role="listbox"]) nav[data-g-overflow]:has(> .g-input-wrap):has(> a:first-of-type[data-g-off]):has(> ul:not([data-g-off]))) { grid-template-columns: minmax(var(--_title), max-content) minmax(var(--g-nav-field-min, 200px), var(--g-nav-field-max, 300px)) minmax(0, 1fr) auto; }
+:where(:is(.g-root,[role="listbox"]) nav[data-g-overflow]:has(> .g-input-wrap):has(> a:first-of-type[data-g-off]) > a:nth-of-type(2)) { grid-column: 1; }
+:where(:is(.g-root,[role="listbox"]) nav[data-g-overflow]:has(> .g-input-wrap):has(> a:first-of-type[data-g-off]) > .g-input-wrap) { grid-column: 2; }
+:where(:is(.g-root,[role="listbox"]) nav[data-g-overflow]:has(> .g-input-wrap):has(> a:first-of-type[data-g-off]):has(> ul:not([data-g-off])) > ul) { grid-column: 3; }
+
 /* ---------- Card: <article> ----------
  * <article><figure style="background-image:…"></figure><h3>Title</h3><p>Text</p><footer><button>Open</button></footer></article>
  * A whole-card link: <a href><article>…</article></a>. Long-form text goes in a <div class="g-prose"> instead. */

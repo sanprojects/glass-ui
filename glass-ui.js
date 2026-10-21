@@ -124,7 +124,7 @@
     floats.slice().forEach(f => { if (!f.o.auto && !f.trigger.contains(t) && !f.panel.contains(t)) f.close(false); });
   });
   /* the items of a menu: its buttons and links (or anything with role="menuitem") */
-  function menuItems(panel) { return [...panel.children].filter(c => /^(BUTTON|A)$/.test(c.tagName) || c.getAttribute('role') === 'menuitem'); }
+  function menuItems(panel) { return [...panel.children].filter(c => !c.hidden && (/^(BUTTON|A)$/.test(c.tagName) || c.getAttribute('role') === 'menuitem')); }
   function enabled(i) { return !isDisabled(i) && !i.disabled; }
   /* Esc closes the top panel (focus back on the trigger); in a menu Arrow / Home / End move between the items and Tab closes */
   document.addEventListener('keydown', e => {
@@ -723,6 +723,77 @@
 
   on('click', '.g-nav__morebtn', (e, b) => { const toggle = mem(b, 'toggle'); if (toggle) toggle(); });
 
+  /* ---------- Overflow bar ----------
+   * <nav data-g-overflow="#menu"><a>…</a> <form class="g-input-wrap">…</form> <ul><li><a>…</a></li></ul> <div><button>…</button> <a role="button">…</a></div></nav>
+   * The field of the bar (a direct child .g-input-wrap) is never narrower than --g-nav-field-min (200px). What does not fit beside it moves into a menu, one row per item;
+   * its button (the last of the bar's <div>, made if there is none) is on the bar only while there is something in the menu. The items are the <li> of a <ul>, the children of a <div>
+   * and the direct children with data-g-collapse. The one with the lowest data-g-priority goes first (a number; the later in the bar, the lower by default). A row is named by
+   * data-g-label, aria-label, title or the text of its item; a link is a link, anything else presses the item. #menu is a menu of the page (data-g-items marks where the rows go, at its start
+   * by default): its own rows are always there, so the button stays while one of them is shown (not hidden, not display: none). Without a name the kit makes the menu.
+   * <nav data-g-overflowing> while an item is in the menu. data-g-overflow-label / data-g-overflow-icon name the button ("More", chevron-down). */
+  function navOverflow(nav) {
+    const named = nav.getAttribute('data-g-overflow'), find = named && document.querySelector(named);
+    const menu = find || part(el('div')); if (!menu.parentNode) document.body.appendChild(menu);
+    const id = menu.id || (menu.id = 'g-menu-' + (++uid));
+    let box = $$(':scope > div', nav).filter(d => d !== menu).pop(); if (!box) box = nav.appendChild(part(el('div')));
+    const btn = part(attrs(el('button'), { type: 'button', 'data-icon': data(nav, 'overflow-icon', 'chevron-down'), 'aria-label': data(nav, 'overflow-label', 'More'), 'data-g-menu': '#' + id, 'data-g-menu-hover': '', 'data-g-align': 'end' }));
+    const sib = box.querySelector(':scope > [data-size]'); if (sib) btn.setAttribute('data-size', sib.getAttribute('data-size'));
+    box.appendChild(btn); mount1(btn, MOUNTS.find(m => m[0] === '[data-g-menu]'));
+    const fp = mem(btn, 'fp'); let busy = false;
+    const hide = n => { owns(n, 'data-g-off'); n.setAttribute('data-g-off', ''); };
+    const shown = n => getComputedStyle(n).display !== 'none';
+    const own = () => [...menu.children].filter(c => !c.hasAttribute('data-g-auto') && !c.hasAttribute('data-g-items') && c.localName !== 'hr' && !c.hidden && shown(c));
+    function collect() {
+      const out = [], push = n => { const t = n.matches('a, button') ? n : n.querySelector('a, button'); if (t) out.push({ node: n, t }); };
+      [...nav.children].forEach(c => {
+        if (c === menu) return;
+        if (c.localName === 'ul' && !c.hasAttribute('data-g-nav-auto')) [...c.children].forEach(push);
+        else if (c.localName === 'div') [...c.children].forEach(x => { if (x !== btn) push(x); });
+        else if (c.hasAttribute('data-g-collapse')) push(c);
+      });
+      out.forEach((o, i) => { o.order = i; o.prio = parseFloat(o.node.getAttribute('data-g-priority')); if (isNaN(o.prio)) o.prio = -i; });
+      return out;
+    }
+    function over() {   // something sticks out at the right end of the bar
+      const limit = nav.getBoundingClientRect().right - (parseFloat(getComputedStyle(nav).paddingRight) || 0) + 1;
+      return [...nav.children].some(c => c.getClientRects().length && c.getBoundingClientRect().right > limit);
+    }
+    function row(it) {
+      const t = it.t, lab = it.node.getAttribute('data-g-label') || t.getAttribute('data-g-label'), href = t.localName === 'a' && !t.hasAttribute('onclick') ? t.getAttribute('href') : null;
+      const r = href ? el('a') : el('button'); part(r); r.setAttribute('data-g-auto', ''); r.setAttribute('role', 'menuitem'); r.tabIndex = -1;
+      if (href) { r.href = href; ['target', 'rel', 'download'].forEach(k => { if (t.hasAttribute(k)) r.setAttribute(k, t.getAttribute(k)); }); } else { r.type = 'button'; r.addEventListener('click', () => t.click()); }
+      r.textContent = (lab || t.getAttribute('aria-label') || t.getAttribute('title') || t.textContent).trim();
+      if (t.hasAttribute('data-icon')) r.setAttribute('data-icon', t.getAttribute('data-icon'));
+      if (t.getAttribute('aria-current')) r.setAttribute('aria-current', t.getAttribute('aria-current'));
+      if (t.disabled || t.getAttribute('aria-disabled') === 'true') r.setAttribute('aria-disabled', 'true');
+      return r;
+    }
+    function layout() {
+      if (busy) return; busy = true;
+      if (fp && fp.isOpen()) fp.close(false);
+      $$('[data-g-off]', nav).forEach(n => n.removeAttribute('data-g-off')); nav.removeAttribute('data-g-squeeze');
+      const items = collect().filter(i => shown(i.node)), keep = own().length > 0;
+      if (!keep) btn.setAttribute('data-g-off', '');
+      const lists = $$(':scope > ul:not([data-g-nav-auto])', nav), cut = [];
+      for (const it of items.slice().sort((a, b) => a.prio - b.prio || b.order - a.order)) {
+        if (!over()) break;
+        btn.removeAttribute('data-g-off'); hide(it.node); cut.push(it);
+        lists.forEach(u => { if ([...u.children].every(li => li.hasAttribute('data-g-off'))) hide(u); });
+      }
+      nav.toggleAttribute('data-g-squeeze', over()); owns(nav, 'data-g-squeeze');   // nothing left to cut: the title is clipped, the field stays
+      $$(':scope > [data-g-auto]', menu).forEach(r => r.remove());
+      const at = menu.querySelector(':scope > [data-g-items]'), ref = at || menu.firstChild;
+      cut.sort((a, b) => a.order - b.order).forEach(it => menu.insertBefore(row(it), ref));
+      nav.toggleAttribute('data-g-overflowing', cut.length > 0); owns(nav, 'data-g-overflowing');
+      busy = false;
+    }
+    if (window.ResizeObserver) new ResizeObserver(layout).observe(nav); else window.addEventListener('resize', layout);
+    new MutationObserver(rs => { if (rs.some(r => r.target !== menu)) layout(); }).observe(menu, { attributes: true, attributeFilter: ['hidden', 'class', 'style'], subtree: true });   // a row of the page shown or hidden
+    document.fonts?.ready.then(layout);
+    layout();
+    return mem(nav, 'overflow', { refresh: layout });
+  }
+
   /* ---------- Popover panel: the native popover attribute (<button popovertarget="p"> + <aside popover id="p">) ----------
    * The browser does the toggling, the top layer, the outside click and Esc. We only report open / close as g:popoveropen / g:popoverclose. */
   document.addEventListener('toggle', e => {
@@ -860,7 +931,7 @@
     ['[data-g-file]', initFile], ['[data-g-number]', numSync],
     ['[data-g-color]', initColor], ['[data-g-password]', initPassword], ['[data-g-clear-input]', initClearInput],
     ['.g-root input:not([type]), .g-root input:is([type="text"], [type="search"], [type="email"], [type="url"], [type="tel"])', initAutoClear], ['select[data-g-select]', initSelect],
-    ['[data-g-menu]', initMenu], ['[role="tablist"]', initTabs], ['input[type="range"]', initSlider],
+    ['[data-g-menu]', initMenu], ['nav[data-g-overflow]', navOverflow], ['[role="tablist"]', initTabs], ['input[type="range"]', initSlider],
     ['table[data-g-selectable]', initTable], ['table', initSort], ['[data-g-more]', initMore], ['[data-g-pager]', pagerRender],
     ['[data-g-anim-loop]', initAnimLoop], ['[data-g-anim-random]', initAnimRandom], ['[data-g-clamp]', initClamp], ['[data-g-ruler]', n => ruler(n)], ['[data-ruler]', rulerOf], ['time', initAge]
   ];

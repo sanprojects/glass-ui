@@ -56,7 +56,7 @@ A form is an adaptive grid: any container that holds `.g-field` children lays th
 
 ### [Navigation](https://sanprojects.github.io/glass-ui/#navigation)
 
-A floating `<nav>` bar that builds its links from page sections and folds the overflow into a More menu, plus pill and underline tabs with arrow-key support.
+A floating `<nav>` bar that builds its links from page sections and folds the overflow into a More menu, plus an overflow bar (`<nav data-g-overflow>`: the search field is never narrower than 200px, whatever does not fit beside it moves into a menu, and the menu button is there only while something is in it), plus pill and underline tabs with arrow-key support.
 
 <img src="docs/navigation.webp" alt="Navigation bar and tabs" width="100%">
 
