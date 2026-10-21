@@ -418,10 +418,17 @@
       tip.textContent = t.getAttribute('data-g-tip'); tip.id = tip.id || 'g-tooltip'; t.setAttribute('aria-describedby', tip.id);
       tip.setAttribute('data-pos', t.getAttribute('data-tip-position') === 'bottom' ? 'bottom' : 'top');   // CSS flips it when there is no room
       if (prev) prev.style.removeProperty('anchor-name');
-      const names = getComputedStyle(t).anchorName;   /* the tip adds its name to the element's own (a selected tab keeps --g-tab, its pill hangs on it) */
-      t.style.setProperty('anchor-name', names && names !== 'none' ? names + ', --g-tip' : '--g-tip'); prev = t;
+      name(t); prev = t; watch.disconnect(); watch.observe(t, { attributes: true, attributeFilter: ['aria-selected', 'aria-current', 'aria-pressed', 'class'] });
       if (tip.showPopover && !tip.matches(':popover-open')) tip.showPopover();
     }
+    /* the tip adds its name to the element's own (a selected tab keeps --g-tab, its pill hangs on it). Clicking the tab under the pointer makes it selected
+       while the tip is still up: the names are read again then, or the inline --g-tip alone would cut the pill loose from the tab. */
+    function name(t) {
+      t.style.removeProperty('anchor-name');
+      const names = getComputedStyle(t).anchorName;
+      t.style.setProperty('anchor-name', names && names !== 'none' ? names + ', --g-tip' : '--g-tip');
+    }
+    const watch = new MutationObserver(() => { if (prev) name(prev); });   /* prev keeps the name after the tip is hidden (it fades out on it), so it is watched until the next tip */
     function hide() { if (!tip) return; if (cur) cur.removeAttribute('aria-describedby'); cur = null; if (tip.hidePopover && tip.matches(':popover-open')) tip.hidePopover(); }
     /* <button title="Duplicate project">: the native title of any element inside .g-root is taken over (moved to data-g-tip, so the browser does not show its own tip).
        Icon-only elements keep their accessible name through aria-label. Without JS the native title still works. */

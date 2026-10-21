@@ -41,6 +41,20 @@ test('tabs: arrow keys move the selection', async () => {
   assert.equal(await tabs.nth(0).getAttribute('aria-selected'), 'false');
 });
 
+test('tabs: a tab with a tooltip, clicked under the pointer, keeps --g-tab with the tip name (the pill follows it)', async () => {
+  const r = await page.evaluate(async () => {
+    const tick = ms => new Promise(res => setTimeout(res, ms));
+    const box = document.createElement('div'); box.className = 'g-root'; document.body.appendChild(box);
+    box.innerHTML = '<div role="tablist"><button aria-selected="true" title="One">One</button><button aria-selected="false" title="Two">Two</button></div>';
+    const [a, b] = box.querySelectorAll('button');
+    b.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); await tick(30);   // the tip is up on the tab that is not selected: its name is --g-tip alone
+    a.setAttribute('aria-selected', 'false'); b.setAttribute('aria-selected', 'true'); await tick(30);   // the click moves the selection under the pointer
+    const names = getComputedStyle(b).anchorName; box.remove();
+    return names;
+  });
+  assert.ok(r.includes('--g-tab') && r.includes('--g-tip'), r);
+});
+
 test('select: opens as a listbox and picks an option', async () => {
   const trigger = page.locator('#s-role + .g-select, .g-select').first().locator('.g-select__trigger');
   await trigger.scrollIntoViewIfNeeded(); await trigger.click();
