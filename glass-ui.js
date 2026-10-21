@@ -1087,8 +1087,17 @@
         const used = {}; list.forEach(s => { if (s.id) used[s.id] = 1; });
         list.forEach(s => { if (!s.id) s.id = freeId(slug(s.label), n => used[n]); used[s.id] = 1; });
       }
-      track.textContent = ''; now = -1; segs = list.map((s, i) => { const n = el('a', 'g-ruler__seg'); n.href = '#' + encodeURIComponent(s.id); n.textContent = s.label; n.setAttribute('aria-label', s.title || s.label); n.setAttribute('data-i', i); track.appendChild(n); return n; });
+      // marks of sections that stay are the same elements (they glide to their new place), a new one fades in, one that is gone fades out
+      const had = new Map(segs.map(n => [n.getAttribute('href'), n])), fresh = [];
+      now = -1; segs = list.map((s, i) => {
+        const href = '#' + encodeURIComponent(s.id); let n = had.get(href);
+        if (n) had.delete(href); else { n = el('a', 'g-ruler__seg g-ruler__seg--new'); n.href = href; fresh.push(n); }
+        if (n.textContent !== s.label) n.textContent = s.label;
+        n.setAttribute('aria-label', s.title || s.label); n.setAttribute('data-i', i); track.appendChild(n); return n;
+      });
+      had.forEach(n => { n.classList.add('g-ruler__seg--new'); n.style.pointerEvents = 'none'; n.removeAttribute('href'); n.removeAttribute('data-i'); setTimeout(() => n.remove(), 600); });
       place();
+      if (fresh.length) { void track.offsetWidth; fresh.forEach(n => n.classList.remove('g-ruler__seg--new')); }   // a reflow in between: the fade starts from the hidden state
       openByHash();   // a no-op until the address names one of these marks
     }
     const maxW = parseFloat(getComputedStyle(box).getPropertyValue('--g-ruler-w')) || 96;   // the width in the stylesheet is the widest the ruler gets
