@@ -25,7 +25,8 @@ const at = w => page.evaluate(async w => {
   return {
     field: nav.querySelector('.g-input-wrap').offsetWidth, menu: vis(btn),
     spill: Math.max(...[...nav.children].filter(vis).map(c => c.getBoundingClientRect().right)) - right,
-    off: [...nav.querySelectorAll('[data-g-off]')].filter(n => n !== btn).map(n => n.getAttribute('aria-label') || n.textContent.trim()),
+    title: (t => ({ shown: vis(t), whole: t.scrollWidth <= t.clientWidth, off: t.hasAttribute('data-g-off') }))(nav.querySelector('[data-g-title]')),
+    off: [...nav.querySelectorAll('[data-g-off]')].filter(n => n !== btn && !n.hasAttribute('data-g-title')).map(n => n.getAttribute('aria-label') || n.textContent.trim()),
     rows: [...document.querySelectorAll(btn.getAttribute('data-g-menu') + ' > [data-g-auto]')].map(n => n.textContent),
     shown: [...nav.querySelectorAll('div > :not([data-g-menu])')].filter(vis).map(n => n.getAttribute('aria-label') || n.textContent.trim()),
   };
@@ -48,8 +49,26 @@ test('no menu when everything fits; the menu holds exactly what was cut', async 
   assert.deepEqual(narrow.rows.sort(), narrow.off.sort());
 });
 
+test('the name of the bar is whole or gone, and it is the first to go', async () => {
+  let seen = { whole: 0, gone: 0 };
+  for (let w = 1000; w >= 300; w -= 20) {
+    const r = await at(w);
+    if (r.title.shown) { assert.ok(r.title.whole, `the name is clipped at ${w}px`); seen.whole++; } else { assert.ok(r.title.off); seen.gone++; }
+    if (r.off.length || r.menu) assert.equal(r.title.shown, false, `a button is in the menu while the name is shown at ${w}px`);
+    assert.deepEqual(r.rows.sort(), r.off.sort());   // the name has no row
+  }
+  assert.ok(seen.whole > 0 && seen.gone > 0);
+});
+
+test('a bar settles to the same state whether it got narrower or wider', async () => {
+  const down = {}, up = {};
+  for (let w = 900; w >= 300; w -= 30) down[w] = JSON.stringify(await at(w));
+  for (let w = 300; w <= 900; w += 30) up[w] = JSON.stringify(await at(w));
+  for (const w in down) assert.equal(up[w], down[w], 'at ' + w + 'px');
+});
+
 test('items go from the end, and the one with a high data-g-priority goes last', async () => {
-  const r = await at(540);
+  const r = await at(460);   // the name went first, so what is cut here starts further down
   assert.ok(r.off.includes('Settings') && !r.off.includes('New'), JSON.stringify(r));
   assert.ok(r.shown.includes('New'));
   const narrow = await at(300);

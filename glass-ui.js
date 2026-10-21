@@ -747,16 +747,18 @@
       const out = [], push = n => { const t = n.matches('a, button') ? n : n.querySelector('a, button'); if (t) out.push({ node: n, t }); };
       [...nav.children].forEach(c => {
         if (c === menu) return;
-        if (c.localName === 'ul' && !c.hasAttribute('data-g-nav-auto')) [...c.children].forEach(push);
+        if (c.hasAttribute('data-g-title')) out.push({ node: c, drop: true });   // the name of the bar: whole or gone, the first to go, no row in the menu
+        else if (c.localName === 'ul' && !c.hasAttribute('data-g-nav-auto')) [...c.children].forEach(push);
         else if (c.localName === 'div') [...c.children].forEach(x => { if (x !== btn) push(x); });
         else if (c.hasAttribute('data-g-collapse')) push(c);
       });
-      out.forEach((o, i) => { o.order = i; o.prio = parseFloat(o.node.getAttribute('data-g-priority')); if (isNaN(o.prio)) o.prio = -i; });
+      out.forEach((o, i) => { o.order = i; o.prio = o.drop ? -Infinity : parseFloat(o.node.getAttribute('data-g-priority')); if (isNaN(o.prio)) o.prio = -i; });
       return out;
     }
-    function over() {   // something sticks out at the right end of the bar
-      const limit = nav.getBoundingClientRect().right - (parseFloat(getComputedStyle(nav).paddingRight) || 0) + 1;
-      return [...nav.children].some(c => c.getClientRects().length && c.getBoundingClientRect().right > limit);
+    function measure() {   // one read of the laid out bar: does something stick out at the right end, and how wide the bar has to be for it not to
+      const box = nav.getBoundingClientRect(), pad = parseFloat(getComputedStyle(nav).paddingRight) || 0;
+      let right = 0; for (const c of nav.children) if (c.getClientRects().length) right = Math.max(right, c.getBoundingClientRect().right);
+      return { over: right > box.right - pad + 1, need: right - box.left + pad };
     }
     function row(it) {
       const t = it.t, lab = it.node.getAttribute('data-g-label') || t.getAttribute('data-g-label'), href = t.localName === 'a' && !t.hasAttribute('onclick') ? t.getAttribute('href') : null;
@@ -768,30 +770,52 @@
       if (t.disabled || t.getAttribute('aria-disabled') === 'true') r.setAttribute('aria-disabled', 'true');
       return r;
     }
-    function layout() {
-      if (busy) return; busy = true;
+    /* The bar is measured as little as it can be. A full pass (after a change of the items, the fonts or the menu's own rows) cuts the items in the order of their priority until nothing sticks out and
+     * remembers how wide the bar was needed with k items gone (need[k]). A pass after a resize starts from what is cut now: it reads the bar once, brings back what the width now allows by the
+     * remembered need (and checks), or cuts more. A resize that changes nothing costs one read and no change of the page. */
+    let seq = null, need = [], k = 0, keep = false, built = [], lists = [];
+    const setOff = (n, on) => { if (on) hide(n); else n.removeAttribute('data-g-off'); };
+    function put() {   // the first k of seq are in the menu; the button is on the bar while the menu has anything
+      seq.forEach((it, i) => { if (it.node.hasAttribute('data-g-off') !== i < k) setOff(it.node, i < k); });
+      lists.forEach(u => { const all = [...u.children].every(li => li.hasAttribute('data-g-off')); if (u.hasAttribute('data-g-off') !== all) setOff(u, all); });
+      const rows = keep || seq.slice(0, k).some(i => !i.drop); if (btn.hasAttribute('data-g-off') === rows) setOff(btn, !rows);
+    }
+    function fit() {   // cut while something sticks out
+      let m = measure();
+      while (m.over && k < seq.length) { need[k] = m.need; k++; put(); m = measure(); }
+      if (nav.hasAttribute('data-g-squeeze') !== m.over) { nav.toggleAttribute('data-g-squeeze', m.over); owns(nav, 'data-g-squeeze'); }   // nothing left to cut: the title is clipped, the field stays
+    }
+    function commit() {   // the rows of the menu, when the items in it are not the ones it has
+      const cut = seq.slice(0, k).filter(i => !i.drop).sort((a, b) => a.order - b.order);
+      if (cut.length === built.length && cut.every((it, i) => it === built[i])) return;
+      built = cut;
       if (fp && fp.isOpen()) fp.close(false);
-      $$('[data-g-off]', nav).forEach(n => n.removeAttribute('data-g-off')); nav.removeAttribute('data-g-squeeze');
-      const items = collect().filter(i => shown(i.node)), keep = own().length > 0;
-      if (!keep) btn.setAttribute('data-g-off', '');
-      const lists = $$(':scope > ul:not([data-g-nav-auto])', nav), cut = [];
-      for (const it of items.slice().sort((a, b) => a.prio - b.prio || b.order - a.order)) {
-        if (!over()) break;
-        btn.removeAttribute('data-g-off'); hide(it.node); cut.push(it);
-        lists.forEach(u => { if ([...u.children].every(li => li.hasAttribute('data-g-off'))) hide(u); });
-      }
-      nav.toggleAttribute('data-g-squeeze', over()); owns(nav, 'data-g-squeeze');   // nothing left to cut: the title is clipped, the field stays
       $$(':scope > [data-g-auto]', menu).forEach(r => r.remove());
       const at = menu.querySelector(':scope > [data-g-items]'), ref = at || menu.firstChild;
-      cut.sort((a, b) => a.order - b.order).forEach(it => menu.insertBefore(row(it), ref));
+      cut.forEach(it => menu.insertBefore(row(it), ref));
       nav.toggleAttribute('data-g-overflowing', cut.length > 0); owns(nav, 'data-g-overflowing');
+    }
+    function layout(full) {
+      if (busy) return; busy = true;
+      const own1 = own().length > 0;
+      if (full === true || !seq || own1 !== keep) {
+        $$('[data-g-off]', nav).forEach(n => n.removeAttribute('data-g-off')); nav.removeAttribute('data-g-squeeze');
+        seq = collect().filter(i => shown(i.node)).sort((a, b) => a.prio - b.prio || b.order - a.order); need = []; k = 0; keep = own1; lists = $$(':scope > ul:not([data-g-nav-auto])', nav);
+        put();
+      } else {
+        const w = nav.offsetWidth;
+        if (nav.hasAttribute('data-g-squeeze')) nav.removeAttribute('data-g-squeeze');
+        let back = false; while (k > 0 && need[k - 1] <= w) { k--; back = true; }
+        if (back) put();
+      }
+      fit(); commit();
       busy = false;
     }
-    if (window.ResizeObserver) new ResizeObserver(layout).observe(nav); else window.addEventListener('resize', layout);
-    new MutationObserver(rs => { if (rs.some(r => r.target !== menu)) layout(); }).observe(menu, { attributes: true, attributeFilter: ['hidden', 'class', 'style'], subtree: true });   // a row of the page shown or hidden
-    document.fonts?.ready.then(layout);
-    layout();
-    return mem(nav, 'overflow', { refresh: layout });
+    if (window.ResizeObserver) new ResizeObserver(() => layout()).observe(nav); else window.addEventListener('resize', () => layout());
+    new MutationObserver(rs => { if (rs.some(r => r.target !== menu)) layout(true); }).observe(menu, { attributes: true, attributeFilter: ['hidden', 'class', 'style'], subtree: true });   // a row of the page shown or hidden
+    document.fonts?.ready.then(() => layout(true));
+    layout(true);
+    return mem(nav, 'overflow', { refresh: () => layout(true) });
   }
 
   /* ---------- Popover panel: the native popover attribute (<button popovertarget="p"> + <aside popover id="p">) ----------
