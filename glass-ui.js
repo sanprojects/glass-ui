@@ -1074,12 +1074,17 @@
         return { label: a.getAttribute('data-ruler') || (a.hasAttribute('data-ruler-auto') ? '' : a.id) || a.textContent.trim() || a.id, id: a.id, el: a, from: y, to: next ? next.getBoundingClientRect().top - top : sHeight() };
       });
     }
+    function relabel(n, label) {   // a mark that keeps its place takes its new name through Glass.morph: a number in it turns like an odometer (a new mark has no text yet: it is set at once)
+      if (n.textContent === label) return;
+      const m = global.Glass && global.Glass.morph;
+      if (n.textContent && m && !document.hidden) m(n, label.replace(/&/g, '&amp;').replace(/</g, '&lt;')); else n.textContent = label;
+    }
     function build() {
       if (!manual) {
         const next = anchors();
         if (next.length === list.length && next.every((s, i) => s.label === list[i].label)) { list = next; place(); openByHash(); return; }   // same names: only the places moved, the marks stay (no redraw)
         if (segs.length === next.length && next.every((s, i) => s.id && s.id === list[i].id)) {   // the same sections with other names (a count went up): the marks take the new names in place, and glide
-          list = next; segs.forEach((n, i) => { n.textContent = list[i].label; n.setAttribute('aria-label', list[i].label); }); place(); openByHash(); return;
+          list = next; segs.forEach((n, i) => { relabel(n, list[i].label); n.setAttribute('aria-label', list[i].label); }); place(); openByHash(); return;
         }
         list = next;
         list.forEach(s => { if (!s.id) { s.id = s.el.id = freeId(slug(s.label), n => document.getElementById(n)); s.el.setAttribute('data-ruler-auto', ''); } });   // an element without an id gets one: it is the section's link (#id)
@@ -1092,7 +1097,7 @@
       now = -1; segs = list.map((s, i) => {
         const href = '#' + encodeURIComponent(s.id); let n = had.get(href);
         if (n) had.delete(href); else { n = el('a', 'g-ruler__seg g-ruler__seg--new'); n.href = href; fresh.push(n); }
-        if (n.textContent !== s.label) n.textContent = s.label;
+        relabel(n, s.label);
         n.setAttribute('aria-label', s.title || s.label); n.setAttribute('data-i', i); track.appendChild(n); return n;
       });
       had.forEach(n => { n.classList.add('g-ruler__seg--new'); n.style.pointerEvents = 'none'; n.removeAttribute('href'); n.removeAttribute('data-i'); setTimeout(() => n.remove(), 600); });
