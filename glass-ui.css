@@ -164,8 +164,8 @@
 :where(:is(.g-root,[role="listbox"]) small) { font-size: var(--g-fs-footnote); line-height: 1.38; color: var(--g-text-2); }
 :where(:is(.g-root,[role="listbox"]) strong) { color: var(--g-text); font-weight: 600; }
 :where(:is(.g-root,[role="listbox"]) :is(em, i)) { font-style: italic; }
-/* a visited link keeps the colour of an unvisited one: the browser purple is not in the kit */
-:where(.g-root a:visited) { color: inherit; }
+/* no browser link colour in the kit (blue, lilac in the dark, purple when visited): a link not styled below reads in the colour of its text */
+:where(.g-root a) { color: inherit; }
 :where(:is(.g-root,[role="listbox"]) :is(p, small, blockquote, dd, td, label, li:not(nav li, .g-list > li)) a:not([role], [class^="g-"], [class*=" g-"])) { color: var(--g-text); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: rgba(var(--g-ov),.5); transition: text-decoration-color var(--g-dur); }
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) :is(p, small, blockquote, dd, td, label, li:not(nav li, .g-list > li)) a:not([role], [class^="g-"], [class*=" g-"]):hover) { text-decoration-color: currentColor; } }
 :where(:is(.g-root,[role="listbox"]) :is(p, small, blockquote, dd, td, label, li:not(nav li, .g-list > li)) a:not([role], [class^="g-"], [class*=" g-"])[data-g-hover]) { text-decoration-color: currentColor; }
