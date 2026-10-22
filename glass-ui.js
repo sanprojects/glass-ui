@@ -1318,7 +1318,8 @@
   /* The distance from now to a moment, on the standard <time>: <time datetime="2026-10-19T09:00:00.000Z"> or <time datetime="1760864400.123">
      (Unix seconds). The kit writes the distance (45 s, 3 min, 2 h). The number is its own span (.g-age__n) and drums only when a tick changes it;
      a re-sync or a fresh render moves it silently. One timer for the page, and it counts only the times on screen (one IntersectionObserver for all of
-     them): a hidden tab or a scrolled-away row costs nothing. The distance is on the server's clock (Glass.syncClock). */
+     them): a hidden tab or a scrolled-away row costs nothing. The distance is on the server's clock (Glass.syncClock). Hovering a time shows the moment by the
+     visitor's own clock and zone in the glass tooltip. */
   let ageSkew = 0, ageTimer = 0;
   const ageSamples = [], ageShown = new Set(), ageAll = new Set();
   const ageIO = typeof IntersectionObserver === 'undefined' ? null : new IntersectionObserver(entries => {
@@ -1362,6 +1363,11 @@
     const at = ageAt(node.getAttribute('datetime') || '');
     if (isNaN(at)) return;   // not a moment the browser can read: the text stays as the author wrote it
     mem(node, 'at', at);
+    // the tooltip: the moment itself, by the visitor's own clock and zone (the author's own title / tip stays)
+    if (!node.hasAttribute('title') && !node.hasAttribute('data-g-tip')) {
+      node.setAttribute('data-g-tip', new Date(at).toLocaleString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' }));
+      node.setAttribute('data-no-hint', '');   // a number in a line of text, not a control: no "?" marker
+    }
     node.textContent = '';
     node.append(mem(node, 'num', el('span', 'g-age__n')), mem(node, 'unit', el('span', 'g-age__u')));
     ageDraw(node, false);

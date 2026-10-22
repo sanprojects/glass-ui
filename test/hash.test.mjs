@@ -172,4 +172,16 @@ test('a tick that changes the number drums it; a hidden time is not counted', as
   await off.close();
 });
 
+test('hovering a time shows the moment by the visitor\'s own clock', async () => {
+  const page = await open('#messages');
+  const r = await page.evaluate(() => {
+    const t = document.querySelector('#ago'), at = Date.parse(t.getAttribute('datetime'));
+    return { tip: t.getAttribute('data-g-tip'), want: new Date(at).toLocaleString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' }) };
+  });
+  assert.equal(r.tip, r.want);
+  await page.hover('#ago'); await page.waitForTimeout(700);
+  assert.equal(await page.evaluate(() => document.querySelector('.g-tooltip')?.textContent), r.want, 'the glass tooltip shows it');
+  await page.close();
+});
+
 test('the page runs without script errors', () => { assert.deepEqual(errors, []); });
