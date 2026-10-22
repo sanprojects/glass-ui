@@ -149,12 +149,12 @@ test('page: a name that only got longer (its right edge stays) lights up its new
   assert.deepEqual({ slides: r.slides, words: r.words }, { slides: 0, words: 1 });
 });
 
-test('page: the same text written again while its words light up (two writes of one click) keeps them lighting up, from where they were', async () => {
+test('page: the same text written again while its words light up (two writes of one click) keeps the wave going, from where it was (one wave over two new words)', async () => {
   const r = await change(`const n = document.getElementById('rname'); n.textContent = 'French Violet'; await new Promise(r => setTimeout(r, 60));
     n.textContent = 'French Violet'; await new Promise(r => setTimeout(r, 20));
     const w = n.querySelectorAll('.g-morph-word'); out.kept = w.length; out.delay = w[0] ? w[0].style.animationDelay : '';`, 0, 1600);
   assert.deepEqual({ kept: r.kept, late: /^-\d+ms$/.test(r.delay), text: await page.evaluate(() => [document.getElementById('rname').childNodes.length, document.getElementById('rname').textContent]) },
-    { kept: 2, late: true, text: [1, 'French Violet'] });
+    { kept: 1, late: true, text: [1, 'French Violet'] });
 });
 
 test('page: what stays stands, while what goes fades out, where it stands once that is gone (a ghost that selectors see does not move it)', async () => {

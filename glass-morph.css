@@ -12,21 +12,31 @@
 @keyframes g-morph-fade { from { opacity: 0; } }
 .g-morph-leave { animation: g-morph-out var(--g-morph-leave) ease-in forwards !important; pointer-events: none; }
 .g-morph-enter { animation: g-morph-in var(--g-morph-enter) var(--g-ease, cubic-bezier(.3,.7,.25,1)) backwards !important; animation-delay: var(--g-morph-d, calc(var(--g-morph-i, 0) * var(--g-morph-stagger))) !important; }   /* --g-morph-d: the script's wave */
-/* A changed text: what is new in it runs a wave of colour, left to right. The text is there at once; a gradient (the colour of the text, with a band
-   of another colour in it) is clipped to the letters and slides over them. The band is lighter than a dark text and darker than a light one (the lightness
-   of the text turned over, 60% of the way), so it shows on any theme. --g-morph-wave sets it, --g-morph-word is the time of all of it (the script reads it too),
-   --g-wave-run the time of one part: parts of one text start one after another (--g-wave-at, 0..1), so the wave goes through all of them. */
-:root { --g-morph-word: 700ms; --g-wave-run: 420ms; }
+/* A changed text: what is new in it runs a wave, left to right. The text is there at once; a gradient is clipped to the letters and slides over
+   them: a soft bell (a cosine, 1.2 times the width of the marked part) in which the text is only part opaque. The wave is the text colour at a lower
+   opacity, not another colour, so it looks the same on any theme and any background. --g-morph-dip is the opacity of the text in the middle of
+   the wave (40%; 100% = no wave), --g-morph-word the time of all of it (the script reads it too), --g-wave-run the time of one part: parts of
+   one text start one after another (--g-wave-at, 0..1), so the wave goes through all of them. */
+:root { --g-morph-word: 700ms; --g-wave-run: 420ms; --g-morph-dip: 40%; }
 @keyframes g-morph-word { from { background-position: 100% 0; } to { background-position: 0 0; } }
 @keyframes g-morph-word-calm { from { opacity: .3; } }
-.g-morph-word {
-  --g-wave-span: calc(var(--g-morph-word) - var(--g-wave-run));
-  background: linear-gradient(90deg, currentColor 38%, var(--g-morph-wave, color-mix(in srgb, currentColor 25%, transparent)) 50%, currentColor 62%) 100% 0 / 300% 100% no-repeat;
-  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-  animation: g-morph-word var(--g-wave-run) linear calc(var(--g-wave-at, 0) * var(--g-wave-span)) backwards;
-}
-@supports (color: oklch(from red calc(l + (round(1 - l, 1) - l) * .6) c h)) {
-  .g-morph-word { background-image: linear-gradient(90deg, currentColor 38%, var(--g-morph-wave, oklch(from currentColor calc(l + (round(1 - l, 1) - l) * .6) c h)) 50%, currentColor 62%); }
+/* a browser without color-mix keeps the text as it is (the text colour would be lost under a gradient it cannot draw) */
+@supports (color: color-mix(in srgb, red 50%, transparent)) {
+  .g-morph-word {
+    --g-wave-span: calc(var(--g-morph-word) - var(--g-wave-run));
+    background: linear-gradient(90deg,
+      currentColor 30%,
+      color-mix(in srgb, currentColor calc(100% - (100% - var(--g-morph-dip)) * 0.146), transparent) 35%,
+      color-mix(in srgb, currentColor calc(100% - (100% - var(--g-morph-dip)) * 0.500), transparent) 40%,
+      color-mix(in srgb, currentColor calc(100% - (100% - var(--g-morph-dip)) * 0.854), transparent) 45%,
+      color-mix(in srgb, currentColor calc(100% - (100% - var(--g-morph-dip)) * 1.000), transparent) 50%,
+      color-mix(in srgb, currentColor calc(100% - (100% - var(--g-morph-dip)) * 0.854), transparent) 55%,
+      color-mix(in srgb, currentColor calc(100% - (100% - var(--g-morph-dip)) * 0.500), transparent) 60%,
+      color-mix(in srgb, currentColor calc(100% - (100% - var(--g-morph-dip)) * 0.146), transparent) 65%,
+      currentColor 70%) 100% 0 / 300% 100% no-repeat;
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    animation: g-morph-word var(--g-wave-run) linear calc(var(--g-wave-at, 0) * var(--g-wave-span)) backwards;
+  }
 }
 /* the old content fading out where it stood (the script places it), under what comes in at its place: to the right, with the new one of its place
    (--g-morph-d), done a little before the rest (--g-morph-run). Both inherit: a page can put this animation on a part of it.

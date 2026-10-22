@@ -331,7 +331,7 @@
         for (let i = a.length - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = a[i] === b[p + j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
         for (let i = 0, j = 0; j < m;) { if (i < a.length && a[i] === b[p + j]) { i++; j++; } else if (i < a.length && L[i + 1][j] >= L[i][j + 1]) i++; else fresh[p + j++] = true; }
         const word = j => fresh[j] && b[j].trim() !== '';
-        b.forEach((x, j) => { if (fresh[j] && !x.trim()) fresh[j] = j > 0 && j < b.length - 1 && word(j - 1) && word(j + 1); });   /* a space joins two new words, it does not stand alone */
+        b.forEach((x, j) => { if (!x.trim()) fresh[j] = j > 0 && j < b.length - 1 && word(j - 1) && word(j + 1); });   /* a space joins two new words (one wave over the phrase), it does not stand alone */
         if (!b.some((x, j) => word(j))) fresh = fresh.fill(true);
       } else fresh = fresh.fill(true);
       const frag = document.createDocumentFragment(), spans = [];
