@@ -685,9 +685,9 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
  * Pinned: data-position="sticky" or "fixed" (give the page about 92px top padding for fixed). A pager is <nav data-g-pager>, not a bar. */
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager])) { position: relative; display: flex; align-items: center; gap: var(--g-gap); min-height: var(--g-nav-h); padding: 10px 12px 10px 24px; border-radius: var(--g-radius-pill); }
 :where(:is(.g-root,[role="listbox"]) nav[data-position="sticky"]) { position: sticky; top: 12px; z-index: 50; }
-:where(:is(.g-root,[role="listbox"]) nav[data-position="fixed"]) { position: fixed; z-index: 50; top: calc(12px + env(safe-area-inset-top, 0px)); left: 16px; right: 16px; max-width: var(--g-page-w); margin-inline: auto; }
-/* The page column: --g-page-w, centred. Any container takes it with .g-page; the bar, the content and the footer that sit directly in <body class="g-root"> take it without a class (the fixed bar has its own rule above). Zero specificity: a page can widen any of them. */
-:where(.g-page, body.g-root > :is(nav:not([data-position="fixed"]), main, footer)) { width: 100%; max-width: var(--g-page-w); box-sizing: border-box; margin-inline: auto; }
+:where(:is(.g-root,[role="listbox"]) nav[data-position="fixed"]) { position: fixed; z-index: 50; top: calc(12px + env(safe-area-inset-top, 0px)); left: 16px; right: 16px; max-width: calc(var(--g-page-w) + var(--g-page-extra, 0px)); margin-inline: auto; }
+/* The page column: --g-page-w, centred. Any container takes it with .g-page; the bar, the content and the footer that sit directly in <body class="g-root"> take it without a class (the fixed bar has its own rule above). Zero specificity: a page can widen any of them. --g-page-extra (0 by default) is added to it: a page that gives the shell a second panel sets it to that panel's width, so the workspace keeps its size. */
+:where(.g-page, body.g-root > :is(nav:not([data-position="fixed"]), main, footer)) { width: 100%; max-width: calc(var(--g-page-w) + var(--g-page-extra, 0px)); box-sizing: border-box; margin-inline: auto; }
 /* The frame of a themed page (body.g-root): the body is a column at least one screen tall, the footer sits at its bottom and the main takes the room between.
    A page whose workspace is a fixed shell (.g-shell--tools, .g-shell[data-fixed]) is exactly one screen tall: the shell scrolls inside itself, the bars stay where they are.
    Zero specificity: a page can change any of it. */
@@ -1276,6 +1276,10 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 :is(.g-shell--tools, .g-shell:where([data-fixed])) > main { display: flex; flex-direction: column; gap: var(--g-gap); place-items: initial; align-content: normal; }
 :is(.g-shell--tools, .g-shell:where([data-fixed])) > main > article { flex: none; }   /* a card is clipped (overflow: hidden), so in a column it would shrink to its padding and cut its own text; the workspace scrolls instead */
 :is(.g-shell--tools, .g-shell:where([data-fixed])) > aside:last-child { background: var(--g-fill); }
+/* A second panel on the right: any element with data-g-aside after the workspace (a script's widget, or an <aside data-g-aside>), as wide as the left one (the same --g-shell-side, so a page that widens the first widens both). It is a panel like the left one; while it is hidden it takes no column. A page that shows it adds the width to --g-page-extra, so the workspace keeps its size. Under 900px it stacks like the panel. */
+:is(.g-shell--tools, .g-shell:where([data-fixed])):has(> aside) > [data-g-aside]:not([hidden]) { display: flex; flex-direction: column; gap: var(--g-gap); min-width: 0; min-height: 0; padding: var(--g-pad); overflow: auto; overscroll-behavior: contain; background: var(--g-fill); box-sizing: border-box; }
+:is(.g-shell--tools, .g-shell:where([data-fixed])):has(> aside):has(> main ~ [data-g-aside]:not([hidden])) { grid-template-columns: var(--g-shell-side) minmax(0, 1fr) var(--g-shell-side); }
+@media (max-width: 900px) { :is(.g-shell--tools, .g-shell:where([data-fixed])):has(> aside):has(> main ~ [data-g-aside]:not([hidden])) { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; } }
 /* .g-shell--stack: the panel is always on top on the whole width (what the narrow screen does), whatever the width */
 :is(.g-shell--tools, .g-shell:where([data-fixed])).g-shell--stack { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
 :is(.g-shell--tools, .g-shell:where([data-fixed])).g-shell--stack > aside { max-height: 45dvh; }

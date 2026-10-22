@@ -9,7 +9,6 @@
 //   script  ms of scripts (CDP Performance ScriptDuration)       style+layout  ms of RecalcStyle + Layout
 //   cpu     ms of all the browser's threads busy (trace: RunTask of every thread: main, compositor, raster) - the stand-in for energy
 //   paint   ms of Paint + Raster tasks   long    tasks over 50 ms on the main thread   gap  the longest gap between two frames (16.7 = smooth)   frames  drawn
-// Glass.morph runs with move:false: the glide check of the kit (movingNow, called for each of 200 paired rows) takes seconds there, the same for every kit, and hides the text animation
 // scenarios: long (3000 characters, all new), mid (400 characters, every other word new), many (200 short texts at once; only those on the screen animate)
 // devices: desktop (1280x900) and mobile (375x812, 3x, CPU slowed 4 times)
 import { chromium } from 'playwright';
@@ -72,7 +71,7 @@ async function once(kit, scn, dev, dark) {
   const get = async () => Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map(m => [m.name, m.value]));
   await browser.startTracing(page, { categories: ['devtools.timeline', 'disabled-by-default-devtools.timeline', 'cc', 'gpu'] });
   const m0 = await get();
-  await page.evaluate(html => { window.__t0 = performance.now(); Glass.morph(document.getElementById('box'), html, { move: false }); }, to.map((t, i) => '<p data-key="' + i + '">' + t + '</p>').join(''));
+  await page.evaluate(html => { window.__t0 = performance.now(); Glass.morph(document.getElementById('box'), html); }, to.map((t, i) => '<p data-key="' + i + '">' + t + '</p>').join(''));
   await page.waitForTimeout(80);
   const mid = await page.evaluate(() => ({ spans: document.querySelectorAll('.g-morph-word, .g-morph-char').length, anims: document.getAnimations().length }));
   await page.waitForTimeout(950);

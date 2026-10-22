@@ -502,8 +502,9 @@
           const glide = [], away = [];   /* an element that changed its place (moved, or pushed by what came, went or grew) glides from where it stood (FLIP) */
           if (o.move !== false) {
             const raw = new Map(), gliding = new Map(), came = new Set();
+            let running = null;   /* what the page moves in the layout: read once per flush (one layout, nothing starts between the rows), not for each row */
             ctx.moves.forEach((f, e) => {
-              if (!e.isConnected || !e.animate || said(e, true) || movingNow().has(e)) return;
+              if (!e.isConnected || !e.animate || said(e, true) || (running || (running = movingNow())).has(e)) return;
               const l = e.getBoundingClientRect();
               kept.push([e, l]);
               /* where it went: by the side of it that stayed (the least of the moves of its two edges and its middle). One that only grew or shrank
@@ -742,11 +743,8 @@
        it is the page's motion, not a change of its content, and it changes every frame while it runs - a glide would start again on each one.
        Such an element is left out of the moves (the morph's own glides and the animations that are not about the layout are not counted) */
     const LAYOUT = /^(left|top|right|bottom|inset|width|height|margin|padding)/;
-    let moving = null, movingAt = -1;
     function movingNow() {
-      const now = performance.now();
-      if (moving && now === movingAt) return moving;
-      moving = new Set(); movingAt = now;
+      const moving = new Set();
       if (!document.getAnimations) return moving;
       for (const a of document.getAnimations()) {
         const t = a.effect && a.effect.target;
