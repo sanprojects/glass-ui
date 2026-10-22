@@ -85,6 +85,8 @@
     function sync() { visible ? start() : stop(); }
     if (window.IntersectionObserver) new IntersectionObserver(function (e) { visible = e[0].isIntersecting; sync(); }).observe(host);
     var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { size(); if (!running) still(); }, 200); });
+    /* back to the tab: draw the frame again at once. A tab that was away may have lost the canvas's picture, and the glass over it blurs whatever is there in the first frame */
+    document.addEventListener('visibilitychange', function () { if (!document.hidden && visible) still(); });
     cv.addEventListener('webglcontextlost', function (e) { e.preventDefault(); stop(); host.classList.remove('is-gl'); });
     host.classList.add('is-gl');
     var api = {
@@ -151,6 +153,7 @@
     new MutationObserver(still).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     if (window.IntersectionObserver) new IntersectionObserver(function (e) { visible = e[0].isIntersecting; }).observe(host);
     var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(still, 200); });
+    document.addEventListener('visibilitychange', function () { if (!document.hidden && visible) still(); });   /* see the liquid above */
     cv.addEventListener('webglcontextlost', function (e) { e.preventDefault(); if (off) off(); off = null; host.classList.remove('is-gl'); cv.remove(); delete host.__gradient; });
     still(); off = G.scene.add(step);
     host.__gradient = { redraw: still };
