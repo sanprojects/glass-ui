@@ -64,6 +64,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
 .m-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:var(--g-gap); }
 .m-item{ display:flex; flex-direction:column; gap:4px; min-width:0; }
 .m-item h4{ margin-top:14px; } .m-item small{ display:block; margin:0; }
+.m-wave{ padding:var(--g-inset); text-align:center; font-weight:500; font-size:15px; line-height:1.3; }
 .m-tile{ aspect-ratio:1; display:grid; place-items:center; border-radius:var(--g-radius-card); background:var(--g-fill-strong); box-shadow:var(--g-rim), var(--g-shadow); font-weight:600; font-size:17px; }
 .sec__head{ display:flex; flex-direction:column; gap:6px; }
 .sec__head h2{ margin:0; font-size:var(--g-fs-title1); letter-spacing:0; font-weight:600; }
@@ -628,7 +629,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
 
 
   <section class="sec g-glass g-anim-scroll" id="motion" data-title="Motion">
-    <div class="sec__head"><h2>Motion</h2><p class="g-desc">Eight effects you can put on any element with a class. Each plays once; add <span class="inline-code">g-anim--loop</span> to repeat it. The tiles below replay on a timer so you can watch them.</p></div>
+    <div class="sec__head"><h2>Motion</h2><p class="g-desc">Eight effects you can put on any element with a class. Each plays once; add <span class="inline-code">g-anim--loop</span> to repeat it. The ninth, Wave, needs no class: <span class="inline-code">Glass.morph</span> runs it over the new words of a text that changed. The tiles below replay on a timer so you can watch them.</p></div>
     <div class="pair">
       <div class="m-grid">
         <div class="m-item"><div class="m-tile g-anim-appear" data-g-anim-loop="2800">appear</div><h4>Appear</h4><small>Fades in while sliding in from the left.</small><small data-muted>1.5 s ease-out</small></div>
@@ -639,6 +640,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
         <div class="m-item"><div class="g-anim-rotate" data-g-anim-loop="2800"><div class="m-tile">front</div><div class="m-tile">back</div></div><h4>Rotate</h4><small>A card with two sides turns around once.</small><small data-muted>1.5 s ease-out</small></div>
         <div class="m-item"><div class="m-tile g-anim-zoom" data-g-anim-loop="2800">zoom</div><h4>Zoom</h4><small>Drops from above and lands, fading in. For lists that build up block by block.</small><small data-muted>1.5 s ease-out</small></div>
         <div class="m-item"><div class="m-tile g-anim-scroll">scroll</div><h4>Scroll</h4><small>Materialises as it scrolls into view. No script.</small></div>
+        <div class="m-item"><div class="m-tile m-wave" id="waveDemo" aria-live="off"><span>A quiet morning by the sea</span></div><h4>Wave</h4><small>New words of a changed text run a soft wave, left to right. <span class="inline-code">Glass.morph</span>, no markup.</small><small data-muted>0.7 s · text swaps on a timer</small></div>
         </div>
       <div class="code"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0">&lt;article class="g-anim-appear"&gt;…&lt;/article&gt;
 &lt;article class="g-anim-pulse g-anim--loop"&gt;…&lt;/article&gt;
@@ -659,7 +661,7 @@ Glass.animate(el, 'highlight');
 /* ripple starts at the click, select fills from the left */
 &lt;button class="g-anim-ripple"&gt;Press&lt;/button&gt;</pre></div>
       <div class="code"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0">/* swap the content of a box and animate the difference: rows that are gone slide out, new ones slide in,
-   a changed text lights up, a changed number turns its digits like an odometer (up when it grew, down when it fell) */
+   a changed text runs a soft wave over its new words (left to right), a changed number turns its digits like an odometer (up when it grew, down when it fell) */
 Glass.morph('#result', html);              // html string or an element; returns a Promise
 
 &lt;li data-key="word"&gt;…&lt;/li&gt;              &lt;!-- pairs the row with the same row of the old content (default: by its text) --&gt;
@@ -823,6 +825,14 @@ window.Prism={manual:true};var _self="undefined"!=typeof window?window:"undefine
 <script src="glass-morph.js"></script>
 <script src="glass-ui-liquid.js"></script>
 <script src="glass-appearance.js"></script>
+<script>
+/* Motion > Wave: the text of the tile is swapped for another every 2.8 s; Glass.morph runs the wave over the words that are new */
+(function(){
+  var box = document.getElementById('waveDemo'); if (!box || !window.Glass || !Glass.morph) return;
+  var lines = ['A quiet morning by the sea', 'A loud evening in the city', 'A slow walk through the snow', 'A quiet morning by the sea'], i = 0;
+  setInterval(function(){ if (document.hidden) return; i = (i + 1) % lines.length; Glass.morph(box, '<span>' + lines[i] + '</span>'); }, 2800);
+})();
+</script>
 <script>
 (function(){
   /* Fill code panels from the live markup before glass-ui.js enhances it */
