@@ -12,10 +12,10 @@
   function load(k){ try{ return localStorage.getItem(k); }catch(_){ return null; } }
   try{ customs=JSON.parse(load('g-bg-custom')||'[]')||[]; }catch(_){ customs=[]; }
   function keyOf(b){ return b.getAttribute('data-scene')+(b.hasAttribute('data-id')?':'+b.getAttribute('data-id'):''); }
-  function setScene(k, c){ var key=c?'custom:'+c.id:k;
+  function setScene(k, c, quiet){ var key=c?'custom:'+c.id:k;
     scene.setAttribute('data-scene', k); scene.style.backgroundImage=c?'url("'+c.src+'")':'';
     Array.prototype.forEach.call(chips.querySelectorAll('.sw-btn'), function(b){ b.setAttribute('aria-pressed', keyOf(b)===key ? 'true':'false'); });
-    store('g-scene', key); }
+    if(!quiet) store('g-bg-scene', key); }
   function pick(row, btn){ Array.prototype.forEach.call(row.querySelectorAll('.sw-btn'), function(b){ b.setAttribute('aria-pressed','false'); b.classList.remove('is-active'); }); if (btn.tagName==='BUTTON') btn.setAttribute('aria-pressed','true'); else btn.classList.add('is-active'); }
   /* background */
   chips.addEventListener('click', function(e){ var b=e.target.closest('.sw-btn'); if(!b) return;
@@ -103,7 +103,7 @@
   if(savedBlur){ br.value=savedBlur; setBlur(savedBlur); } if(savedFill){ fr.value=savedFill; setFill(savedFill); }
   /* reset */
   $('ctlReset').addEventListener('click', function(){
-    bgIn.value=''; bgIn.dispatchEvent(new Event('change')); bgIn.removeAttribute('aria-invalid'); customs=[]; Array.prototype.forEach.call(chips.querySelectorAll('[data-id]'), function(b){ b.remove(); }); store('g-bg-custom','[]'); setScene('gradient'); setAccent('#0071E3'); pick(accRow, accRow.querySelector('button')); pick(liqRow, liqRow.querySelector('button'));
+    bgIn.value=''; bgIn.dispatchEvent(new Event('change')); bgIn.removeAttribute('aria-invalid'); customs=[]; Array.prototype.forEach.call(chips.querySelectorAll('[data-id]'), function(b){ b.remove(); }); store('g-bg-custom','[]'); setScene('ice'); setAccent('#0071E3'); pick(accRow, accRow.querySelector('button')); pick(liqRow, liqRow.querySelector('button'));
     ['--g-accent','--g-accent-hover','--g-accent-fg','--g-blur','--g-fill','--g-fill-strong','--g-fill-hover','--g-fill-selected'].forEach(function(p){ root.removeProperty(p); });
     br.value=30; fr.value=10; br.dispatchEvent(new Event('input')); fr.dispatchEvent(new Event('input')); root.removeProperty('--g-blur'); root.removeProperty('--g-fill');
     curPal=paletteOf(DEFAULT); applyColours(); try{ ['g-palette','g-colour','g-accent','g-blur','g-fill'].forEach(function(k){ localStorage.removeItem(k); }); }catch(_){}
@@ -111,8 +111,8 @@
   });
   /* restore the saved background */
   customs.forEach(addBtn);
-  (function(){ var s=load('g-scene')||scene.getAttribute('data-scene')||'gradient', c=s.indexOf('custom:')===0&&customs.filter(function(x){ return 'custom:'+x.id===s; })[0];
-    if(c) setScene('custom', c); else setScene(chips.querySelector('[data-scene="'+s+'"]:not([data-id])')?s:'gradient'); })();
+  (function(){ var s=load('g-bg-scene')||scene.getAttribute('data-scene')||'ice', c=s.indexOf('custom:')===0&&customs.filter(function(x){ return 'custom:'+x.id===s; })[0];
+    if(c) setScene('custom', c, true); else setScene(chips.querySelector('[data-scene="'+s+'"]:not([data-id])')?s:'ice', null, true); })();
   /* restore the saved colours: the accent and the colour of the liquid and gradient backgrounds */
   (function(){ var a=load('g-accent'); if(/^#[0-9a-f]{6}$/i.test(a||'')){ setAccent(a,true); var b=accRow.querySelector('button[data-accent="'+a+'" i]'); if(b) pick(accRow,b); else { $('accentCustom').value=a; pick(accRow,$('accentCustom').parentNode); } }
     var P=null, id=load('g-colour'); try{ P=JSON.parse(load('g-palette')); }catch(_){}
