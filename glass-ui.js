@@ -732,6 +732,8 @@
   on('click', '.g-nav__morebtn', (e, b) => { const toggle = mem(b, 'toggle'); if (toggle) toggle(); });
 
   /* ---------- Overflow bar ----------
+   * A plain <nav> inside .g-root needs nothing: it gets the same bar (not <nav data-g-pager>, not a <nav> with a data-g-nav-auto list; data-g-overflow="off" opts out). Its own <a> and <button>
+   * are items too, except a first <a> without role="button" (the brand). With the attribute, only <ul>, <div> and data-g-collapse items count, as before.
    * <nav data-g-overflow="#menu"><a>…</a> <form class="g-input-wrap">…</form> <ul><li><a>…</a></li></ul> <div><button>…</button> <a role="button">…</a></div></nav>
    * The field of the bar (a direct child .g-input-wrap) is never narrower than --g-nav-field-min (200px). What does not fit beside it moves into a menu, one row per item;
    * its button (the last of the bar's <div>, made if there is none) is on the bar only while there is something in the menu. The items are the <li> of a <ul>, the children of a <div>
@@ -740,6 +742,7 @@
    * by default): its own rows are always there, so the button stays while one of them is shown (not hidden, not display: none). Without a name the kit makes the menu.
    * <nav data-g-overflowing> while an item is in the menu. data-g-overflow-label / data-g-overflow-icon name the button ("More", chevron-down). */
   function navOverflow(nav) {
+    const bare = !nav.hasAttribute('data-g-overflow'); if (bare) { nav.setAttribute('data-g-overflow', ''); owns(nav, 'data-g-overflow'); }   // a plain <nav> takes the attribute: the CSS of the bar is on it
     const named = nav.getAttribute('data-g-overflow'), find = named && document.querySelector(named);
     const menu = find || part(el('div')); if (!menu.parentNode) document.body.appendChild(menu);
     const id = menu.id || (menu.id = 'g-menu-' + (++uid));
@@ -752,13 +755,14 @@
     const shown = n => getComputedStyle(n).display !== 'none';
     const own = () => [...menu.children].filter(c => !c.hasAttribute('data-g-auto') && !c.hasAttribute('data-g-items') && c.localName !== 'hr' && !c.hidden && shown(c));
     function collect() {
+      const brand = bare && nav.firstElementChild?.matches('a:not([role="button"])') ? nav.firstElementChild : null;   // a plain <nav>: its own a / button are items, but the link that opens it is the brand
       const out = [], push = n => { const t = n.matches('a, button') ? n : n.querySelector('a, button'); if (t) out.push({ node: n, t }); };
       [...nav.children].forEach(c => {
         if (c === menu) return;
         if (c.hasAttribute('data-g-title')) out.push({ node: c, drop: true });   // the name of the bar: whole or gone, the first to go, no row in the menu
         else if (c.localName === 'ul' && !c.hasAttribute('data-g-nav-auto')) [...c.children].forEach(push);
         else if (c.localName === 'div') [...c.children].forEach(x => { if (x !== btn) push(x); });
-        else if (c.hasAttribute('data-g-collapse')) push(c);
+        else if (c.hasAttribute('data-g-collapse') || (bare && c.matches('a, button') && c !== brand)) push(c);
       });
       out.forEach((o, i) => { o.order = i; o.prio = o.drop ? -Infinity : parseFloat(o.node.getAttribute('data-g-priority')); if (isNaN(o.prio)) o.prio = -i; });
       return out;
@@ -963,7 +967,7 @@
     ['[data-g-file]', initFile], ['[data-g-number]', numSync],
     ['[data-g-color]', initColor], ['[data-g-password]', initPassword], ['[data-g-clear-input]', initClearInput],
     ['.g-root input:not([type]), .g-root input:is([type="text"], [type="search"], [type="email"], [type="url"], [type="tel"])', initAutoClear], ['select[data-g-select]', initSelect],
-    ['[data-g-menu]', initMenu], ['nav[data-g-overflow]', navOverflow], ['[role="tablist"]', initTabs], ['input[type="range"]', initSlider],
+    ['[data-g-menu]', initMenu], ['nav[data-g-overflow]:not([data-g-overflow="off"]), .g-root nav:not([data-g-pager], [data-g-overflow], :has(> ul[data-g-nav-auto]))', navOverflow], ['[role="tablist"]', initTabs], ['input[type="range"]', initSlider],
     ['table[data-g-selectable]', initTable], ['table', initSort], ['[data-g-more]', initMore], ['[data-g-pager]', pagerRender],
     ['[data-g-anim-loop]', initAnimLoop], ['[data-g-anim-random]', initAnimRandom], ['[data-g-clamp]', initClamp], ['[data-g-ruler]', n => ruler(n)], ['[data-ruler]', rulerOf], ['time', initAge]
   ];

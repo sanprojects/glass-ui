@@ -726,7 +726,7 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
  * styles can bring it back); a list with no item left is data-g-off too. The name of the bar (data-g-title) is whole or off. With nothing left to cut, data-g-squeeze lets the name be clipped. */
 :where(:is(.g-root,[role="listbox"]) nav[data-g-overflow]) { display: flex; }
 :where(:is(.g-root,[role="listbox"]) nav[data-g-overflow]) [data-g-off] { display: none !important; }
-:where(:is(.g-root,[role="listbox"]) nav[data-g-overflow] > a) { flex: none; margin-right: 0; }
+:where(:is(.g-root,[role="listbox"]) nav[data-g-overflow] > :is(a, button)) { flex: none; margin-right: 0; }
 :where(:is(.g-root,[role="listbox"]) nav[data-g-overflow][data-g-squeeze] > a:not([data-g-collapse])) { flex: 0 1 auto; }
 :is(.g-root,[role="listbox"]) nav[data-g-overflow][data-g-overflow] > .g-input-wrap { flex: 100 1 0; min-width: var(--g-nav-field-min, 200px); max-width: var(--g-nav-field-max, 300px); width: auto; }   /* the doubled attribute: the form rules of the page ("form > .g-field" grids) set min-width: 0 with more weight than a :where */
 :where(:is(.g-root,[role="listbox"]) nav[data-g-overflow] > ul) { flex: 1 0 auto; }

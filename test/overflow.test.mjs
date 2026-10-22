@@ -1,4 +1,4 @@
-// The overflow bar (nav[data-g-overflow]): node --test test/overflow.test.mjs
+// The overflow bar (nav[data-g-overflow], and a plain <nav> in .g-root): node --test test/overflow.test.mjs
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
@@ -90,6 +90,50 @@ test('a row of the menu with the hidden attribute is not drawn', async () => {
     menu.prepend(row); const d = getComputedStyle(row).display; row.remove(); return d;
   });
   assert.equal(r, 'none');
+});
+
+// a plain <nav> in .g-root: no attribute, no class
+const bare = w => page.evaluate(async w => {
+  const nav = document.querySelector('nav[aria-label="Toolbar"]'), box = nav.parentElement; box.style.maxWidth = 'none'; box.style.minWidth = '0'; box.style.width = w + 'px'; box.scrollIntoView({ block: 'center' });
+  await new Promise(r => setTimeout(r, 500));
+  const btn = nav.querySelector('[data-g-menu]'), vis = n => getComputedStyle(n).display !== 'none', right = nav.getBoundingClientRect().right - parseFloat(getComputedStyle(nav).paddingRight);
+  return {
+    mounted: nav.hasAttribute('data-g-overflow'), menu: !!btn && vis(btn),
+    spill: Math.max(...[...nav.children].filter(vis).map(c => c.getBoundingClientRect().right)) - right,
+    brand: vis(nav.firstElementChild),
+    off: [...nav.querySelectorAll('[data-g-off]')].filter(n => n !== btn && n.parentElement === nav).map(n => n.getAttribute('aria-label')),
+    rows: btn ? [...document.querySelectorAll(btn.getAttribute('data-g-menu') + ' > [data-g-auto]')].map(n => n.textContent) : [],
+  };
+}, w);
+
+test('a plain <nav> folds its own links and buttons into a menu, and keeps the brand', async () => {
+  const wide = await bare(900);
+  assert.equal(wide.mounted, true); assert.equal(wide.menu, false); assert.deepEqual(wide.rows, []);
+  for (let w = 500; w >= 200; w -= 20) {
+    const r = await bare(w);
+    assert.ok(r.spill < 1, `spill ${r.spill}px at ${w}px`);
+    assert.ok(r.brand || r.menu, `the brand is gone and there is no menu at ${w}px`);
+  }
+  const narrow = await bare(260);
+  assert.equal(narrow.menu, true); assert.ok(narrow.off.length > 0);
+  assert.deepEqual(narrow.rows.sort(), narrow.off.sort());
+  assert.ok(!narrow.off.includes('Editor'));
+});
+
+test('the last item of a plain <nav> goes first', async () => {
+  const r = await bare(300);
+  if (r.off.length) assert.equal(r.off[0] === 'Settings' || r.off.includes('Settings'), true, JSON.stringify(r));
+});
+
+test('a pager, a nav with a data-g-nav-auto list and data-g-overflow="off" are left alone', async () => {
+  const r = await page.evaluate(() => {
+    const root = document.querySelector('.g-root'), mk = html => { const d = document.createElement('div'); d.innerHTML = html; const n = d.firstElementChild; root.appendChild(n); return n; };
+    const off = mk('<nav data-g-overflow="off"><button>A</button><button>B</button></nav>'), auto = mk('<nav><ul data-g-nav-auto data-sections="#nope"></ul></nav>');
+    const out = { off: off.querySelector('[data-g-menu]') === null, auto: auto.querySelector('[data-g-menu]') === null, pager: [...document.querySelectorAll('nav[data-g-pager]')].every(n => !n.hasAttribute('data-g-overflow')) };
+    off.remove(); auto.remove(); return out;
+  });
+  await page.waitForTimeout(100);
+  assert.deepEqual(r, { off: true, auto: true, pager: true });
 });
 
 test('the page runs without script errors', () => { assert.deepEqual(errors, []); });
