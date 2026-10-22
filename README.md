@@ -142,7 +142,7 @@ Each file also ships as `.min.css` / `.min.js`.
 
 ## Good to know
 
-- **Spacing** is one rhythm owned by the parent (`gap`), children carry no outer margin: `--g-gap` (16px) between neighbours, `--g-gap-inner` (8px) inside one component, `--g-inset` (16px) a control's side padding, `--g-pad` (24px) container padding. Documented exceptions: optical alignment of icons, the card media bleed, menu separators and `.g-prose`. `test/spacing.test.mjs` measures the gaps in the demo and fails on off-rhythm values.
+- **Spacing** is one rhythm owned by the parent (`gap`), children carry no outer margin: `--g-gap` (16px) between neighbours, `--g-gap-inner` (8px) inside one component, `--g-inset` (16px) a control's side padding, `--g-pad` (24px) container padding. A bare `div` / `section` / `aside` that holds a kit block (alert, list, table, card, form...) becomes a stack by itself: one column, `--g-gap` between its children (zero specificity, so a container with a layout of its own is never spaced twice). Documented exceptions: optical alignment of icons, the card media bleed, menu separators and `.g-prose`. `test/spacing.test.mjs` measures the gaps in the demo and fails on off-rhythm values.
 - **Type scale** is seven steps: `--g-fs-caption` 12, `-footnote` 13, `-subhead` 15 (controls), `-body` 17 (running text), `-title3` 20, `-title1` 28, `-title-lg` 34. Use the tokens, not px values; sizes in `em` (inline code, math) stay relative to their text.
 - **Fonts** are not shipped. The kit uses `Manrope` if you load it, otherwise the system font. Set `--g-font` to use your own.
 - **Icons** are a subset of [Lucide](https://lucide.dev) (ISC licence, © Lucide Contributors), generated into `glass-icons.css`. Add your own as described in that file.

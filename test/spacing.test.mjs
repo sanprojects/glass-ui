@@ -37,11 +37,11 @@ const MEASURE = `(() => {
       if (axis && !dist) out.push({axis, gap: Math.round(gap*10)/10, allowed, at: path(c), a: path(kids[i-1]).split(' > ').pop(), b: path(kids[i]).split(' > ').pop()}); }
     for (const k of c.children) visit(k); };
   roots.forEach(visit); return out; })()`;
-let browser, found;
+let browser, found, page;
 
 before(async () => {
   browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
-  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   await page.goto('file://' + path.join(root, 'index.html')); await page.waitForTimeout(1200);
   await page.evaluate(() => Glass.init(document));
   found = await page.evaluate(MEASURE);
@@ -67,4 +67,30 @@ test('the stylesheet keeps its spacing rules', () => {
   // from its anchor, the ruler's distance from the edge (Glass.ruler reads it) and .g-prose
   const margins = [...css.matchAll(/(?<![-\w])margin(?:-[a-z]+)?:\s*([^;}]+)/g)].map(m => m[1].trim()).filter(v => !/^(0|auto|0 auto)$/.test(v));
   assert.ok(margins.length <= 21, 'non-zero margins: ' + margins.length + ' (expected the known exceptions, at most 21)');
+});
+
+// Flow: kit blocks dropped into a bare container are one gap apart, and a container with a layout of its own is left alone.
+test('a plain div of kit blocks is spaced by --g-gap, a container with its own layout is not spaced twice', async () => {
+  const p = await browser.newPage({ viewport: { width: 800, height: 600 } });
+  await p.goto('file://' + path.join(root, 'test/alone.html'));
+  await p.setContent(`<link rel="stylesheet" href="file://${path.join(root, 'glass-ui.css')}"><body class="g-root">
+    <div id="plain"><div class="g-alert">one</div><div class="g-alert g-cluster">two</div><div class="g-stack"><p>a</p><p>b</p></div><ul class="g-list"><li>x</li></ul></div>
+    <div id="own" style="display:flex;flex-direction:column;gap:8px"><div class="g-alert">one</div><div class="g-alert">two</div></div>
+    <div id="prose" class="g-prose"><div class="g-alert">one</div><p>two</p></div>
+    <div id="hid" hidden><div class="g-alert">one</div><div class="g-alert">two</div></div>
+    <div id="text"><p>a</p><p>b</p></div>
+    <div id="wide"><div class="g-alert">one</div><table style="width:2000px"><tr><td>x</td></tr></table></div></body>`);
+  await p.waitForFunction(() => [...document.styleSheets].some(s => s.href && s.href.endsWith('glass-ui.css')));
+  await p.waitForTimeout(300);
+  const gaps = await p.evaluate(() => Object.fromEntries(['plain', 'own', 'prose', 'text'].map(id => {
+    const k = [...document.getElementById(id).children], g = [];
+    for (let i = 1; i < k.length; i++) g.push(Math.round(k[i].getBoundingClientRect().top - k[i - 1].getBoundingClientRect().bottom));
+    return [id, g]; })));
+  assert.deepEqual(gaps.plain, [16, 16, 16]);
+  assert.deepEqual(gaps.own, [8]);
+  assert.ok(gaps.prose[0] <= 0 || gaps.prose[0] === 17, 'a .g-prose keeps its own rhythm: ' + gaps.prose);
+  assert.deepEqual(gaps.text, [0]);   // no kit block: plain paragraphs are the business of .g-prose / .g-stack
+  assert.equal(await p.evaluate(() => getComputedStyle(document.getElementById('hid')).display), 'none');
+  assert.ok(await p.evaluate(() => document.getElementById('wide').getBoundingClientRect().width <= 800), 'a wide table does not widen the container');
+  await p.close();
 });

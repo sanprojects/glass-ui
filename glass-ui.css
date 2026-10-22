@@ -152,6 +152,12 @@
    a long press on it does not select text or open the link menu */
 [data-g-touch], [data-g-touch] * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 
+/* ---------- Flow: a plain container of kit blocks is a stack ----------
+ * Elements carry no outer margin, so blocks dropped into a bare div (a server-rendered result, a fragment, a page section) would touch. <main> is left out: the frame of the page keeps its spacing to the page (see below). The PARENT owns the gap here too:
+ * a div / section / aside with a kit block (alert, list, table, card, form...) among its children becomes a one-column grid with --g-gap between all of them.
+ * Zero specificity and first in the file: any container that sets its own layout (a flex or grid with its own gap, .g-stack, .g-prose, a hidden box) keeps it, so nothing is spaced twice. */
+:where(:is(.g-root, .g-root *):is(div, section, aside):not(.g-prose, [hidden]):has(> :is(.g-alert, .g-list, .g-stack, .g-cluster, .g-file, .g-empty, [data-grid], table, article, blockquote, form, fieldset) + *, > * + :is(.g-alert, .g-list, .g-stack, .g-cluster, .g-file, .g-empty, [data-grid], table, article, blockquote, form, fieldset))) { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: var(--g-gap); }
+
 /* ---------- Typography: native elements ---------- */
 :where(:is(.g-root,[role="listbox"]) :is(h1, h2, h3, h4, h5, h6, p, ul, ol, dl, dd, figure, pre, blockquote, hr)) { margin: 0; }
 :where(:is(.g-root,[role="listbox"]) h1) { font-family: var(--g-font-display, inherit); font-size: var(--g-fs-title-lg); line-height: 1.2; font-weight: 700; letter-spacing: var(--g-display-tracking, 0); text-wrap: balance; }
