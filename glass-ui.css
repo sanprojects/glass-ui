@@ -928,15 +928,11 @@ ul.g-list:not([data-plain], :has(> li[data-icon])) > li::before { content: ""; f
 :where(:is(.g-root,[role="listbox"]) dialog) { padding: var(--g-pad); width: min(420px, calc(100vw - 32px)); border: 0; border-radius: var(--g-radius-card); color: var(--g-text-2); font-family: var(--g-font); font-size: var(--g-fs-body); line-height: 1.3; }
 :where(:is(.g-root,[role="listbox"]) dialog :is(h1, h2, h3, h4, h5)) { color: var(--g-text); }
 :where(:is(.g-root,[role="listbox"]) dialog[open]) { display: flex; }
-:where(:is(.g-root,[role="listbox"]) dialog) { flex-direction: column; gap: var(--g-gap); } /* not only while [open], so the layout stays the same during the exit fade */
+:where(:is(.g-root,[role="listbox"]) dialog) { flex-direction: column; gap: var(--g-gap); } /* not only while [open], so the layout never changes between open and closed */
 :where(:is(.g-root,[role="listbox"]) dialog)::backdrop { background: rgba(10,14,30,.38); backdrop-filter: blur(6px); }
 :where(:is(.g-root,[role="listbox"]) dialog[open]) { animation: g-pop var(--g-dur-spring) var(--g-ease-spring); }
 :where(:is(.g-root,[role="listbox"]) dialog[open])::backdrop { animation: g-fade var(--g-dur-md) ease; }
-/* exit: a quick fade only (no transform, so the content never deforms); display / overlay allow-discrete keep the dialog rendered until it ends */
-:where(:is(.g-root,[role="listbox"]) dialog) { transition: opacity var(--g-dur) ease-in, overlay var(--g-dur) allow-discrete, display var(--g-dur) allow-discrete; }
-:where(:is(.g-root,[role="listbox"]) dialog:not([open])) { opacity: 0; }
-:where(:is(.g-root,[role="listbox"]) dialog)::backdrop { transition: opacity var(--g-dur) ease-in, overlay var(--g-dur) allow-discrete, display var(--g-dur) allow-discrete; }
-:where(:is(.g-root,[role="listbox"]) dialog:not([open]))::backdrop { opacity: 0; }
+/* exit: none. The dialog closes at once, with no fade: the opening animates position and scale only, never opacity */
 dialog > [data-icon]:first-child { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; align-self: center; --g-icon-size: var(--g-icon-lg); background: var(--g-accent); color: var(--g-accent-fg); box-shadow: 0 2px 10px rgba(0,0,0,.12); }
 :where(:is(.g-root,[role="listbox"]) dialog > :is(h2, h3)) { font-size: var(--g-fs-title3); font-weight: 700; letter-spacing: -.01em; text-align: center; }
 :where(:is(.g-root,[role="listbox"]) dialog > p) { text-align: center; }
@@ -952,8 +948,6 @@ dialog > [data-icon]:first-child { display: grid; place-items: center; width: 56
 :where(:is(.g-root,[role="listbox"]) [popover]) { inset: auto; margin: 0; padding: var(--g-pad); border: 0; border-radius: var(--g-radius-card); color: var(--g-text); font-family: var(--g-font); }
 :where(:is(.g-root,[role="listbox"]) [popover]:not([role="menu"], [role="listbox"], .g-tooltip):not(:popover-open)) { display: none !important; }
 :where(:is(.g-root,[role="listbox"]) [popover]:not([role="menu"], [role="listbox"], .g-tooltip):popover-open) { animation: g-pop var(--g-dur-spring) var(--g-ease-spring); }
-:where(:is(.g-root,[role="listbox"]) [popover]) { transition: opacity var(--g-dur) ease-in, overlay var(--g-dur) allow-discrete, display var(--g-dur) allow-discrete; }
-:where(:is(.g-root,[role="listbox"]) [popover]:not(:popover-open)) { opacity: 0; }
 
 /* ---------- Tooltip: any element with a title attribute inside .g-root (glass-ui.js turns it into a glass tooltip) ----------
  * The tooltip is a real element in <body> (a blur inside a button cannot see the page), same glass as the dialog and popover, no arrow.
@@ -1091,7 +1085,7 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 /* ---------- Keyframes + motion ---------- */
 @keyframes g-spin { to { transform: rotate(360deg); } }
 @keyframes g-indet { 0% { background-position: -61% 0; } 100% { background-position: 161% 0; } }
-@keyframes g-pop { from { opacity: 0; transform: scale(.94) translateY(8px); } }
+@keyframes g-pop { from { transform: scale(.94) translateY(8px); } }   /* no opacity: a page may draw the glass of a dialog or popover itself, and a fade would show the content without it */
 @keyframes g-fade { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
   .g-root *, .g-scene *, dialog, [popover], .g-toast { animation-duration: .001ms !important; transition-duration: .001ms !important; }
