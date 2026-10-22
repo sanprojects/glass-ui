@@ -18,7 +18,9 @@ EXTRA = ['info', 'check', 'triangle-alert', 'x', 'chevron-down', 'chevron-left',
          # the pages of a site: voice, microphone, fullscreen, flag, pause, print, map, terminal, tools
          'flag', 'flask-conical', 'gamepad-2', 'languages', 'map', 'maximize', 'mic', 'pause', 'printer', 'terminal', 'utensils', 'volume', 'wrench', 'book-a',
          # the site: tool page in the breadcrumb, privacy policy, users online, profiling, hardware
-         'shuffle', 'shield', 'users', 'flame', 'cpu']
+         'shuffle', 'shield', 'users', 'flame', 'cpu',
+         # the site menu: one icon per tool
+         'calculator', 'sigma', 'scale', 'triangle-right', 'cake', 'hourglass', 'list-music', 'binary', 'cross', 'chart-line', 'timer', 'grid-3x3', 'spell-check', 'keyboard', 'smile', 'audio-lines', 'map-pin', 'route', 'puzzle', 'dna', 'braces', 'align-left', 'type', 'power', 'audio-waveform', 'satellite']
 
 def used():
     names = set(EXTRA)
