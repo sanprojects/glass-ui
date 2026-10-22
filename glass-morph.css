@@ -2,7 +2,7 @@
  * Glass Morph — the styles of glass-morph.js. No dependencies: the colours and the easing of Glass UI (glass-ui.css) when it is on the page, else their own.
  *
  * Glass.morph(target, next) swaps the content of a box for new content and animates the difference; a box (or <body>) with data-g-morph animates whatever changes in it.
- * At once: a row that is gone fades out where it stood, a new one slides in, the rest glides, new words of a text light up, a number turns its digits.
+ * At once: a row that is gone fades out where it stood, a new one slides in, the rest glides, new words of a text run a wave of colour, a number turns its digits.
  * The tuning is custom properties; set them on the box: <div id="result" style="--g-morph-leave: 120ms"> (the script reads them in ms; ms or s, as a minifier may write them).
  * !important: a row that is still entering has the rules of .g-list rows (and of the site) with a higher specificity. */
 :root { --g-morph-leave: 200ms; --g-morph-enter: 300ms; --g-morph-stagger: 20ms; --g-morph-reel: 320ms; --g-morph-reel-stagger: 35ms; --g-morph-move: 400ms; }
@@ -10,15 +10,24 @@
 /* what comes in is whole early (opacity at 40% of the run) and slides on to its place till the end: a half-transparent thing reads as a hole */
 @keyframes g-morph-in { 0% { opacity: 0; transform: translateX(-24px); } 40% { opacity: 1; } 100% { opacity: 1; transform: none; } }
 @keyframes g-morph-fade { from { opacity: 0; } }
-@keyframes g-morph-flash { from { background: var(--g-fill-strong, rgba(128,128,128,.28)); } }
 .g-morph-leave { animation: g-morph-out var(--g-morph-leave) ease-in forwards !important; pointer-events: none; }
 .g-morph-enter { animation: g-morph-in var(--g-morph-enter) var(--g-ease, cubic-bezier(.3,.7,.25,1)) backwards !important; animation-delay: var(--g-morph-d, calc(var(--g-morph-i, 0) * var(--g-morph-stagger))) !important; }   /* --g-morph-d: the script's wave */
-.g-morph-flash { animation: g-morph-flash 1s ease-out !important; }   /* the highlight of the kit (g-anim-highlight) is used when the element's ::after is free */
-/* A changed text: only its new words light up, they come in out of a soft blur on a tint that fades (--g-morph-word, read by the script too) */
-:root { --g-morph-word: 1200ms; }
-@keyframes g-morph-word { 0% { background-color: var(--g-fill-strong, rgba(128,128,128,.28)); opacity: .25; filter: blur(2px); } 22% { opacity: 1; filter: none; } 100% { background-color: transparent; } }
-@keyframes g-morph-word-calm { from { background-color: var(--g-fill-strong, rgba(128,128,128,.28)); } }
-.g-morph-word { border-radius: 3px; -webkit-box-decoration-break: clone; box-decoration-break: clone; animation: g-morph-word var(--g-morph-word) ease-out; }
+/* A changed text: what is new in it runs a wave of colour, left to right. The text is there at once; a gradient (the colour of the text, with a band
+   of another colour in it) is clipped to the letters and slides over them. The band is lighter than a dark text and darker than a light one (the lightness
+   of the text turned over, 60% of the way), so it shows on any theme. --g-morph-wave sets it, --g-morph-word is the time of all of it (the script reads it too),
+   --g-wave-run the time of one part: parts of one text start one after another (--g-wave-at, 0..1), so the wave goes through all of them. */
+:root { --g-morph-word: 700ms; --g-wave-run: 420ms; }
+@keyframes g-morph-word { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@keyframes g-morph-word-calm { from { opacity: .3; } }
+.g-morph-word {
+  --g-wave-span: calc(var(--g-morph-word) - var(--g-wave-run));
+  background: linear-gradient(90deg, currentColor 38%, var(--g-morph-wave, color-mix(in srgb, currentColor 25%, transparent)) 50%, currentColor 62%) 100% 0 / 300% 100% no-repeat;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  animation: g-morph-word var(--g-wave-run) linear calc(var(--g-wave-at, 0) * var(--g-wave-span)) backwards;
+}
+@supports (color: oklch(from red calc(l + (round(1 - l, 1) - l) * .6) c h)) {
+  .g-morph-word { background-image: linear-gradient(90deg, currentColor 38%, var(--g-morph-wave, oklch(from currentColor calc(l + (round(1 - l, 1) - l) * .6) c h)) 50%, currentColor 62%); }
+}
 /* the old content fading out where it stood (the script places it), under what comes in at its place: to the right, with the new one of its place
    (--g-morph-d), done a little before the rest (--g-morph-run). Both inherit: a page can put this animation on a part of it.
    It is gone at 40% of its run, as the new one of its place is whole at 40% of its own: a whole new text over an old one that still shows reads as both at once */
@@ -29,12 +38,12 @@
 [data-g-measure] [data-g-lazy] { content-visibility: visible; }
 /* A browser that does not keep up (glass-morph.js steps the motion down, <html data-g-motion>): the new words only tint; from step 2 what is
    new only fades in */
-[data-g-motion] .g-morph-word { animation-name: g-morph-word-calm; }
+[data-g-motion] .g-morph-word { background: none; -webkit-text-fill-color: currentColor; animation: g-morph-word-calm var(--g-wave-run) ease-out; }
 [data-g-motion]:not([data-g-motion="1"]) .g-morph-enter { animation-name: g-morph-fade !important; }
 /* Less motion: nothing slides, glides or turns (the script), what is new fades in and the new words only tint */
 @media (prefers-reduced-motion: reduce) {
   .g-morph-enter { animation-name: g-morph-fade !important; }
-  .g-morph-word { animation-name: g-morph-word-calm; }
+  .g-morph-word { background: none; -webkit-text-fill-color: currentColor; animation: g-morph-word-calm var(--g-wave-run) ease-out; }
 }
 
 /* The reels: a changed digit is a strip of digits, from the old one to the new one the way an odometer counts, that runs by in its cell:

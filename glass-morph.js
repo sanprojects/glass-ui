@@ -1,6 +1,6 @@
 /*!
  * Glass Morph — animates what changes on a page. No dependencies: a library of its own (glass-morph.js + glass-morph.css). With Glass UI
- * (glass-ui.js) on the page it also measures the kit's [data-g-fit] columns in an update, highlights with the kit and ends the kit's busy line.
+ * (glass-ui.js) on the page it also measures the kit's [data-g-fit] columns in an update and ends the kit's busy line.
  *
  * Glass.morph(target, next, opts)
  * Replaces the content of `target` with `next` (an element or an HTML string) and animates the difference, for ANY elements at any depth:
@@ -9,7 +9,7 @@
  *   - an element that is in both trees stays the same node, it is patched in place (attributes, text): nothing replays on it, focus, scroll,
  *     what the user typed and animations that run survive;
  *   - an element that is in both trees but stands in another place (a list that was sorted again) glides there from where it stood (opts.move);
- *   - in a text that changed the new words light up (.g-morph-word); a change that adds no word is highlighted (g-anim-highlight / .g-morph-flash);
+ *   - in a text that changed the new words run a wave of colour, left to right (.g-morph-word); a change that adds no word runs it over the whole text;
  *   - a number that became another number (6 -> 13, 63% -> 71%) turns its changed digits like the reels of an odometer: units first, up when it grew,
  *     down when it fell (.g-reel). Also inside a text: when only its numbers changed ("Осталось 5 мин" -> "6 мин") the words around them stay
  *     and each changed number turns; a word that changed too is marked as words (.g-morph-word), not turned.
@@ -22,7 +22,7 @@
  * Only what is on the screen is animated: an element outside the viewport is patched without an animation and takes no part in the stagger.
  * Hidden tab: patched at once. Reduced motion: patched at once, what is new fades in and new words only tint.
  * opts: key(el) -> string | null; keep(el) -> true: an element (of the box) that is paired stays as it is, nothing in it is patched (the form being sent);
- * leave / enter / flash / reel / move / height: false switches a part off.
+ * leave / enter / flash (the wave of a text) / reel / move / height: false switches a part off.
  * What a script built into the page's markup (a UI kit's controls) is not the page's: the new markup does not have it, and it stays as it is.
  *   data-g-part            an element a script put in or runs (a button, a panel, an ad slot another script fills): left where it stands,
  *                          nothing in it is patched, one in the new markup is not put in (the page's stays, alone), and on a watched page
@@ -309,8 +309,10 @@
       });
       return { frag, nodes, boards };
     }
-    /* A text that changed: the words that are new in it are wrapped for a moment (.g-morph-word: they come in out of a soft blur on a tint that fades),
-       the rest stays plain text. Returns a fragment for the old node `t`, or null when there is nothing new to show (only removed words) or the part of the text that changed is long. */
+    /* A text that changed: what is new in it runs a wave of colour, left to right (.g-morph-word, a span for a moment); the rest stays plain text.
+       Only the new words are marked, the words both texts start and end with are not: a log written again with a line more waves its new tail.
+       A text where nothing is new (words went away) or that is too long to compare is marked whole. Returns the fragment for the old node `t`,
+       or null when the new text is empty. Several marked parts make one wave: each starts where it stands in the text (--g-wave-at, 0..1). */
     /* the kit put its text back (a board that turned, marked words): no change for the boxes that watch it. Seen, the merge of the text nodes
        (normalize) would tell a part of the text as the text the element had, and the words would light up again and again */
     function unseen(node) { WATCHED.forEach(W => { if (W.box.contains(node)) W.mo.takeRecords(); }); }
@@ -323,25 +325,33 @@
       while (p < a0.length && p < b.length && a0[p] === b[p]) p++;
       while (q < a0.length - p && q < b.length - p && a0[a0.length - 1 - q] === b[b.length - 1 - q]) q++;
       const a = a0.slice(p, a0.length - q), m = b.length - p - q;
-      if (a.length * m > 40000) return null;
-      const L = Array.from({ length: a.length + 1 }, () => new Uint16Array(m + 1));   /* the longest common run of words */
-      for (let i = a.length - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = a[i] === b[p + j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
-      const fresh = new Array(b.length).fill(false);
-      for (let i = 0, j = 0; j < m;) { if (i < a.length && a[i] === b[p + j]) { i++; j++; } else if (i < a.length && L[i + 1][j] >= L[i][j + 1]) i++; else fresh[p + j++] = true; }
-      const word = j => fresh[j] && b[j].trim() !== '';
-      b.forEach((x, j) => { if (fresh[j] && !x.trim()) fresh[j] = j > 0 && j < b.length - 1 && word(j - 1) && word(j + 1); });   /* a space joins two new words, it does not stand alone */
-      if (!b.some((x, j) => word(j))) return null;
+      let fresh = new Array(b.length).fill(false);
+      if (a.length * m <= 40000) {
+        const L = Array.from({ length: a.length + 1 }, () => new Uint16Array(m + 1));   /* the longest common run of words */
+        for (let i = a.length - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = a[i] === b[p + j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+        for (let i = 0, j = 0; j < m;) { if (i < a.length && a[i] === b[p + j]) { i++; j++; } else if (i < a.length && L[i + 1][j] >= L[i][j + 1]) i++; else fresh[p + j++] = true; }
+        const word = j => fresh[j] && b[j].trim() !== '';
+        b.forEach((x, j) => { if (fresh[j] && !x.trim()) fresh[j] = j > 0 && j < b.length - 1 && word(j - 1) && word(j + 1); });   /* a space joins two new words, it does not stand alone */
+        if (!b.some((x, j) => word(j))) fresh = fresh.fill(true);
+      } else fresh = fresh.fill(true);
       const frag = document.createDocumentFragment(), spans = [];
-      let run = '', on = null;
-      const out = () => { if (!run) return; if (on) { const s = el('g-morph-word', run); spans.push(s); frag.appendChild(s); } else frag.appendChild(document.createTextNode(run)); run = ''; };
-      b.forEach((x, j) => { if (fresh[j] !== on) { out(); on = fresh[j]; } run += x; });
+      const total = to.length || 1;
+      let run = '', on = null, at = 0, pos = 0;
+      const out = () => { if (!run) return; if (on) { const s = mark(run, at / total); spans.push(s); frag.appendChild(s); } else frag.appendChild(document.createTextNode(run)); run = ''; };
+      b.forEach((x, j) => { if (fresh[j] !== on) { out(); on = fresh[j]; at = pos; } run += x; pos += x.length; });
       out();
       const host = t.parentElement;
-      const finish = () => { clearTimeout(timer); host._gRun = null; spans.forEach(s => { if (s.parentNode) s.replaceWith(s.firstChild || ''); }); if (host.isConnected) { host.normalize(); unseen(host); } };   /* plain text again, one node */
+      const finish = () => { clearTimeout(timer); host._gRun = null; spans.forEach(s => { if (s.parentNode) s.replaceWith(document.createTextNode(s.textContent)); }); if (host.isConnected) { host.normalize(); unseen(host); } };   /* plain text again, one node */
       const timer = setTimeout(finish, ctx.T.word + 60);
       spans.forEach(s => { s._finish = finish; });
       ctx.words.push([host, finish]);
       return frag;
+    }
+    /* a marked part of a text: the text itself, in a span the stylesheet runs the wave over; --g-wave-at (0..1) is where in the text it starts */
+    function mark(text, at) {
+      const s = el('g-morph-word', text);
+      s.style.setProperty('--g-wave-at', at.toFixed(3));
+      return s;
     }
     /* phase 2: patch `op` (live) to look like `np` */
     function reconcile(op, np, o, ctx) {
@@ -354,7 +364,7 @@
       m.pairs.forEach(([i, j]) => pairOf.set(newL[j], oldL[i]));
       m.foreign.forEach(([j, e]) => pairOf.set(newL[j], e));
       /* what goes before the cursor is gathered in a fragment and put in with one insert: fewer mutations of the live tree (and fewer records for observers) */
-      let cursor = op.firstChild, textChanged = false, batch = null;
+      let cursor = op.firstChild, batch = null;
       const put = () => { if (batch) { op.insertBefore(batch, cursor); batch = null; } };
       /* an element of the page in a script's wrap: the wrap is what is put in place (once), the element stays in it */
       const carrier = n => { for (let c = n; c.parentElement; c = c.parentElement) { if (c.parentElement === op) return c; if (!c.parentElement.hasAttribute('data-g-wrap')) return n; } return n; };
@@ -384,10 +394,10 @@
             if (t.nodeValue !== nk.nodeValue) {
               const parts = ctx.play && o.reel !== false && t.parentElement ? numSplit(t.nodeValue, nk.nodeValue) : null;   /* only numbers changed: they turn, the text around them stays */
               if (parts && inView(t.parentElement)) { const d = reelsOf(parts, ctx.T); node = d.frag; (ctx.arms || (ctx.arms = [])).push(...d.boards); }   /* the old node stays at the cursor and goes below */
-              else if (ctx.play && o.flash !== false && t.parentElement && (node = words(t, nk.nodeValue, ctx))) { /* the changed words are marked; the old node goes below */ }
-              else { node = t; if (t.nodeValue.trim() || nk.nodeValue.trim()) textChanged = true; t.nodeValue = nk.nodeValue; }   /* not the whitespace between tags */
+              else if (ctx.play && o.flash !== false && t.parentElement && (node = words(t, nk.nodeValue, ctx))) { /* the new words (the whole text when none is new) are marked; the old node goes below */ }
+              else { node = t; t.nodeValue = nk.nodeValue; }
             }
-          } else if (nk.nodeValue.trim() && !op.children.length && !oldTexts.length && cursor) textChanged = true;
+          }
         }
         const at = node.nodeType === 1 ? carrier(node) : node;
         if (at !== node) { if (placed.has(at)) return; placed.add(at); }
@@ -398,7 +408,6 @@
       });
       put();
       while (cursor) { const next = cursor.nextSibling; if (!part(cursor)) op.removeChild(cursor); cursor = next; }
-      if (textChanged && ctx.play && o.flash !== false) ctx.flashing.push(op);
     }
     /* What leaves does not hold the update up: it is put back where it stood, in its own parent but out of the flow (it pushes nothing),
        and fades out while the new content comes in and the rest glides. list: [element, parent, x, y, width, height, the parent is static] (all read before the patch:
@@ -465,17 +474,17 @@
     const time = v => { const m = /^\s*([-+]?(?:\d+\.?\d*|\.\d+))(ms|s)?\s*$/i.exec(v || ''); return m ? parseFloat(m[1]) * (/^s$/i.test(m[2] || '') ? 1000 : 1) : NaN; };
     function timings(target) {
       const cs = getComputedStyle(target), css = (name, def) => time(cs.getPropertyValue(name)) || def;
-      return { leave: css('--g-morph-leave', 200), enter: css('--g-morph-enter', 300), stagger: css('--g-morph-stagger', 20), reel: css('--g-morph-reel', 320), reelStagger: css('--g-morph-reel-stagger', 35), move: css('--g-morph-move', 400), word: css('--g-morph-word', 1200), ease: cs.getPropertyValue('--g-ease').trim() || 'ease-out' };
+      return { leave: css('--g-morph-leave', 200), enter: css('--g-morph-enter', 300), stagger: css('--g-morph-stagger', 20), reel: css('--g-morph-reel', 320), reelStagger: css('--g-morph-reel-stagger', 35), move: css('--g-morph-move', 400), word: css('--g-morph-word', 700), ease: cs.getPropertyValue('--g-ease').trim() || 'ease-out' };
     }
     /* What an update of `target` animates and how: filled while the update is read (entering, moves, words, ...), played by flush() once the DOM is in its
        new state. One for Glass.morph (which patches the box itself) and for a watched box (data-g-morph: someone else changed it) */
     function stage(target, o, T, play) {
       const ctx = {
-        play, T, entering: [], flashing: [], moves: new Map(), pre: new Map(), words: [], h0: null,
+        play, T, entering: [], moves: new Map(), pre: new Map(), words: [], h0: null,
         /* after the DOM is patched: what is new / changed AND on the screen is animated (the stagger counts only those) */
         flush() {
           /* the reads first, all against one layout of the patched page (a read after a write lays the page out again): what is on the screen,
-             the ::after of what flashes, where the moved rows stand now */
+             where the moved rows stand now */
           /* after the patch the browser has not yet told which [data-g-lazy] boxes are on the screen (it does so in the next frame) and lays out
              a new or changed one at a guessed or stale size: while these reads run, all of them are laid out as they are (data-g-measure, the kit's CSS) */
           const scope = ctx.scope || [target];   /* the watched page: only where it changed */
@@ -490,7 +499,6 @@
           const hidden = ctx.words.filter(([host]) => !inView(host));   /* marked words out of the viewport: plain text at once */
           const box = target.getBoundingClientRect(), bs = getComputedStyle(target);
           const extra = bs.boxSizing === 'border-box' ? 0 : ['paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth'].reduce((v, k) => v + (parseFloat(bs[k]) || 0), 0);
-          const flash = ctx.flashing.filter(inView).map(e => [e, !!kit.animate && getComputedStyle(e, '::after').content === 'none']);   /* the kit's highlight draws on ::after */
           const glide = [], away = [];   /* an element that changed its place (moved, or pushed by what came, went or grew) glides from where it stood (FLIP) */
           if (o.move !== false) {
             const raw = new Map(), gliding = new Map(), came = new Set();
@@ -546,7 +554,7 @@
           const waveOf = e => { const p = at.get(e); return p ? ctx.wave(p[0], p[1]) : 0; };
           if (ctx.ghosts.length) placed(ghost(ctx.ghosts, ctx.run, ctx.until, ctx.wave), kept);
           if (ctx.onWrite) ctx.onWrite();
-          if (enter.length || glide.length || away.length || ctx.ghosts.length || flash.length || ctx.words.length || ctx.reels) gauge(Math.max(end, ctx.reels ? T.reel : 0, 300), ctx.probe);   /* does the browser keep up with it */
+          if (enter.length || glide.length || away.length || ctx.ghosts.length || ctx.words.length || ctx.reels) gauge(Math.max(end, ctx.reels ? T.reel : 0, 300), ctx.probe);   /* does the browser keep up with it */
           scope.forEach(s => s.removeAttribute('data-g-measure'));   /* the reads are done: what is out of the viewport is skipped again in the next frame */
           hidden.forEach(([, finish]) => finish());
           /* the box takes its new height smoothly, so what is below it does not jump (overflow clipped along Y meanwhile; X stays visible for the slides) */
@@ -565,17 +573,11 @@
             e.classList.add('g-morph-enter'); e.style.setProperty('--g-morph-d', d + 'ms'); e.style.setProperty('--g-morph-enter', (end - d) + 'ms');   /* a later start, a shorter run: all end at once; both inherit, as for what goes */
           });
           if (enter.length) settled(() => enter.forEach(e => later(e, 'g-morph-enter', end + 50, () => { e.style.removeProperty('--g-morph-enter'); e.style.removeProperty('--g-morph-d'); })));
-          const again = flash.filter(([e, own]) => !own && e.classList.contains('g-morph-flash'));   /* a flash that still runs starts over: one reflow for all of them */
-          if (again.length) { again.forEach(([e]) => e.classList.remove('g-morph-flash')); void again[0][0].offsetWidth; }
-          flash.forEach(([e, own]) => {
-            if (own) { kit.animate(e, 'highlight'); later(e, 'g-anim-highlight', 1600); }
-            else { e.classList.add('g-morph-flash'); later(e, 'g-morph-flash', 1050); }
-          });
           glide.forEach(([e, dx, dy]) => { const d = waveOf(e); e.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { id: 'g-morph', duration: end - d, delay: d, easing: T.ease, fill: 'backwards' }); });   /* all in place at once */
           /* gone out of the viewport: held where it stood, it fades out as a ghost does; then it is in its new place, out of sight */
           away.forEach(([e, dx, dy]) => { const d = waveOf(e), from = `translate(${dx}px, ${dy}px)`, to = `translate(${dx + 24}px, ${dy}px)`, run = ctx.until - d;
             e.animate([{ transform: from, opacity: 1, easing: T.ease }, { transform: to, opacity: 0, offset: Math.min(1, ctx.run(d) / run) }, { transform: to, opacity: 0 }], { id: 'g-morph', duration: run, delay: d, fill: 'backwards' }); });
-          ctx.entering = []; ctx.flashing = []; ctx.moves = new Map(); ctx.pre = new Map(); ctx.words = []; ctx.h0 = null;
+          ctx.entering = []; ctx.moves = new Map(); ctx.pre = new Map(); ctx.words = []; ctx.h0 = null;
         }
       };
       return ctx;
@@ -987,7 +989,7 @@
         if (!seen) return;   /* not on the screen: the new text is there, nothing turns or lights up */
         const split = o.reel !== false ? numSplit(from, to) : null;
         if (split && turns < 100) { t.nodeValue = from; const d = reelsOf(split, T); t.replaceWith(d.frag); boards.push(...d.boards); turns += d.boards.length; e._gRun = { to, nodes: d.nodes, at: performance.now() }; }   /* measured with the reads of the update */
-        else if (o.flash !== false) { t.nodeValue = from; const f = words(t, to, ctx); if (f) { const nodes = [...f.childNodes]; t.replaceWith(f); e._gRun = { to, nodes, at: performance.now() }; } else { t.nodeValue = to; ctx.flashing.push(e); } }   /* too long to mark by words: it lights up, as in Glass.morph */
+        else if (o.flash !== false) { t.nodeValue = from; const f = words(t, to, ctx); if (f) { const nodes = [...f.childNodes]; t.replaceWith(f); e._gRun = { to, nodes, at: performance.now() }; } else t.nodeValue = to; }
       });
       /* where each one stood: its own place, or the place of the old one it is (page coordinates to the viewport), and on it what runs now (a glide
          of the last update, its own or of the box it is in: where it is drawn now) */

@@ -200,21 +200,21 @@ test('page: the hover held back while the page animates (data-g-still) is given 
   assert.deepEqual({ during, after, pressed }, { during: [], after: ['pointerover', 'mouseover', 'mouseenter'], pressed: ['pointerover', 'mouseover', 'mouseenter', 'down:hovered'] });
 });
 
-test('page: new words light up once (putting the text back is no change: it used to light them up again and again)', async () => {
+test('page: new words run the wave once (putting the text back is no change: it used to light them up again and again)', async () => {
   await page.evaluate(() => { document.getElementById('below').textContent = 'Воды минеральные'; });
   await page.waitForTimeout(1600);
   const r = await change(`document.getElementById('below').textContent = 'Воды лечебно-столовые';`, 40, 3500);   /* "Воды" stays, one word is new */
   assert.deepEqual({ words: r.made.words, text: await page.evaluate(() => [document.getElementById('below').childNodes.length, document.getElementById('below').textContent]) }, { words: 1, text: [1, 'Воды лечебно-столовые'] });
 });
 
-test('page: a long text written anew (too long to mark by words) lights up, as it does in Glass.morph (it used to change with nothing shown)', async () => {
+test('page: a long text written anew (too long to mark by words) runs the wave over all of it, as it does in Glass.morph (it used to change with nothing shown)', async () => {
   const long = w => Array.from({ length: 120 }, (_, i) => w + i).join(' ');   /* 120 words: more than words() marks (it pairs words of the two texts, up to 40000 pairs) */
   await page.evaluate(t => { document.getElementById('below').textContent = t; }, long('host'));
   await page.waitForTimeout(1600);
   const lit = await page.evaluate(async t => {
     const e = document.getElementById('below'); let seen = false;
-    const mo = new MutationObserver(() => { if (/g-morph-flash|g-anim-highlight/.test(e.className)) seen = true; });
-    mo.observe(e, { attributes: true, attributeFilter: ['class'] });
+    const mo = new MutationObserver(rs => rs.forEach(r => r.addedNodes.forEach(n => { if (n.nodeType === 1 && n.classList.contains('g-morph-word') && n.textContent === t) seen = true; })));
+    mo.observe(e, { childList: true });
     e.textContent = t;
     await new Promise(r => setTimeout(r, 300)); mo.disconnect();
     return [seen, e.childNodes.length, e.textContent === t];
@@ -225,24 +225,23 @@ test('page: a long text written anew (too long to mark by words) lights up, as i
   assert.deepEqual(lit, [true, 1, true]);
 });
 
-test('page: a long text that grows (a log written again with a line more) marks its new tail each time, it does not light up', async () => {
+test('page: a long text that grows (a log written again with a line more) marks only its new tail each time, not the whole text', async () => {
   const lines = n => Array.from({ length: n }, (_, i) => 'line ' + i + ' of the log, it says what happened').join('\n');   /* 40 lines: ~320 words */
   await page.evaluate(t => { document.getElementById('below').textContent = t; }, lines(40));
   await page.waitForTimeout(1600);
   const r = await page.evaluate(async lines => {
-    const e = document.getElementById('below'), out = { flash: 0, words: [] };
+    const e = document.getElementById('below'), out = { words: [] };
     const mo = new MutationObserver(rs => rs.forEach(r => {
-      if (r.type === 'attributes' && /g-morph-flash|g-anim-highlight/.test(e.className) && !/g-morph-flash|g-anim-highlight/.test(r.oldValue || '')) out.flash++;
       r.addedNodes.forEach(n => { if (n.nodeType === 1 && n.classList.contains('g-morph-word')) out.words.push(n.textContent.trim()); });
     }));
-    mo.observe(e, { attributes: true, attributeFilter: ['class'], attributeOldValue: true, childList: true });
+    mo.observe(e, { childList: true });
     for (const n of [41, 42, 43]) { e.textContent = lines.slice(0, n).join('\n'); await new Promise(r => setTimeout(r, 300)); }
     await new Promise(r => setTimeout(r, 1500)); mo.disconnect();
     return { ...out, text: [e.childNodes.length, e.textContent === lines.slice(0, 43).join('\n')] };
   }, Array.from({ length: 43 }, (_, i) => 'line ' + i + ' of the log, it says what happened'));
   await page.evaluate(() => { document.getElementById('below').textContent = 'below'; });
   await page.waitForTimeout(1600);
-  assert.deepEqual(r, { flash: 0, words: [40, 41, 42].map(i => 'line ' + i + ' of the log, it says what happened'), text: [1, true] });
+  assert.deepEqual(r, { words: [40, 41, 42].map(i => 'line ' + i + ' of the log, it says what happened'), text: [1, true] });
 });
 
 test('page: what another script runs (an ad slot it fills, data-g-part; auto ads, Glass.morphSkip set by the page before the kit) is not animated, nor is what it pushes', async () => {
