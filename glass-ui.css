@@ -230,10 +230,13 @@
   box-shadow: var(--g-rim), var(--g-shadow-float);
 }
 .g-glass { border-radius: var(--g-radius-card); }
-/* Phones: Safari 26 tints its top bar from the background-COLOR of an open modal dialog; a translucent fill is read as transparent = black. So the dialog gets the page colour underneath
- * (the glass fill stays on top as an image); the see-through blur of a dialog is given up on a phone, desktop keeps the glass. */
+/* iPhone: Safari 26 tints its top bar from the background-COLOR of an open modal dialog; a translucent fill is read as transparent = black. So the dialog gets the page colour underneath
+ * (the glass fill stays on top as an image); the see-through blur of a dialog is given up there. Only where Safari does it (-webkit-touch-callout exists on iOS alone):
+ * a narrow window or an Android phone keeps the glass. */
 @media (max-width: 800px) {
-  :where(:is(.g-root,[role="listbox"]) dialog) { background-image: linear-gradient(var(--g-fill-strong), var(--g-fill-strong)); background-color: var(--g-page-bg); }
+  @supports (-webkit-touch-callout: none) {
+    :where(:is(.g-root,[role="listbox"]) dialog) { background-image: linear-gradient(var(--g-fill-strong), var(--g-fill-strong)); background-color: var(--g-page-bg); }
+  }
 }
 /* Performance: glass nested inside glass does not need its own blur (its backdrop is already the parent's blurred
  * surface), and every extra blur layer costs GPU time on scroll. Keep one blur layer per stack. */
