@@ -1284,6 +1284,8 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 :is(.g-shell--tools, .g-shell:where([data-fixed])).g-shell--stack { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
 :is(.g-shell--tools, .g-shell:where([data-fixed])).g-shell--stack > aside { max-height: 45dvh; }
 @media (max-width: 900px) { :is(.g-shell--tools, .g-shell:where([data-fixed])) { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); } :is(.g-shell--tools, .g-shell:where([data-fixed])) > aside { max-height: 45dvh; } }
+/* a shell with a workspace only (no aside): the workspace is the one row and takes the height, not an auto row that shrinks to its header (a scroll-body table showed only its header) */
+@media (max-width: 900px) { :is(.g-shell--tools, .g-shell:where([data-fixed])):not(:has(> aside)) { grid-template-rows: minmax(0, 1fr); } }
 
 /* ---------- Elapsed / remaining time (data-g-ago, data-g-left; the kit counts): the number drums when it changes ---------- */
 .g-age__n { display: inline-block; transform-origin: 50% 100%; font-variant-numeric: tabular-nums; }
