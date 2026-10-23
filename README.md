@@ -151,11 +151,12 @@ Each file also ships as `.min.css` / `.min.js`.
 
 The CSS gradient of the scene draws what the WebGL one draws at its start (no shade over it, the `--gx`/`--gy` defaults of the demo), so the change from one to the other does not show.
 
-**Browser bars in the scene's colour.** Safari 26 tints its top and bottom bars with the body's background colour. `data-g-tint` on the scene keeps that colour equal to the scene's pixel at the top left of the screen (the analytic gradient, the liquid canvas, a photo or the scene's own colour, with its shade), in `body.style.backgroundColor` and `meta[name=theme-color]`, and stores it in `sessionStorage` so the next page paints its bars in it from the start:
+**Browser bars in the scene's colour.** Safari 26 tints its top and bottom bars with the body's background colour, and the bottom one with a fixed box at the bottom edge when there is one. `data-g-tint` on the scene keeps the body's colour equal to the scene's pixel at the top left of the screen (the analytic gradient, the liquid canvas, a photo or the scene's own colour, with its shade), in `body.style.backgroundColor` and `meta[name=theme-color]`, and gives `.g-tint-edge` (a masked 12px box at the bottom, made by the script when the page has none) the pixel at the bottom left. Both are stored in `sessionStorage` so the next page paints its bars in them from the start:
 
 ```html
 <div class="scene" id="scene" data-scene="gradient" data-g-gradient data-g-tint aria-hidden="true"></div>
-<script>try{var c=sessionStorage.getItem('g-tint');if(/^#[0-9a-f]{6}$/i.test(c))document.body.style.backgroundColor=c}catch(e){}</script>
+<div class="g-tint-edge" aria-hidden="true"></div>
+<script>try{var c=sessionStorage.getItem('g-tint'),b=sessionStorage.getItem('g-tint-bottom'),x=/^#[0-9a-f]{6}$/i;if(x.test(c))document.body.style.backgroundColor=c;if(x.test(b))document.currentScript.previousElementSibling.style.backgroundColor=b}catch(e){}</script>
 ```
 
 The colour is read again when the scene or the theme changes and once a second while the page is visible (the gradient drifts).

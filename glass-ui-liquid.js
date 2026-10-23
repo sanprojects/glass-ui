@@ -219,61 +219,76 @@
   /* Colour of the bars (Safari 26 on iOS) -------------------------------
    * <div class="scene" data-g-gradient data-g-tint>
    * Safari tints its status bar and its toolbar with the page's background colour (the body's). With data-g-tint the body takes the colour of the
-   * scene at the top left corner of the screen, so the bars go on from the background: the gradient worked out from its blobs, the liquid
+   * scene at the top left corner of the screen, so the bars go on from the background. The toolbar takes the colour of a fixed box at the bottom edge
+   * when there is one: .g-tint-edge (made here when the page has none) is such a box, 12px tall (Safari skips a thinner one), hidden by a mask
+   * (Safari still reads it; an opacity of 0 or a pseudo-element it does not), in the scene's colour at the bottom left: the gradient worked out from its blobs, the liquid
    * (a [data-g-liquid] shown in it) read back from its canvas, a photo (background center/cover) from a 1px canvas, else the scene's background colour;
    * under the scene's ::after when that is a plain linear-gradient (a shade). It follows the drift once a second while the page is shown and writes
-   * only a colour that changed (and meta theme-color, for the browsers that read it). The last one is kept in sessionStorage "g-tint": an inline
-   * script at the top of the body puts it on before the first paint (README), so a page change does not flash the stylesheet's colour.
+   * only a colour that changed (and meta theme-color, for the browsers that read it). The last ones are kept in sessionStorage "g-tint" and
+   * "g-tint-bottom": an inline script at the top of the body puts them on before the first paint (README), so a page change does not flash the stylesheet's colour.
    * With nothing to take (an image of another origin, a scene not drawn yet) the body keeps what it has. */
   function rgba(s) {   /* "rgb(1, 2, 3)" / "rgba(1, 2, 3, .5)" -> [r, g, b, a], 0..1 */
     var m = /rgba?\(([^)]+)\)/.exec(s || ''), p = m ? m[1].split(/[\s,\/]+/).filter(Boolean).map(parseFloat) : [];
     return p.length < 3 ? null : [p[0] / 255, p[1] / 255, p[2] / 255, p.length > 3 ? p[3] : 1];
   }
   var PHOTOS = {};
-  function photo(host, r, done) {   /* the pixel of a center/cover background image at the screen's corner; null while it loads (done runs then) */
+  function photo(host, r, y0, done) {   /* the pixel of a center/cover background image at the screen's left edge, y0 px from its top; null while it loads (done runs then) */
     var cs = getComputedStyle(host), m = /url\((['"]?)(.*?)\1\)/.exec(cs.backgroundImage);
     if (!m || cs.backgroundSize !== 'cover' || cs.backgroundPosition !== '50% 50%') return null;
     var e = PHOTOS[m[2]];
     if (!e) { e = PHOTOS[m[2]] = { img: new Image() }; e.img.onload = function () { e.ok = true; done(); }; e.img.src = m[2]; return null; }
     if (!e.ok) return null;
-    var at = [r.left, r.top, r.width, r.height].join();
-    if (e.at === at) return e.col;
+    var at = [r.left, r.top, r.width, r.height, y0].join(), k = y0 ? 'bottom' : 'top', c = e[k] || (e[k] = {});   /* the last read of each edge is kept */
+    if (c.at === at) return c.col;
     var w = e.img.naturalWidth, h = e.img.naturalHeight, s = Math.max(r.width / w, r.height / h),
-      x = Math.min(w - 1, Math.max(0, (-r.left - (r.width - w * s) / 2) / s)), y = Math.min(h - 1, Math.max(0, (-r.top - (r.height - h * s) / 2) / s));
+      x = Math.min(w - 1, Math.max(0, (-r.left - (r.width - w * s) / 2) / s)), y = Math.min(h - 1, Math.max(0, (y0 - r.top - (r.height - h * s) / 2) / s));
     try {
       var cv = e.cv || (e.cv = document.createElement('canvas')); cv.width = cv.height = 1;
       var cx = cv.getContext('2d', { willReadFrequently: true }); cx.drawImage(e.img, x, y, 1, 1, 0, 0, 1, 1);
-      var d = cx.getImageData(0, 0, 1, 1).data; e.col = [d[0] / 255, d[1] / 255, d[2] / 255];
-    } catch (err) { e.col = null; }   /* an image of another origin taints the canvas */
-    e.at = at; return e.col;
+      var d = cx.getImageData(0, 0, 1, 1).data; c.col = [d[0] / 255, d[1] / 255, d[2] / 255];
+    } catch (err) { c.col = null; }   /* an image of another origin taints the canvas */
+    c.at = at; return c.col;
   }
   function tint(host) {
-    var last = '', meta = document.querySelector('meta[name="theme-color"]'), qt = 0;
-    function corner() {   /* [r, g, b] 0..1 of the scene at the top left of the screen */
+    var last = '', lastB = '', meta = document.querySelector('meta[name="theme-color"]'), qt = 0,
+      edge = document.querySelector('body > .g-tint-edge') || document.body.appendChild(Object.assign(document.createElement('div'), { className: 'g-tint-edge' }));
+    edge.setAttribute('aria-hidden', 'true');
+    function corner(y) {   /* [r, g, b] 0..1 of the scene at the left edge of the screen, y px from its top */
       var r = host.getBoundingClientRect(), g = host.__gradient, col = null, lq, c;
-      if (g && g.on()) { c = (g.canvas() || host).getBoundingClientRect(); return g.colorAt(-c.left / c.width, -c.top / c.height); }   /* no shade over it */
+      if (g && g.on()) { c = (g.canvas() || host).getBoundingClientRect(); return g.colorAt(-c.left / c.width, (y - c.top) / c.height); }   /* no shade over it */
       lq = host.querySelector('[data-g-liquid]');
       if (lq && lq.getClientRects().length) {
         c = lq.__liquid && lq.__liquid.canvas();
-        if (c) { var cr = c.getBoundingClientRect(); col = lq.__liquid.pixel(-cr.left / cr.width, -cr.top / cr.height); }
+        if (c) { var cr = c.getBoundingClientRect(); col = lq.__liquid.pixel(-cr.left / cr.width, (y - cr.top) / cr.height); }
         col = col || rgba(getComputedStyle(lq).backgroundColor);
-      } else col = photo(host, r, run) || rgba(getComputedStyle(host).backgroundColor);
+      } else col = photo(host, r, y, run) || rgba(getComputedStyle(host).backgroundColor);
       if (!col || col[3] === 0) return null;
       var a = getComputedStyle(host, '::after'), m = a.mixBlendMode === 'normal' && /^linear-gradient\((rgba?\([^)]*\)), (rgba?\([^)]*\))\)$/.exec(a.backgroundImage);
       if (m) {
-        var v = Math.min(1, Math.max(0, -r.top / r.height)), o0 = rgba(m[1]), o1 = rgba(m[2]), o = o0.map(function (q, n) { return q + (o1[n] - q) * v; });
+        var v = Math.min(1, Math.max(0, (y - r.top) / r.height)), o0 = rgba(m[1]), o1 = rgba(m[2]), o = o0.map(function (q, n) { return q + (o1[n] - q) * v; });
         col = col.map(function (q, n) { return n < 3 ? q * (1 - o[3]) + o[n] * o[3] : q; });
       }
       return col;
     }
+    function hexOf(col) { return '#' + col.slice(0, 3).map(function (q) { return ('0' + Math.round(Math.max(0, Math.min(1, q)) * 255).toString(16)).slice(-2); }).join(''); }
     function run() {
       if (document.hidden) return;
-      var col = corner(); if (!col) return;
-      var hex = '#' + col.slice(0, 3).map(function (q) { return ('0' + Math.round(Math.max(0, Math.min(1, q)) * 255).toString(16)).slice(-2); }).join('');
-      if (hex === last) return;
-      last = hex; document.body.style.backgroundColor = hex;
-      if (meta) meta.setAttribute('content', hex);
-      try { sessionStorage.setItem('g-tint', hex); } catch (e) {}
+      var col = corner(0), colB = corner(Math.max(0, edge.getBoundingClientRect().bottom - 1));
+      if (col) {
+        var hex = hexOf(col);
+        if (hex !== last) {
+          last = hex; document.body.style.backgroundColor = hex;
+          if (meta) meta.setAttribute('content', hex);
+          try { sessionStorage.setItem('g-tint', hex); } catch (e) {}
+        }
+      }
+      if (colB) {
+        var hexB = hexOf(colB);
+        if (hexB !== lastB) {
+          lastB = hexB; edge.style.backgroundColor = hexB;
+          try { sessionStorage.setItem('g-tint-bottom', hexB); } catch (e) {}
+        }
+      }
     }
     function soon() { cancelAnimationFrame(qt); qt = requestAnimationFrame(run); }   /* after the scene has taken a change in */
     new MutationObserver(soon).observe(host, { attributes: true, attributeFilter: ['style', 'data-scene'] });

@@ -97,13 +97,21 @@
          3  nothing is animated: patched at once, as in a hidden tab. A change once a minute plays at step 2, to see whether the browser keeps up again
        The step is kept for the tab (sessionStorage) and shown on <html data-g-motion="1|2|3"> for the page's own CSS; Glass.morph.motion() reads it,
        Glass.morph.motion(n) sets it (a setting of the site, a test) */
-    let MOTION = 0, motionAt = 0, BAD = 0, GOOD = 0, gauging = false;
+    let MOTION = 0, motionAt = 0, BAD = 0, GOOD = 0, gauging = false, RUN = 0, markTimer = 0;   /* RUN: when what the updates play now is over */
     try {
       const nav = performance.getEntriesByType('navigation')[0];
       if (nav && nav.type === 'reload') sessionStorage.removeItem('g-motion');   /* a reload starts at all of it again: the step is the tab's, a reload is the user's retry */
       MOTION = Math.min(3, Math.max(0, parseInt(sessionStorage.getItem('g-motion'), 10) || 0));
     } catch (e) { /* storage off */ }
-    const motionMark = () => { const r = document.documentElement; if (MOTION) r.setAttribute('data-g-motion', String(MOTION)); else r.removeAttribute('data-g-motion'); };
+    /* The page's CSS takes the step between updates only: the step is often told while one plays (the gauge of the last update ends in the next
+       one), and its CSS swaps the animation of what comes in (g-morph-fade <-> g-morph-in) and of the new words - a CSS animation whose name changes
+       starts again from its first frame: a row that was in jumped back and came in once more */
+    const motionMark = () => {
+      clearTimeout(markTimer);
+      const wait = RUN - performance.now();
+      if (wait > 0) { markTimer = setTimeout(motionMark, wait + 20); return; }
+      const r = document.documentElement; if (MOTION) r.setAttribute('data-g-motion', String(MOTION)); else r.removeAttribute('data-g-motion');
+    };
     function setMotion(m) {
       m = Math.min(3, Math.max(0, m | 0)); BAD = GOOD = 0; motionAt = performance.now();
       if (m === MOTION) return;
@@ -566,6 +574,8 @@
           }); });
           if (ctx.ghosts.length) placed(ghost(ctx.ghosts, ctx.run, ctx.until, ctx.wave), kept);
           if (ctx.onWrite) ctx.onWrite();
+          /* the entering rows keep their class until two frames and end + 50 ms from now (see below), the new words run --g-morph-word */
+          RUN = Math.max(RUN, performance.now() + Math.max(ctx.until, ctx.words.length ? T.word : 0) + 150);
           if (enter.length || glide.length || away.length || ctx.ghosts.length || ctx.words.length || ctx.reels) gauge(Math.max(end, ctx.reels ? T.reel : 0, 300), ctx.probe);   /* does the browser keep up with it */
           scope.forEach(s => s.removeAttribute('data-g-measure'));   /* the reads are done: what is out of the viewport is skipped again in the next frame */
           hidden.forEach(([, finish]) => finish());

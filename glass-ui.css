@@ -270,6 +270,10 @@
 .g-liquid.is-gl > i { display: none; }
 @keyframes g-drift { from { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(14vmax,-9vmax,0) scale(1.15); } to { transform: translate3d(-10vmax,12vmax,0) scale(.92); } }
 @media (prefers-reduced-motion: reduce) { .g-liquid > i { animation: none; } }
+/* Safari 26 tints its toolbar with a fixed box at the bottom edge (12px or taller; it skips a pseudo-element and does not read one again at opacity 0):
+   masked away, it is still read. data-g-tint (glass-ui-liquid.js) gives it the scene's colour at the bottom left */
+.g-tint-edge { position: fixed; left: 0; right: 0; bottom: 0; height: 12px; z-index: 1; pointer-events: none;
+  -webkit-mask-image: linear-gradient(transparent, transparent); mask-image: linear-gradient(transparent, transparent); }
 
 
 /* ---------- Button: <button>, <a data-variant="…">, <input type="button|submit|reset"> ----------
@@ -708,6 +712,8 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 :where(body.g-root) { margin: 0; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; gap: var(--g-gap); padding: var(--g-gap); }   /* dvh: the footer of a short page sits above Safari's toolbar, not under it */
 :where(.g-root) main { flex: 1; display: flex; flex-direction: column; }   /* the spacing between its blocks is the page's (a gap here stops the morph from gliding what is below a change: test/page.test.mjs) */
 :where(body.g-root):is([data-g-fixed], :has(.g-shell--tools, .g-shell[data-fixed])) { height: 100dvh; min-height: 0; overflow: hidden; }
+/* ...so the body is the scroll container of the sticky bar, and WebKit counts its top from the body's padding (16 + 12): the bar sat 12px low and ate the gap to the content */
+:where(body.g-root):is([data-g-fixed], :has(.g-shell--tools, .g-shell[data-fixed])) > nav[data-position="sticky"] { top: 0; }
 :where(body.g-root):is([data-g-fixed], :has(.g-shell--tools, .g-shell[data-fixed])) > main { min-height: 0; }
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > a) { display: flex; align-items: center; gap: var(--g-gap-inner); flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; font-weight: 700; font-size: var(--g-fs-body); letter-spacing: -.01em; color: var(--g-text); text-decoration: none; margin-right: auto; }   /* on the narrowest bars the name is clipped before anything overlaps */
 /* Logo dot for the brand link: <nav><a href="/"><span class="g-brand-dot"></span>Name</a>…</nav> */
