@@ -2033,18 +2033,13 @@
     });
   }
 
-  /* Theme: Glass.setTheme('light' | 'dark' | 'auto'); sets data-theme on <html> and follows the system in 'auto' */
-  const themeMq = window.matchMedia ? matchMedia('(prefers-color-scheme: light)') : null;
-
-  let themeMode = 'dark';
-  function applyTheme() { const t = themeMode === 'auto' ? (themeMq && themeMq.matches ? 'light' : 'dark') : themeMode; document.documentElement.setAttribute('data-theme', t); fire(document, 'g:themechange', { theme: t, mode: themeMode }); }
-  function setTheme(m) { themeMode = m === 'light' || m === 'auto' ? m : 'dark'; applyTheme(); }
-  if (themeMq && themeMq.addEventListener) themeMq.addEventListener('change', () => { if (themeMode === 'auto') applyTheme(); });
-  if (!document.documentElement.hasAttribute('data-theme')) document.documentElement.setAttribute('data-theme', 'dark');/* default: dark */
+  /* The kit is dark only (the light theme was removed: glass-ui-light.css and Glass.setTheme are in the git history). data-theme="dark" stays on <html>
+     for pages that style by it */
+  if (!document.documentElement.hasAttribute('data-theme')) document.documentElement.setAttribute('data-theme', 'dark');
   function popBy(sel) { return document.querySelector(sel); }
   /* glass-morph.js (Glass.morph, Glass.watch) may be on the page before or after this file: both add to one Glass */
   global.Glass = Object.assign(global.Glass || {}, {
-    init, animate, busy, fileProgress, ruler, setTheme, toast, setProgress, validate, nav: navAuto, syncClock,
+    init, animate, busy, fileProgress, ruler, toast, setProgress, validate, nav: navAuto, syncClock,
     fit: box => { if (box._gFit) box._gFit(); else mount1(box, ['[data-g-fit]', initFit]); },   /* measure a [data-g-fit] box now (glass-morph.js, in the reads of an update) */
     fitTable: t => { if (t.matches(FIT_T)) tableFit(t); },   /* the columns of a table fit its box now (glass-morph.js, in the reads of an update) */
     /* for glass-morph.js: the kit's parts that run by themselves (their own animations, built and changed by the kit): not content to animate */

@@ -109,11 +109,6 @@
 /* More contrast: lighter secondary text, stronger lines and recessed fields */
 @media (prefers-contrast: more) { :root { --g-text-2: rgba(255,255,255,.92); --g-text-3: rgba(255,255,255,.85); --g-text-4: rgba(255,255,255,.75); --g-line: rgba(255,255,255,.4); --g-fill-recessed: rgba(0,0,0,.3); } }
 
-/* Light theme: separate file glass-ui-light.css (loaded after this one). */
-
-
-/* Light theme: separate file glass-ui-light.css (loaded after this one). */
-
 /* ---------- Base ---------- */
 /* How the kit is written: style the NATIVE elements (button, input, textarea, select, details, dialog, progress, table, nav, article, h1-h6, p ...) inside .g-root,
  * pick variants with attributes (data-variant, data-size, aria-*, role) and keep g- classes only for parts that HTML has no element for (badge, chip, file drop, ring ...).

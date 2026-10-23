@@ -115,7 +115,6 @@
     var api = {
       start: start, stop: stop,
       setColors: function (p, l) { day = false; pal = p; light = l || light; if (gl) { paint(pal, light); if (!running) still(); } },
-      setLift: function (v) { lift = +v || 0; if (gl && day) { paintDay(); if (!running) still(); } },   /* 0..1 lightens the day cycle (light theme) */
       setDay: function (on) { day = !!on; if (day) ph = .3; if (gl) { colours(); if (!running) still(); } },
       /* the colour at (u, v) of the canvas, 0..1 from its top left, or null before the canvas: a frame is drawn and read back in the same task (the buffer is not kept) */
       pixel: function (u, v) {
@@ -148,7 +147,7 @@
     ' col+=(hash(gl_FragCoord.xy)-.5)*2./255.; gl_FragColor=vec4(col,1.); }';
   var GR_BLOBS = [[18, 12, 60, 50, .6], [88, 18, 50, 50, .6], [72, 92, 60, 60, .62], [10, 85, 40, 40, .6]],   /* centre x y %, radii %, where the fade ends: as in the CSS gradient */
     GR_T = [40, 50, 56, 45], GR_A = [[38, 30], [-34, 34], [-38, -28], [34, -34]], GR_OFF = [0, 20, 45, 10],   /* drift: half-period s, reach %, phase s */
-    GR_DARK = ['#00283c', '#33a7e1', '#9bbbf9', '#34b8c9', '#74b7f9'], GR_LIGHT = ['#e8f6ff', '#79bfe8', '#d1e0fd', '#89cfda', '#add5fe'];
+    GR_DARK = ['#00283c', '#33a7e1', '#9bbbf9', '#34b8c9', '#74b7f9'];
   function gradient(host) {
     if (!host) return null;
     if (host.__gradient) return host.__gradient;
@@ -165,8 +164,7 @@
       return true;
     }
     function pal() {
-      var d = document.documentElement.getAttribute('data-theme') === 'light' ? GR_LIGHT : GR_DARK;
-      return d.map(function (c, i) { var v = host.style.getPropertyValue('--sc' + i).trim(); return hex3(/^#[0-9a-f]{6}$/i.test(v) ? v : c); });
+      return GR_DARK.map(function (c, i) { var v = host.style.getPropertyValue('--sc' + i).trim(); return hex3(/^#[0-9a-f]{6}$/i.test(v) ? v : c); });
     }
     function colours() { var p = pal(); uC.forEach(function (u, i) { gl.uniform3fv(u, p[i]); }); }
     /* what the shader draws at (u, v), 0..1 from the top left, worked out here (no read of the GPU, no grain): the colour of the bars (tint below) */
@@ -205,7 +203,6 @@
     }
     window.addEventListener('pageswap', keep); window.addEventListener('pagehide', keep);
     new MutationObserver(still).observe(host, { attributes: true, attributeFilter: ['style', 'data-scene'] });
-    new MutationObserver(still).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     if (window.IntersectionObserver) new IntersectionObserver(function (e) { visible = e[0].isIntersecting; }).observe(host);
     var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(still, 200); });
     document.addEventListener('visibilitychange', function () { if (!document.hidden && visible) still(); });   /* see the liquid above */
@@ -292,7 +289,6 @@
     }
     function soon() { cancelAnimationFrame(qt); qt = requestAnimationFrame(run); }   /* after the scene has taken a change in */
     new MutationObserver(soon).observe(host, { attributes: true, attributeFilter: ['style', 'data-scene'] });
-    new MutationObserver(soon).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     window.addEventListener('resize', soon); document.addEventListener('visibilitychange', soon);
     setInterval(run, 1000);
     run();

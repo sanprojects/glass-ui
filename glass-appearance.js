@@ -1,7 +1,7 @@
 /*! Glass UI: Appearance panel (optional, separate from the kit).
- * Wires up the settings popover of the demo: theme, background (built-in scenes and your own images, remembered between visits),
+ * Wires up the settings popover of the demo: background (built-in scenes and your own images, remembered between visits),
  * accent colour, background colour (the liquid, or the gradient) and liquid speed, glass blur and opacity, Reset. Needs glass-ui.js (+ glass-ui-liquid.js for the liquid controls),
- * glass-appearance.css and the panel markup (#ctl with #themeTabs, #bgChips, #accentRow, #liquidRow, #speedTabs, #blurRange, #fillRange)
+ * glass-appearance.css and the panel markup (#ctl with #bgChips, #accentRow, #liquidRow, #speedTabs, #blurRange, #fillRange)
  * plus a fixed background element #scene. Nothing in the kit depends on it. */
 (function () {
   function init() {
@@ -49,30 +49,28 @@
       if (r>=-.001&&r<=1.001&&g>=-.001&&g<=1.001&&bl>=-.001&&bl<=1.001) return rgbToHex(gam(r),gam(g),gam(bl)); }
     return rgbToHex(gam(L),gam(L),gam(L)); }
   /* the blobs of a picked colour (the fifth is for the gradient): a dark (or pale) ground, the colour itself and its two analogous neighbours 28 degrees either side; the picked lightness sets how light the whole field is */
-  function liquidPalette(hex, light){ var o=hexToOk(hex), L=o[0], C=Math.min(o[1],.2), H=o[2], k=function(v,a,b){ return Math.max(a,Math.min(b,v)); };
-    return light ? [okToHex(k(.74+.2*L,.8,.95),C*.45,H), okToHex(k(.6+.25*L,.7,.9),C*.7,H), okToHex(k(.8+.15*L,.86,.96),C*.5,H+28), okToHex(k(.66+.22*L,.76,.92),C*.55,H-28), okToHex(k(.72+.2*L,.8,.94),C*.6,H+14)]
-                 : [okToHex(k(L*.38,.13,.3),C*.6,H), okToHex(k(L,.46,.74),C,H), okToHex(k(L+.1,.56,.86),C*.9,H+28), okToHex(k(L+.03,.5,.78),C*.85,H-28), okToHex(k(L+.07,.52,.82),C*.9,H+14)]; }
+  function liquidPalette(hex){ var o=hexToOk(hex), L=o[0], C=Math.min(o[1],.2), H=o[2], k=function(v,a,b){ return Math.max(a,Math.min(b,v)); };
+    return [okToHex(k(L*.38,.13,.3),C*.6,H), okToHex(k(L,.46,.74),C,H), okToHex(k(L+.1,.56,.86),C*.9,H+28), okToHex(k(L+.03,.5,.78),C*.85,H-28), okToHex(k(L+.07,.52,.82),C*.9,H+14)]; }
   /* accent */
   function setAccent(hex,keep){ if(!keep) store('g-accent',hex); var rgb=hexToRgb(hex), lift=rgb.map(function(v){ return v+(255-v)*0.2; });
     root.setProperty('--g-accent',hex); root.setProperty('--g-accent-hover',rgbToHex(lift[0],lift[1],lift[2])); }
   var accRow=$('accentRow');
   Array.prototype.forEach.call(accRow.querySelectorAll('button.sw-btn'), function(b){ b.addEventListener('click', function(){ pick(accRow,b); setAccent(b.getAttribute('data-accent')); }); });
   $('accentCustom').addEventListener('input', function(e){ pick(accRow, e.target.parentNode); setAccent(e.target.value); });
-  /* background colour: a palette per theme is worked out when a colour is picked and saved (g-palette), and the host page's first script puts it on the page,
-     so the very first frame already has it. [0] is the dark theme, [1] the light one. */
+  /* background colour: the palette is worked out when a colour is picked and saved (g-palette), and the host page's first script puts it on the page,
+     so the very first frame already has it. Its lists stay lists of one ([0]): a palette saved while the kit had a light theme ([1]) still reads */
   var DEFAULT='#33a7e1', liqHost=document.querySelector('.g-liquid[data-for="liquid"]'), liqApi=function(){ return Glass.liquid && Glass.liquid(liqHost); };
-  var STOCK=[['#1d2b52','#5ea0ff','#ff9ec2','#46d1c1','#a78bfa'],['#e8eefb','#9cc4ff','#ffc2d9','#9be8dc','#c9b8f7']], GOLD=[['#2a1a0d','#b7721e','#f2c66d','#7b3d1b'],['#f3d9a8','#e3b062','#fbeac0','#e9c08a']];
-  var isLight=function(){ return document.documentElement.getAttribute('data-theme')==='light'; }, GRAD=['--sc0','--sc1','--sc2','--sc3','--sc4'];
-  function paletteOf(hex){ var o=hexToOk(hex), grad=function(L){ var c=liquidPalette(hex,L); if (L) c[0]=okToHex(.965,Math.min(o[1],.2)*.2,o[2]); return c; };   /* gradient: five colours, liquid: four */
-    return { g:[grad(false),grad(true)], q:[liquidPalette(hex,false).slice(0,4),liquidPalette(hex,true).slice(0,4)], lt:['#fff8f2','#ffffff'] }; }
+  var STOCK=[['#1d2b52','#5ea0ff','#ff9ec2','#46d1c1','#a78bfa']], GOLD=[['#2a1a0d','#b7721e','#f2c66d','#7b3d1b']];
+  var GRAD=['--sc0','--sc1','--sc2','--sc3','--sc4'];
+  function paletteOf(hex){ var c=liquidPalette(hex); return { g:[c], q:[c.slice(0,4)], lt:['#fff8f2'] }; }   /* gradient: five colours, liquid: four */
   function presetPalette(v){ var P;
     if (v==='day'){ P=paletteOf(DEFAULT); P.g=STOCK; P.day=1; return P; }
-    if (v==='gold'){ P=paletteOf(hslToHex(38,75,55)); P.q=GOLD; P.lt=['#ffe3a3','#ffffff']; return P; }
+    if (v==='gold'){ P=paletteOf(hslToHex(38,75,55)); P.q=GOLD; P.lt=['#ffe3a3']; return P; }
     return paletteOf(/^#/.test(v)?v:hslToHex(+v,70,55)); }
   var curPal=paletteOf(DEFAULT);
-  function applyColours(){ var P=curPal, t=isLight()?1:0, api=liqApi();
-    P.g[t].forEach(function(c,i){ scene.style.setProperty(GRAD[i],c); });
-    if (api){ api.setLift(t?.55:0); if (P.day) api.setDay(true); else api.setColors(P.q[t],P.lt[t]); } }
+  function applyColours(){ var P=curPal, api=liqApi();
+    P.g[0].forEach(function(c,i){ scene.style.setProperty(GRAD[i],c); });
+    if (api){ if (P.day) api.setDay(true); else api.setColors(P.q[0],P.lt[0]); } }
   function setColour(P,id,keep){ curPal=P; applyColours();
     if (keep) return;   /* restoring the saved colour: neither saved again nor does it switch the background */
     store('g-palette',JSON.stringify(P)); store('g-colour',id);
@@ -80,18 +78,7 @@
   var liqRow=$('liquidRow'), presetOf=function(b){ return b.getAttribute('data-color')||b.getAttribute('data-hue'); };
   Array.prototype.forEach.call(liqRow.querySelectorAll('button.sw-btn'), function(b){ b.addEventListener('click', function(){ pick(liqRow,b); setColour(presetPalette(presetOf(b)),'b:'+presetOf(b)); }); });
   $('liquidCustom').addEventListener('input', function(e){ pick(liqRow, e.target.parentNode); setColour(paletteOf(e.target.value),'c:'+e.target.value); });
-  /* theme */
-  var THEMES=['dark','light','auto'];
-  $('themeTabs').addEventListener('g:tabchange', function(e){ Glass.setTheme(THEMES[e.detail.index]); try{ localStorage.setItem('g-theme', THEMES[e.detail.index]); }catch(_){} });
-  var savedTheme='dark'; try{ savedTheme=localStorage.getItem('g-theme')||'dark'; }catch(_){}
-  if (THEMES.indexOf(savedTheme)<0) savedTheme='dark';
-  Glass.setTheme(savedTheme); document.querySelectorAll('#themeTabs > *')[THEMES.indexOf(savedTheme)].click();
-  /* the page host may set data-theme itself (from the system theme): keep our own choice */
-  (function(){ var html=document.documentElement, mode=savedTheme, busy=false;
-    $('themeTabs').addEventListener('g:tabchange', function(e){ mode=THEMES[e.detail.index]; });
-    function want(){ return mode==='auto' ? (matchMedia('(prefers-color-scheme: light)').matches?'light':'dark') : mode; }
-    new MutationObserver(function(){ if(busy||html.getAttribute('data-theme')===want()) return; busy=true; Glass.setTheme(mode); busy=false; }).observe(html,{attributes:true,attributeFilter:['data-theme']}); })();
-  document.addEventListener('g:themechange', applyColours);
+  applyColours();   /* the default colour until a saved one is restored below (the theme switch used to apply it) */
   /* liquid speed */
   var SPEEDS=[0,1,2.5,5.8];   /* one speed for the liquid and the gradient: 1 = calm */
   $('speedTabs').addEventListener('g:tabchange', function(e){ Glass.scene.speed(SPEEDS[e.detail.index]); store('g-speed',e.detail.index); });
@@ -109,7 +96,7 @@
     ['--g-accent','--g-accent-hover','--g-accent-fg','--g-blur','--g-fill','--g-fill-strong','--g-fill-hover','--g-fill-selected'].forEach(function(p){ root.removeProperty(p); });
     br.value=30; fr.value=10; br.dispatchEvent(new Event('input')); fr.dispatchEvent(new Event('input')); root.removeProperty('--g-blur'); root.removeProperty('--g-fill');
     curPal=paletteOf(DEFAULT); applyColours(); try{ ['g-palette','g-colour','g-accent','g-blur','g-fill'].forEach(function(k){ localStorage.removeItem(k); }); }catch(_){}
-    var tabs=document.querySelectorAll('#speedTabs > *'); tabs[1].click(); document.querySelectorAll('#themeTabs > *')[0].click();
+    var tabs=document.querySelectorAll('#speedTabs > *'); tabs[1].click();
   });
   /* restore the saved background */
   customs.forEach(addBtn);
@@ -118,7 +105,7 @@
   /* restore the saved colours: the accent and the colour of the liquid and gradient backgrounds */
   (function(){ var a=load('g-accent'); if(/^#[0-9a-f]{6}$/i.test(a||'')){ setAccent(a,true); var b=accRow.querySelector('button[data-accent="'+a+'" i]'); if(b) pick(accRow,b); else { $('accentCustom').value=a; pick(accRow,$('accentCustom').parentNode); } }
     var P=null, id=load('g-colour'); try{ P=JSON.parse(load('g-palette')); }catch(_){}
-    if (!(P&&P.g&&P.g.length===2&&P.q&&P.q.length===2&&P.lt)) return;
+    if (!(P&&P.g&&P.g[0]&&P.q&&P.q[0]&&P.lt)) return;
     setColour(P,id,true); window.addEventListener('load', applyColours);   /* the liquid may mount after this script */
     var b=null; if (id&&id.indexOf('b:')===0) b=liqRow.querySelector('button[data-color="'+id.slice(2)+'"],button[data-hue="'+id.slice(2)+'"]');
     if (b) pick(liqRow,b); else if (id&&id.indexOf('c:')===0){ $('liquidCustom').value=id.slice(2); pick(liqRow,$('liquidCustom').parentNode); } })();

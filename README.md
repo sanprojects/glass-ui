@@ -11,7 +11,7 @@ No dependencies, no build step.
 
 </div>
 
-Translucent, blurred panels over a photo, gradient or colour field. Themed through CSS tokens: dark by default, light optional.
+Translucent, blurred panels over a photo, gradient or colour field. Themed through CSS tokens, dark.
 
 ## Quick start
 
@@ -21,7 +21,6 @@ npm i glass-ui-css
 
 ```html
 <link rel="stylesheet" href="glass-ui.min.css">
-<link rel="stylesheet" href="glass-ui-light.min.css"> <!-- optional light theme -->
 <link rel="stylesheet" href="glass-icons.min.css" media="print" onload="this.media='all'"><noscript><link rel="stylesheet" href="glass-icons.min.css"></noscript> <!-- not waited for: icons only -->
 <script src="glass-ui.min.js" defer></script>
 <link rel="stylesheet" href="glass-morph.min.css"> <!-- optional: Glass.morph, data-g-morph -->
@@ -111,7 +110,6 @@ Seven effects you add with a single class: appear, shimmer, ripple, pulse, highl
 
 An optional settings panel (`glass-appearance.css` / `.js`) that the demo uses to restyle the page live:
 
-- **Theme**: dark, light or auto
 - **Background**: a scene from the set, or your own image
 - **Accent colour** and **liquid colour**
 - **Liquid speed**: still, calm, mid, lively
@@ -136,7 +134,6 @@ Also in the demo, without screenshots here:
 | `glass-ui.css` / `.js` | the kit |
 | `glass-morph.css` / `.js` | Morph: `Glass.morph`, `Glass.watch`, `data-g-morph` (works on its own too; `node bench/vs-auto-animate.mjs` compares it with auto-animate) |
 | `glass-icons.css` | icon pack, used as `data-icon="name"` |
-| `glass-ui-light.css` | light theme: `Glass.setTheme('light' \| 'dark' \| 'auto')` |
 | `glass-ui-liquid.js` | optional animated background |
 | `glass-appearance.css` / `.js` | optional settings panel used by the demo |
 
