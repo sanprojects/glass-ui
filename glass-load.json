@@ -1,0 +1,14 @@
+{
+  "load": "How a page links the files of the kit, in this order (it is the cascade). block: a stylesheet the first paint waits for. late: a stylesheet that only paints boxes the blocking ones already laid out (it sets custom properties only, test/load.test.mjs), so the first paint does not wait for it and nothing moves when it comes: <link rel=\"stylesheet\" media=\"print\" onload=\"this.media='all'\"> and the plain link in <noscript>. defer: <script defer>. A file with a part is linked only when the page asks for that part. Each file also ships as .min.",
+  "files": [
+    { "file": "glass-ui.css", "load": "block" },
+    { "file": "glass-ui-light.css", "load": "block" },
+    { "file": "glass-icons.css", "load": "late" },
+    { "file": "glass-ui.js", "load": "defer" },
+    { "file": "glass-morph.css", "load": "block", "part": "morph" },
+    { "file": "glass-morph.js", "load": "defer", "part": "morph" },
+    { "file": "glass-appearance.css", "load": "block", "part": "appearance" },
+    { "file": "glass-ui-liquid.js", "load": "defer", "part": "appearance" },
+    { "file": "glass-appearance.js", "load": "defer", "part": "appearance" }
+  ]
+}

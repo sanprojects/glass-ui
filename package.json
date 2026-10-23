@@ -41,10 +41,11 @@
     "glass-appearance.css",
     "glass-appearance.min.css",
     "glass-appearance.js",
-    "glass-appearance.min.js"
+    "glass-appearance.min.js",
+    "glass-load.json"
   ],
   "scripts": {
-    "test": "node --test test/min.test.mjs test/smoke.test.mjs test/spacing.test.mjs test/address.test.mjs test/page.test.mjs test/hash.test.mjs test/frame.test.mjs test/overflow.test.mjs"
+    "test": "node --test test/min.test.mjs test/smoke.test.mjs test/spacing.test.mjs test/address.test.mjs test/page.test.mjs test/hash.test.mjs test/frame.test.mjs test/overflow.test.mjs test/has.test.mjs test/load.test.mjs"
   },
   "devDependencies": {
     "@formkit/auto-animate": "0.8.2",

@@ -1420,7 +1420,8 @@
   function busyStart(el) {
     if (WAITS.has(el)) return;
     WAITS.forEach((w, b) => { if (!b.isConnected) busyEnd(b); });   /* a box that left the page waiting (its content replaced with it) waits no more */
-    const now = performance.now(), r = el.getBoundingClientRect();
+    /* read while the style is clean (just laid out): after the attribute below the read would compute it again at once */
+    const now = performance.now(), r = el.getBoundingClientRect(), delay = msVar(el, '--g-busy-box-delay', 300);
     ended = ended.filter(e => now - e.at < e.fade);
     /* the same wait going on in the same place: a box that waits, or did a moment ago, where this one is (a box around it, in it, the old content it replaces) */
     let prev = null;
@@ -1435,12 +1436,12 @@
       prev.bar = null;
       return busyShow(el, w, from);
     }
-    const left = w.t0 + msVar(el, '--g-busy-box-delay', 300) - now;
+    const left = w.t0 + delay - now;
     if (left <= 0) busyShow(el, w); else w.timer = setTimeout(() => busyShow(el, w), left);
   }
   function busyShow(el, w, from) {
     w.timer = 0;
-    const empty = !el.children.length && !el.textContent.trim();
+    const empty = !el.children.length && !el.textContent.trim(), run = msVar(el, '--g-busy-run', 1600);   /* read before the attributes below change the style */
     el.removeAttribute('data-g-busy-out');
     el.setAttribute('data-g-busy', empty ? 'empty' : '');
     let bar = el.querySelector(':scope > .g-busy-bar');
@@ -1449,7 +1450,7 @@
       bar = document.createElement('i'); bar.className = 'g-busy-bar'; bar.setAttribute('aria-hidden', 'true');
       bar.setAttribute('data-g-part', '');   /* a morph into the box leaves it to fade out */
       /* every line keeps one beat (a running time of the page): one that takes over from another goes on from where that one was */
-      bar.style.setProperty('--g-busy-at', -(performance.now() % msVar(el, '--g-busy-run', 1600)) + 'ms');
+      bar.style.setProperty('--g-busy-at', -(performance.now() % run) + 'ms');
       if (from != null) bar.style.opacity = from;   /* instead of fading in from nothing (@starting-style) */
       el.prepend(bar);
       if (from != null) { getComputedStyle(bar).opacity; bar.style.opacity = ''; }

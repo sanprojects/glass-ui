@@ -88,7 +88,7 @@
   --g-progress-h: 8px; /* progress bars and file upload bars */
   --g-pad: 24px;     /* inner padding of containers: popover, card, table cell */
 
-  --g-font: var(--ui-font, 'Manrope', system-ui, sans-serif); /* load Manrope (400-700) or your own font; without it the system font is used */
+  --g-font: var(--ui-font, -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial, sans-serif); /* the platform's own UI font (SF Pro, Segoe UI, Roboto): nothing to download, so text paints at once. Set --ui-font for a web font */
   /* Optional: a separate face for h1[data-size="lg"] and h1, e.g. --g-font-display: 'Unbounded', sans-serif; */
   --g-ease: cubic-bezier(.3,.7,.25,1);
   --g-ease-spring: linear(0, 0.132, 0.41, 0.698, 0.923, 1.061, 1.12, 1.122, 1.094, 1.057, 1.023, 1.0, 0.988, 0.984, 0.986, 0.99, 0.995, 0.999, 1.001, 1.002, 1.002, 1.002, 1.001, 1.0, 1); /* soft spring with a slight overshoot; pair with --g-dur-spring */
@@ -360,32 +360,32 @@
 :where(:is(.g-root,[role="listbox"]) :is(.g-field, label:has(> input:is([type="checkbox"], [type="radio"])))) { grid-column: auto; }
 :where(:is(.g-root,[role="listbox"]) [data-grid]:has(> :is(.g-field, label))) { --g-grid-min: 200px; align-items: start; align-content: start; }
 /* A fold whose body is fields: the body (::details-content) is the grid, the summary stays above it. The body's own padding-top is the gap under the summary (the children carry none). */
-:is(.g-root,[role="listbox"]) details:has(> .g-field)::details-content { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--g-grid-min, 200px)), 1fr)); align-items: start; gap: var(--g-gap); padding-top: var(--g-gap-inner); }
-:is(.g-root,[role="listbox"]) details:has(> .g-field) > :not(summary) { padding: 0; }
-:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > .g-field { grid-row: span 3; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: subgrid; row-gap: var(--g-gap-inner); min-width: 0; }
-:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > .g-field > label { grid-row: 1; }
-:where(:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > .g-field[data-wide]) { grid-column: 1 / -1; }   /* opt-in: this field takes the whole row of the grid, the next ones start a new row */
-:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > .g-field > :not(label, small) { grid-row: 2 / 4; align-self: start; }
-:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > .g-field:is(:has(> small:not([role="alert"])), :has([aria-invalid="true"])) > :not(label, small) { grid-row: 2; }
-:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > .g-field > small { grid-row: 3; }
+:is(.g-root,[role="listbox"]) details:has(> .g-field) { --g-fold-display: grid; --g-fold-pad: var(--g-gap-inner); --g-fold-after: 0; }   /* read by the body (the fold rules below): a :has() left of ::details-content would restyle the whole page on every change (test/has.test.mjs) */
+:is(.g-root,[role="listbox"]) details > :is(.g-field, .g-field ~ *, :has(~ .g-field)):not(summary) { padding: 0; }   /* every child of a fold with fields, told by its siblings */
+/* The container of a field is any parent (:is(form, fieldset, [data-grid], *) - "*" in the place of a :has(> .g-field) that is always true there and made every change of the page restyle it).
+   The control takes the rows 2-3, or row 2 when the field has a hint or an error (--g-field-row, set on the field: a :has() left of "the control" would restyle the page). */
+:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], *) > .g-field { --g-field-row: 2 / 4; --g-field-align: start; grid-row: span 3; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: subgrid; row-gap: var(--g-gap-inner); min-width: 0; }
+:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], *) > .g-field > label { grid-row: 1; }
+:where(:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], *) > .g-field[data-wide]) { grid-column: 1 / -1; }   /* opt-in: this field takes the whole row of the grid, the next ones start a new row */
+:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], *) > .g-field > :not(label, small) { grid-row: var(--g-field-row); align-self: var(--g-field-align); }
+:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], *) > .g-field:is(:has(> small:not([role="alert"])), :has([aria-invalid="true"])) { --g-field-row: 2; }
+:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], *) > .g-field > small { grid-row: 3; }
 /* a lone field is the whole row: one text area or one search box is not left in a third of the width */
-:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > .g-field:not(:has(~ .g-field), .g-field ~ .g-field) { grid-column: 1 / -1; }
+:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], *) > .g-field:not(:has(~ .g-field), .g-field ~ .g-field) { grid-column: 1 / -1; }
 /* A field without a <label> (a button, a link-button, any control that needs no caption) is aligned with the controls beside it: like every field its control stands in the rows 2-3
    of the line, and the empty first row is the one the captions of its neighbours fill. <div class="g-field"><button>Go</button></div>
    Where nothing stands beside it (a grid narrower than a few columns) that empty row would be a gap for nothing, so there it is a row of its own, as wide as the form. */
-:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > .g-field:not(:has(> label)) > :is(button, [role="button"], input:is([type="submit"], [type="button"])) { box-sizing: border-box; width: 100%; height: var(--g-h-md); justify-content: center; overflow: hidden; white-space: nowrap; }
-:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > .g-field:not(:has(> label)) > :is(button, [role="button"], a[data-icon]):empty[data-icon] { width: var(--g-h-md); justify-self: start; }   /* an icon-only button in a field without a caption is the round button of the row, not a bar across the cell */
+:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], *) > .g-field:not(:has(> label)) > :is(button, [role="button"], input:is([type="submit"], [type="button"])) { box-sizing: border-box; width: 100%; height: var(--g-h-md); justify-content: center; overflow: hidden; white-space: nowrap; }
+:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], *) > .g-field:not(:has(> label)) > :is(button, [role="button"], a[data-icon]):empty[data-icon] { width: var(--g-h-md); justify-self: start; }   /* an icon-only button in a field without a caption is the round button of the row, not a bar across the cell */
 /* A container where no field has a caption has no caption row to share: its fields are plain cells (nothing empty above the controls) */
-:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)):not(:has(> .g-field > label)) > .g-field { grid-row: auto; display: flex; flex-direction: column; }
-:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)):not(:has(> .g-field > label)) > .g-field > * { align-self: stretch; }
-@container (max-width: 40rem) { :is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > .g-field:not(:has(> label)) { grid-column: 1 / -1; grid-row: auto; display: flex; flex-direction: column; } }
+:is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], *):not(:has(> .g-field > label)) > .g-field { grid-row: auto; display: flex; flex-direction: column; --g-field-align: stretch; }
+@container (max-width: 40rem) { :is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], *) > .g-field:not(:has(> label)) { grid-column: 1 / -1; grid-row: auto; display: flex; flex-direction: column; } }
 /* A checkbox or radio next to fields is one of the line: its three rows are the fields' rows and the box sits at the controls' height, not at the labels' */
-:is(.g-root,[role="listbox"]) :has(> .g-field) > label:has(> input:is([type="checkbox"], [type="radio"])) { grid-row: span 3; display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: subgrid; gap: var(--g-gap-inner); align-items: center; align-content: start; }
-:is(.g-root,[role="listbox"]) :has(> .g-field) > label:has(> input:is([type="checkbox"], [type="radio"])) > * { grid-row: 2 / 4; }
+:is(.g-root,[role="listbox"]) :has(> .g-field) > label:has(> input:is([type="checkbox"], [type="radio"])) { --g-check-row: 2 / 4; grid-row: span 3; display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: subgrid; gap: var(--g-gap-inner); align-items: center; align-content: start; }
+:where(:is(.g-root,[role="listbox"]) label > *) { grid-row: var(--g-check-row, auto); }   /* the box and its text: the rows the label says (a :has() left of "every child" would restyle the page) */
 :is(.g-root,[role="listbox"]) :has(> .g-field) > label:has(> input:is([type="checkbox"], [type="radio"])) > input { translate: none; }   /* centred by the grid: the optical shift of a lone box is not needed */
 /* A row of fields without captions (a search field, a round button, a switch): the checkbox or switch stands in the row of the controls, the first one, not under them */
-:is(.g-root,[role="listbox"]) :has(> .g-field):not(:has(> .g-field > label)) > label:has(> input:is([type="checkbox"], [type="radio"])) { grid-row: auto; grid-template-rows: none; align-content: center; min-height: var(--g-h-md); }
-:is(.g-root,[role="listbox"]) :has(> .g-field):not(:has(> .g-field > label)) > label:has(> input:is([type="checkbox"], [type="radio"])) > * { grid-row: auto; }
+:is(.g-root,[role="listbox"]) :has(> .g-field):not(:has(> .g-field > label)) > label:has(> input:is([type="checkbox"], [type="radio"])) { --g-check-row: auto; grid-row: auto; grid-template-rows: none; align-content: center; min-height: var(--g-h-md); }
 /* A checkbox or radio in a form grid keeps its text on one line: too long, it ends with an ellipsis (the full text is the label's title), never wraps under the box */
 :is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > label:has(> input:is([type="checkbox"], [type="radio"])) { min-width: 0; max-width: 100%; }
 :is(.g-root,[role="listbox"]) :is(form, fieldset, [data-grid], :has(> .g-field)) > label:has(> input:is([type="checkbox"], [type="radio"])) > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -553,7 +553,9 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
  * <button data-g-menu="#m">Actions</button>
  * <div role="menu" id="m"><button>Edit <kbd>F2</kbd></button> <a href="#">Share</a> <hr> <button data-variant="danger">Delete</button></div>
  * A native popover (top layer, so its blur sees the real page behind it) placed under the trigger with CSS anchor positioning; glass-ui.js sets the anchor.
- * A select list is the same panel: role="listbox" with role="option" items. */
+ * A select list is the same panel: role="listbox" with role="option" items.
+ * Give the panel its role="menu" in the markup: until glass-ui.js makes it a popover (after the first paint) it is not shown - no flash of its items, no shift of the page. */
+[role="menu"]:not([popover]) { display: none; }
 [role="menu"], [role="listbox"] {
   position: fixed; inset: auto; margin: var(--g-gap-inner) 0; box-sizing: border-box; overflow: auto; padding: var(--g-gap-inner); border: 0; border-radius: var(--g-radius-field);
   background: linear-gradient(var(--g-fill-strong), var(--g-fill-strong)), rgba(0,0,0,.2);
@@ -648,7 +650,8 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 [aria-expanded="true"][data-icon="chevron-down"]::before, [aria-expanded="true"][data-icon-end="chevron-down"]::after { transform: rotate(180deg); }
 [data-g-password][aria-pressed="true"] { --g-is: var(--g-i-eye-off); }
 .g-input-end[hidden] { display: none; }
-.g-input-wrap:has([data-g-clear-input]) > input::-webkit-search-cancel-button { display: none; }
+.g-input-wrap:has([data-g-clear-input]) { --g-native-clear: none; }   /* the kit's cross replaces the browser's (a :has() left of the cross would restyle the page) */
+.g-input-wrap > input::-webkit-search-cancel-button { display: var(--g-native-clear, block); }
 /* a field that cannot be edited (readonly, disabled) has no clear cross: it fades out after --g-ro-delay and comes back when the field becomes writable */
 .g-input-wrap > input:read-only ~ [data-g-clear-input] { opacity: 0; pointer-events: none; transition: opacity var(--g-dur) var(--g-ro-delay); }
 /* Busy field: <input aria-busy="true"> (with readonly while the request runs; both are removed when it ends). After --g-busy-delay the field looks
@@ -674,7 +677,7 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 :where(:is(.g-root,[role="listbox"]) [role="tablist"][data-block] > :is(button, [role="tab"])) { flex: 1 1 0; }
 :where(:is(.g-root,[role="listbox"]) [role="tablist"][data-variant="underline"]) { display: flex; width: 100%; background: none; box-shadow: none; padding: 0; gap: var(--g-gap); border-radius: 0; border-bottom: 1px solid var(--g-line); }
 :where(:is(.g-root,[role="listbox"]) [role="tablist"][data-variant="underline"] > *) { height: var(--g-h-md); padding: 0 2px; border-radius: 0; box-shadow: none; background: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
-:where(:is(.g-root,[role="listbox"]) [role="tablist"][data-variant="underline"] > [aria-selected="true"], :is(.g-root,[role="listbox"]) [role="tablist"][data-variant="underline"]:not(:has([aria-selected="true"])) > :first-child) { background: none; color: var(--g-text); border-bottom-color: var(--g-ink); box-shadow: none; }
+:where(:is(.g-root,[role="listbox"]) [role="tablist"][data-variant="underline"] > [aria-selected="true"], :is(.g-root,[role="listbox"]) [role="tablist"][data-variant="underline"]:not(:has([aria-selected="true"])) > :is(button, [role="tab"]):first-child) { background: none; color: var(--g-text); border-bottom-color: var(--g-ink); box-shadow: none; }
 :where(:is(.g-root,[role="listbox"]) [role="tabpanel"]) { padding-top: var(--g-gap); font-size: var(--g-fs-subhead); line-height: 1.33; color: var(--g-text-2); }
 [role="tabpanel"][hidden], [role="tablist"]:not([data-g-ready]) ~ [role="tabpanel"]:not([role="tablist"] + *) { display: none; }
 /* a panel rises in when its tab is chosen: @starting-style (the one that is hidden again leaves at once, so the layout never holds two) */
@@ -691,11 +694,12 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 :where(.g-page, body.g-root > :is(nav:not([data-position="fixed"]), main, footer)) { width: 100%; max-width: calc(var(--g-page-w) + var(--g-page-extra, 0px)); box-sizing: border-box; margin-inline: auto; }
 /* The frame of a themed page (body.g-root): the body is a column at least one screen tall, the footer sits at its bottom and the main takes the room between.
    A page whose workspace is a fixed shell (.g-shell--tools, .g-shell[data-fixed]) is exactly one screen tall: the shell scrolls inside itself, the bars stay where they are.
+   A server that renders the page knows it is one: <body data-g-fixed> makes the frame right from the first paint, before the shell's markup has streamed in (no shift when it does).
    Zero specificity: a page can change any of it. */
 :where(body.g-root) { margin: 0; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; gap: var(--g-gap); padding: var(--g-gap); }   /* dvh: the footer of a short page sits above Safari's toolbar, not under it */
 :where(.g-root) main { flex: 1; display: flex; flex-direction: column; }   /* the spacing between its blocks is the page's (a gap here stops the morph from gliding what is below a change: test/page.test.mjs) */
-:where(body.g-root):has(.g-shell--tools, .g-shell[data-fixed]) { height: 100dvh; min-height: 0; overflow: hidden; }
-:where(body.g-root):has(.g-shell--tools, .g-shell[data-fixed]) > main { min-height: 0; }
+:where(body.g-root):is([data-g-fixed], :has(.g-shell--tools, .g-shell[data-fixed])) { height: 100dvh; min-height: 0; overflow: hidden; }
+:where(body.g-root):is([data-g-fixed], :has(.g-shell--tools, .g-shell[data-fixed])) > main { min-height: 0; }
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > a) { display: flex; align-items: center; gap: var(--g-gap-inner); flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; font-weight: 700; font-size: var(--g-fs-body); letter-spacing: -.01em; color: var(--g-text); text-decoration: none; margin-right: auto; }   /* on the narrowest bars the name is clipped before anything overlaps */
 /* Logo dot for the brand link: <nav><a href="/"><span class="g-brand-dot"></span>Name</a>…</nav> */
 .g-brand-dot { width: 22px; height: 22px; border-radius: 50%; background: conic-gradient(from 200deg, #fff, var(--g-accent), #9be7ff, #fff); box-shadow: inset 0 0 0 1px rgba(255,255,255,.5); }
@@ -769,7 +773,7 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 /* A grid with round icon buttons in it is a toolbar: the buttons keep their own size (a column of the grid is a share of the width, 1/12 at least and 200px in a grid of fields, which is right for a field and wrong for a 40px button),
    the other cells share what is left, at 200px at least, and wrap when they do not fit. Checkboxes keep their own width as well. A grid of fields (.g-field) stays a grid. */
 :is(.g-root,[role="listbox"]) [data-grid]:has(> :is(button, a[role="button"])[data-icon]:empty):not(:has(> .g-field)) { display: flex; flex-wrap: wrap; align-items: center; }
-:is(.g-root,[role="listbox"]) [data-grid]:has(> :is(button, a[role="button"])[data-icon]:empty):not(:has(> .g-field)) > * { flex: 1 1 var(--g-grid-min, 200px); min-width: 0; }
+:is(.g-root,[role="listbox"]) [data-grid] > :is(:is(button, a[role="button"])[data-icon]:empty, :is(button, a[role="button"])[data-icon]:empty ~ *, :has(~ :is(button, a[role="button"])[data-icon]:empty)):not(.g-field, .g-field ~ *, :has(~ .g-field)) { flex: 1 1 var(--g-grid-min, 200px); min-width: 0; }   /* every cell of such a grid, told by its siblings (a :has() on the grid left of "every cell" would restyle the page) */
 :is(.g-root,[role="listbox"]) [data-grid]:has(> :is(button, a[role="button"])[data-icon]:empty):not(:has(> .g-field)) > :is(:is(button, a[role="button"])[data-icon]:empty, label:has(> input:is([type="checkbox"], [type="radio"]))) { flex: none; }
 
 :where([data-grid] > [data-span="full"]) { grid-column: 1 / -1; }
@@ -1015,7 +1019,7 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
    A disclosure row: the title, an optional short value (<small>) on the right, and a chevron that turns down when open. The whole row is the target and lights
    up on hover (the plate reaches into the container padding, so give the container at least --g-inset). Rows that follow each other share their dividers.
    Native element: keyboard, name="x", no script. */
-:where(:is(.g-root,[role="listbox"]) details) { margin: 0; padding: 0; border: 0; border-top: 1px solid var(--g-line); }
+:where(:is(.g-root,[role="listbox"]) details) { margin: 0; padding: 0; border: 0; border-top: 1px solid var(--g-line); --g-fold-display: block; --g-fold-pad: 0; --g-fold-after: 0; }
 :where(:is(.g-root,[role="listbox"]) details > summary) { position: relative; isolation: isolate; display: flex; align-items: center; justify-content: space-between; gap: var(--g-gap-inner); min-height: var(--g-h-lg); padding: 0; border-radius: var(--g-radius-field); list-style: none; cursor: pointer;
   font-size: var(--g-fs-subhead); font-weight: 500; color: var(--g-text); -webkit-user-select: none; user-select: none; }   /* no box of its own: the title lines up with the labels and fields around it */
 :where(:is(.g-root,[role="listbox"]) details > summary)::-webkit-details-marker { display: none; }
@@ -1030,9 +1034,13 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 /* opening and closing slide the content: ::details-content + interpolate-size (without them the content just appears) */
 :root { interpolate-size: allow-keywords; }
 :where(:is(.g-root,[role="listbox"]) details)::details-content { block-size: 0; overflow: clip; contain: layout paint; transition: block-size var(--g-dur-md) var(--g-ease), content-visibility var(--g-dur-md) allow-discrete; }
+/* What a fold says of its body comes in custom properties of the <details> (a :has() left of ::details-content or of its children restyles the whole page, test/has.test.mjs):
+   --g-fold-display and --g-fold-pad (a grid of fields), --g-fold-after (the space before the next fold). The body passes the last one to the children as --g-fold-child-after,
+   so a fold inside a fold, which sets its own, still gets its parent's. */
+:where(:is(.g-root,[role="listbox"]) details)::details-content { display: var(--g-fold-display); padding-top: var(--g-fold-pad); grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--g-grid-min, 200px)), 1fr)); align-items: start; gap: var(--g-gap); --g-fold-child-after: var(--g-fold-after); }
 :where(:is(.g-root,[role="listbox"]) details[open])::details-content { block-size: auto; }
-:where(:is(.g-root,[role="listbox"]) details > :not(summary)) { padding: var(--g-gap-inner) 0 0; font-size: inherit; line-height: inherit; color: inherit; }
-:where(:is(.g-root,[role="listbox"]) details[open]:has(+ details) > :not(summary)) { padding-bottom: var(--g-gap); }   /* only before the next fold; the container pads the last one itself (a trailing <script>, <style> or any other sibling must not add space) */
+:where(:is(.g-root,[role="listbox"]) details > :not(summary)) { padding: var(--g-gap-inner) 0 var(--g-fold-child-after, 0); font-size: inherit; line-height: inherit; color: inherit; }
+:where(:is(.g-root,[role="listbox"]) details[open]:has(+ details)) { --g-fold-after: var(--g-gap); }   /* only before the next fold; the container pads the last one itself (a trailing <script>, <style> or any other sibling must not add space) */
 :where(:is(.g-root,[role="listbox"]) details:last-of-type:not([open]) > summary) { margin-bottom: calc((var(--g-h-lg) - 1lh) / -2); }   /* the last closed fold: the row is taller than its text; the empty half is taken back so the gap under the text equals the container padding */
 /* <details data-g-narrow>: a fold on narrow screens only (up to 900px). Without "open" it starts closed there, no script, so a reload never shows it open for a moment;
    on wider screens the summary is hidden and the content is always shown. */
@@ -1053,14 +1061,14 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 @media (hover: hover) { .g-pager__btn:hover { background: var(--g-fill-strong); color: var(--g-text); } }
 .g-pager__btn[data-g-hover] { background: var(--g-fill-strong); color: var(--g-text); }
 /* Selected state of tab, chip and page button: one white pill */
-[role="tablist"] > [aria-selected="true"]:not([data-variant="underline"] > *), [role="tablist"]:not([data-variant="underline"], :has([aria-selected="true"])) > :first-child, .g-pager__btn[aria-current="page"] { background: rgba(255,255,255,.92); color: var(--g-text-inverse); box-shadow: 0 1px 3px rgba(0,0,0,.14); }
+[role="tablist"] > [aria-selected="true"]:not([data-variant="underline"] > *), [role="tablist"]:not([data-variant="underline"], :has([aria-selected="true"])) > :where(button, [role="tab"]):first-child, .g-pager__btn[aria-current="page"] { background: rgba(255,255,255,.92); color: var(--g-text-inverse); box-shadow: 0 1px 3px rgba(0,0,0,.14); }
 /* Tab indicator: ONE pill (or underline) slides from the old tab to the new one. The chosen tab is its anchor (--g-dur-md). Without anchor positioning the chosen tab keeps its own fill. */
 @supports (anchor-name: --g-tab) {
   [role="tablist"] { position: relative; isolation: isolate; anchor-scope: --g-tab; }
-  [role="tablist"] > [aria-selected="true"]:not([data-variant="underline"] > *), [role="tablist"]:not([data-variant="underline"], :has([aria-selected="true"])) > :first-child { background: none; box-shadow: none; }
+  [role="tablist"] > [aria-selected="true"]:not([data-variant="underline"] > *), [role="tablist"]:not([data-variant="underline"], :has([aria-selected="true"])) > :where(button, [role="tab"]):first-child { background: none; box-shadow: none; }
   [role="tablist"][data-variant="underline"] > * { border-bottom-color: transparent !important; }
   [role="tablist"] > * { transition: color var(--g-dur-md) var(--g-ease); }   /* the letters change colour in step with the sliding pill */
-  [role="tablist"] > [aria-selected="true"], [role="tablist"]:not(:has([aria-selected="true"])) > :first-child { anchor-name: --g-tab; }
+  [role="tablist"] > [aria-selected="true"], [role="tablist"]:not(:has([aria-selected="true"])) > :where(button, [role="tab"]):first-child { anchor-name: --g-tab; }
   [role="tablist"]::after { content: ""; position: absolute; z-index: -1; pointer-events: none; position-anchor: --g-tab; left: anchor(left); right: anchor(right); top: anchor(top); bottom: anchor(bottom);
     border-radius: var(--g-radius-pill); background: rgba(255,255,255,.92); box-shadow: 0 1px 3px rgba(0,0,0,.14); transition: left var(--g-dur-md) var(--g-ease), right var(--g-dur-md) var(--g-ease); }
   [role="tablist"][data-variant="underline"]::after { top: calc(anchor(bottom) - 2px); bottom: auto; height: 2px; border-radius: 0; background: var(--g-ink); box-shadow: none; }
@@ -1149,6 +1157,17 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 /* data-g-lazy: a long part of a page (a group of a thousand rows) that the browser lays out and paints only when it is near the viewport; until then it
    stands at --g-lazy-h, once drawn at its real height. Keep in mind it keeps its CSS counters to itself (a numbering through several of them: counter-set on its first row) */
 [data-g-lazy] { content-visibility: auto; contain-intrinsic-block-size: auto var(--g-lazy-h, 500px); }
+/* A lazy list that tells its count of rows (<ol class="g-list" data-g-lazy style="--g-items: 120">) stands at its real height until drawn, so nothing below it
+   moves when it is: the rows over the columns that fit in its box, as the list lays them out (--g-col-min wide, --g-gap between, --g-cap at most), --g-list-row-h each.
+   The box is measured as a container: the parent of the list gets container-type: inline-size (keep its width set by its own parent, not by its content).
+   tan(atan2(a, b)) is a / b of two lengths as a number. A browser without these functions keeps the 500px */
+@supports (width: calc(round(down, tan(atan2(1cqi, 1px)), 1) * 1px)) {
+  :where(:has(> .g-list[data-g-lazy])) { container-type: inline-size; }
+  .g-list[data-g-lazy] {
+    --g-lazy-cols: clamp(1, round(down, tan(atan2(100cqi + var(--g-gap), var(--g-col-min) + var(--g-gap))) + .001, 1), var(--g-cap, 99));
+    --g-lazy-h: calc(round(up, var(--g-items) / var(--g-lazy-cols), 1) * var(--g-list-row-h));
+  }
+}
 
 /* ---------- Busy box: Glass.busy(box, true | false | promise) ----------
  * While new content is on the way: after --g-busy-box-delay a thin line fades in and runs along the top edge of the box (the content stays as it is), and

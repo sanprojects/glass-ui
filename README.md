@@ -21,8 +21,8 @@ npm i glass-ui-css
 
 ```html
 <link rel="stylesheet" href="glass-ui.min.css">
-<link rel="stylesheet" href="glass-icons.min.css">
 <link rel="stylesheet" href="glass-ui-light.min.css"> <!-- optional light theme -->
+<link rel="stylesheet" href="glass-icons.min.css" media="print" onload="this.media='all'"><noscript><link rel="stylesheet" href="glass-icons.min.css"></noscript> <!-- not waited for: icons only -->
 <script src="glass-ui.min.js" defer></script>
 <link rel="stylesheet" href="glass-morph.min.css"> <!-- optional: Glass.morph, data-g-morph -->
 <script src="glass-morph.min.js" defer></script>
@@ -70,7 +70,9 @@ Cards (static and fully clickable), badges, progress bars, ring and spinner, a s
 
 ### [Overlays](https://sanprojects.github.io/glass-ui/#overlays)
 
-A dialog on the native `<dialog>` element (focus trap, Esc to close), tooltips, menus and toasts triggered from JavaScript.
+A dialog on the native `<dialog>` element (focus trap, Esc to close), tooltips, menus and toasts triggered from JavaScript. A menu panel (`<div role="menu" id="m">` for `data-g-menu="#m"` or `data-g-overflow="#m"`) carries its `role="menu"` in the markup: the kit's CSS keeps it hidden until the script makes it a popover, so the first paint has no flash of its items and no layout shift.
+
+A long part of a page marked `data-g-lazy` is laid out and painted only when it is near the viewport (until then it stands at `--g-lazy-h`, 500px by default). A lazy `.g-list` that tells its count of rows, `<ol class="g-list" data-g-lazy style="--g-items: 120">`, stands at its real height: the kit counts the columns that fit in its box, so nothing below it moves when it is drawn. Its parent becomes a size container for that (`container-type: inline-size`): keep the parent's width set by its own parent, not by its content.
 
 <img src="docs/overlays.webp" alt="Dialog over blurred page" width="100%">
 
@@ -140,11 +142,13 @@ Also in the demo, without screenshots here:
 
 Each file also ships as `.min.css` / `.min.js`.
 
+**`glass-load.json`** lists the files in the order a page links them (the cascade) and how: `block` (the first paint waits for it), `late` (icons: custom properties only, so the first paint does not wait for it and nothing moves when it comes; linked as above) and `defer` (scripts). A page that generates its `<head>` reads it instead of listing the files by hand; `test/load.test.mjs` keeps it complete and keeps a late file paint-only.
+
 ## Good to know
 
 - **Spacing** is one rhythm owned by the parent (`gap`), children carry no outer margin: `--g-gap` (16px) between neighbours, `--g-gap-inner` (8px) inside one component, `--g-inset` (16px) a control's side padding, `--g-pad` (24px) container padding. A bare `div` / `section` / `aside` that holds a kit block (alert, list, table, card, form...) becomes a stack by itself: one column, `--g-gap` between its children (zero specificity, so a container with a layout of its own is never spaced twice). Documented exceptions: optical alignment of icons, the card media bleed, menu separators and `.g-prose`. `test/spacing.test.mjs` measures the gaps in the demo and fails on off-rhythm values.
 - **Type scale** is seven steps: `--g-fs-caption` 12, `-footnote` 13, `-subhead` 15 (controls), `-body` 17 (running text), `-title3` 20, `-title1` 28, `-title-lg` 34. Use the tokens, not px values; sizes in `em` (inline code, math) stay relative to their text.
-- **Fonts** are not shipped. The kit uses `Manrope` if you load it, otherwise the system font. Set `--g-font` to use your own.
+- **Fonts** are not shipped. The kit uses the platform's UI font (SF Pro on Apple, Segoe UI on Windows, Roboto on Android): no download, no render-blocking font CSS. Set `--ui-font` (or `--g-font`) to use your own.
 - **Icons** are a subset of [Lucide](https://lucide.dev) (ISC licence, © Lucide Contributors), generated into `glass-icons.css`. Add your own as described in that file.
 - **Browsers:** current evergreen browsers.
 
