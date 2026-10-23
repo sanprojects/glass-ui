@@ -172,11 +172,13 @@
 :where(:is(.g-root,[role="listbox"]) :is(em, i)) { font-style: italic; }
 /* no browser link colour in the kit (blue, lilac in the dark, purple when visited): a link not styled below reads in the colour of its text */
 :where(.g-root a) { color: inherit; }
-:where(:is(.g-root,[role="listbox"]) :is(p, small, blockquote, dd, td, label, li:not(nav li, .g-list > li)) a:not([role], [class^="g-"], [class*=" g-"])) { color: var(--g-text); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: rgba(var(--g-ov),.5); transition: text-decoration-color var(--g-dur); }
+:where(:is(.g-root,[role="listbox"]) :is(p, small, blockquote, dd, td, label, li:not(nav li, .g-list > li)) a:not([role], [class^="g-"], [class*=" g-"])) { color: var(--g-text); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: rgba(var(--g-ov),.4); transition: text-decoration-color var(--g-dur); }
+/* a link in a cell is the first thing every row repeats: a column of bright underlines is a fence, so its line is a faint hint that the name is a link and lights up on hover */
+:where(:is(.g-root,[role="listbox"]) td a:not([role], [class^="g-"], [class*=" g-"])) { text-decoration-color: rgba(var(--g-ov),.2); }
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) :is(p, small, blockquote, dd, td, label, li:not(nav li, .g-list > li)) a:not([role], [class^="g-"], [class*=" g-"]):hover) { text-decoration-color: currentColor; } }
 :where(:is(.g-root,[role="listbox"]) :is(p, small, blockquote, dd, td, label, li:not(nav li, .g-list > li)) a:not([role], [class^="g-"], [class*=" g-"])[data-g-hover]) { text-decoration-color: currentColor; }
 /* A plain link straight inside an article (a card with a link line) reads like the links in its prose, never the browser's blue/purple */
-:where(:is(.g-root,[role="listbox"]) article > a:not([role], [class^="g-"], [class*=" g-"])) { color: var(--g-text); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: rgba(var(--g-ov),.5); transition: text-decoration-color var(--g-dur); }
+:where(:is(.g-root,[role="listbox"]) article > a:not([role], [class^="g-"], [class*=" g-"])) { color: var(--g-text); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: rgba(var(--g-ov),.4); transition: text-decoration-color var(--g-dur); }
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) article > a:not([role], [class^="g-"], [class*=" g-"]):hover) { text-decoration-color: currentColor; } }
 :where(:is(.g-root,[role="listbox"]) article > a:not([role], [class^="g-"], [class*=" g-"])[data-g-hover]) { text-decoration-color: currentColor; }
 :where(:is(.g-root,[role="listbox"]) u) { text-decoration-thickness: 1px; text-underline-offset: 3px; }
