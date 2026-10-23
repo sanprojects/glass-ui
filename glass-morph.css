@@ -6,10 +6,11 @@
  * The tuning is custom properties; set them on the box: <div id="result" style="--g-morph-leave: 120ms"> (the script reads them in ms; ms or s, as a minifier may write them).
  * !important: a row that is still entering has the rules of .g-list rows (and of the site) with a higher specificity. */
 :root { --g-morph-leave: 200ms; --g-morph-enter: 300ms; --g-morph-stagger: 20ms; --g-morph-reel: 320ms; --g-morph-reel-stagger: 35ms; --g-morph-move: 400ms; }
-@keyframes g-morph-out { to { opacity: 0; transform: translateX(-24px); } }
-/* what comes in is whole early (opacity at 40% of the run) and slides on to its place till the end: a half-transparent thing reads as a hole */
-@keyframes g-morph-in { 0% { opacity: 0; transform: translateX(-24px); } 40% { opacity: 1; } 100% { opacity: 1; transform: none; } }
-@keyframes g-morph-fade { from { opacity: 0; } }
+/* No opacity here: what moves can be glass, and an opacity < 1 makes a backdrop root (the blur breaks while it runs). What goes slides off and is
+   hidden at 40% of its run; what comes in is hidden till its turn (the wave delay), then slides on to its place */
+@keyframes g-morph-out { 0% { transform: none; } 40% { transform: translateX(-10px); visibility: visible; } 40.1%, 100% { transform: translateX(-24px); visibility: hidden; } }
+@keyframes g-morph-in { 0% { visibility: hidden; transform: translateX(-24px); } 1%, 100% { visibility: visible; } 100% { transform: none; } }
+@keyframes g-morph-fade { 0% { visibility: hidden; } 1%, 100% { visibility: visible; } }
 .g-morph-leave { animation: g-morph-out var(--g-morph-leave) ease-in forwards !important; pointer-events: none; }
 .g-morph-enter { animation: g-morph-in var(--g-morph-enter) var(--g-ease, cubic-bezier(.3,.7,.25,1)) backwards !important; animation-delay: var(--g-morph-d, calc(var(--g-morph-i, 0) * var(--g-morph-stagger))) !important; }   /* --g-morph-d: the script's wave */
 /* A changed text: what is new in it runs a wave, left to right. The text is there at once; a gradient is clipped to the letters and slides over
@@ -41,16 +42,16 @@
 /* the old content fading out where it stood (the script places it), under what comes in at its place: to the right, with the new one of its place
    (--g-morph-d), done a little before the rest (--g-morph-run). Both inherit: a page can put this animation on a part of it.
    It is gone at 40% of its run, as the new one of its place is whole at 40% of its own: a whole new text over an old one that still shows reads as both at once */
-@keyframes g-morph-away { 0% { opacity: 1; transform: none; } 40% { opacity: 0; } 100% { opacity: 0; transform: translateX(24px); } }
+@keyframes g-morph-away { 0% { transform: none; } 40% { transform: translateX(10px); visibility: visible; } 40.1%, 100% { transform: translateX(24px); visibility: hidden; } }
 .g-morph-ghost { z-index: -1; animation: g-morph-away var(--g-morph-run, 180ms) var(--g-ease, cubic-bezier(.3,.7,.25,1)) var(--g-morph-d, 0ms) both !important; }
 /* Glass.morph measures the patched box at once, before the browser has told which of them are on the screen: for those reads they are all laid out
    (else a new or changed one stands at a guessed size, and what glides would aim wrong). Only [data-g-lazy] is named: switching it touches nothing else */
 [data-g-measure] [data-g-lazy] { content-visibility: visible; }
 /* A browser that does not keep up (glass-morph.js steps the motion down, <html data-g-motion>): the new words only tint; from step 2 what is
-   new only fades in */
+   new only appears (no fade: glass is never faded) */
 [data-g-motion] .g-morph-word { background: none; -webkit-text-fill-color: currentColor; animation: g-morph-word-calm var(--g-wave-run) ease-out; }
 [data-g-motion]:not([data-g-motion="1"]) .g-morph-enter { animation-name: g-morph-fade !important; }
-/* Less motion: nothing slides, glides or turns (the script), what is new fades in and the new words only tint */
+/* Less motion: nothing slides, glides or turns (the script), what is new appears and the new words only tint */
 @media (prefers-reduced-motion: reduce) {
   .g-morph-enter { animation-name: g-morph-fade !important; }
   .g-morph-word { background: none; -webkit-text-fill-color: currentColor; animation: g-morph-word-calm var(--g-wave-run) ease-out; }

@@ -558,14 +558,13 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
   position: fixed; inset: auto; margin: var(--g-gap-inner) 0; box-sizing: border-box; overflow: auto; padding: var(--g-gap-inner); border: 0; border-radius: var(--g-radius-field);
   background: linear-gradient(var(--g-fill-strong), var(--g-fill-strong)), rgba(0,0,0,.2);
   position-area: block-end span-inline-end; position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;   /* below the trigger, flips above it when there is no room */
-  opacity: 0; transform: translateY(-6px) scale(.98); pointer-events: none;
-  transition: opacity var(--g-dur), transform var(--g-dur) var(--g-ease), overlay var(--g-dur) allow-discrete, display var(--g-dur) allow-discrete;
+  transform: translateY(-6px) scale(.98); pointer-events: none;   /* glass is never faded (an opacity < 1 makes a backdrop root: the blur breaks while it runs): the panel moves in, and closes at once */
 }
 [role="menu"]:not([popover]), [role="listbox"]:not([popover]) { display: none; }   /* before glass-ui.js has made it a popover */
 [role="menu"] { min-width: 220px; max-width: calc(100vw - 32px); max-height: min(420px, 45vh); }
 [role="listbox"] { width: anchor-size(width); max-height: min(280px, 45vh); }
-[role="menu"]:popover-open, [role="listbox"]:popover-open { opacity: 1; transform: none; pointer-events: auto; }
-@starting-style { [role="menu"]:popover-open, [role="listbox"]:popover-open { opacity: 0; transform: translateY(-6px) scale(.98); } }
+[role="menu"]:popover-open, [role="listbox"]:popover-open { transform: none; pointer-events: auto; transition: transform var(--g-dur) var(--g-ease); }
+@starting-style { [role="menu"]:popover-open, [role="listbox"]:popover-open { transform: translateY(-6px) scale(.98); } }
 [role="menu"] > :is(button, a, [role="menuitem"]), [role="option"] {
   display: flex; align-items: center; gap: var(--g-gap-inner); box-sizing: border-box; width: 100%; min-height: var(--g-h-md); padding: 0 var(--g-inset); border: 0; background: none;
   border-radius: var(--g-radius-sm); font-family: var(--g-font); font-size: var(--g-fs-subhead); font-weight: 500; line-height: inherit; text-align: left; text-decoration: none; cursor: pointer; color: var(--g-text);
@@ -679,8 +678,8 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 :where(:is(.g-root,[role="listbox"]) [role="tabpanel"]) { padding-top: var(--g-gap); font-size: var(--g-fs-subhead); line-height: 1.33; color: var(--g-text-2); }
 [role="tabpanel"][hidden], [role="tablist"]:not([data-g-ready]) ~ [role="tabpanel"]:not([role="tablist"] + *) { display: none; }
 /* a panel rises in when its tab is chosen: @starting-style (the one that is hidden again leaves at once, so the layout never holds two) */
-[role="tabpanel"] { transition: opacity var(--g-dur-md) var(--g-ease), transform var(--g-dur-md) var(--g-ease); }
-@starting-style { [role="tabpanel"] { opacity: 0; transform: translateY(6px); } }
+[role="tabpanel"] { transition: transform var(--g-dur-md) var(--g-ease); }
+@starting-style { [role="tabpanel"] { transform: translateY(6px); } }
 
 /* ---------- Navigation bar: <nav> ----------
  * <nav><a href="/">Brand</a> <ul><li><a href="/" aria-current="page">Home</a></li></ul> <div>…buttons…</div></nav>
@@ -939,8 +938,7 @@ ul.g-list:not([data-plain], :has(> li[data-icon])) > li::before { content: ""; f
 :where(:is(.g-root,[role="listbox"]) dialog) { flex-direction: column; gap: var(--g-gap); } /* not only while [open], so the layout never changes between open and closed */
 :where(:is(.g-root,[role="listbox"]) dialog)::backdrop { background: rgba(10,14,30,.38); backdrop-filter: blur(6px); }
 :where(:is(.g-root,[role="listbox"]) dialog[open]) { animation: g-pop var(--g-dur-spring) var(--g-ease-spring); }
-:where(:is(.g-root,[role="listbox"]) dialog[open])::backdrop { animation: g-fade var(--g-dur-md) ease; }
-/* exit: none. The dialog closes at once, with no fade: the opening animates position and scale only, never opacity */
+/* No fade at all: the backdrop blurs, and a fade of it would show the blur late. The dialog closes at once; the opening animates position and scale only */
 dialog > [data-icon]:first-child { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; align-self: center; --g-icon-size: var(--g-icon-lg); background: var(--g-accent); color: var(--g-accent-fg); box-shadow: 0 2px 10px rgba(0,0,0,.12); }
 :where(:is(.g-root,[role="listbox"]) dialog > :is(h2, h3)) { font-size: var(--g-fs-title3); font-weight: 700; letter-spacing: -.01em; text-align: center; }
 :where(:is(.g-root,[role="listbox"]) dialog > p) { text-align: center; }
@@ -987,10 +985,10 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 .g-tooltip { position: fixed; inset: auto; margin: var(--g-gap-inner); border: 0; max-width: min(280px, 80vw); padding: var(--g-gap-inner) var(--g-inset); border-radius: var(--g-radius-field); text-align: center;
   font: 500 var(--g-fs-footnote)/1.35 var(--g-font); font-variant-numeric: tabular-nums; color: var(--g-text); pointer-events: none; overflow: visible;
   position-anchor: --g-tip; position-area: block-start span-all; justify-self: anchor-center; position-try-fallbacks: flip-block;   /* above the element, centred on it; below when there is no room */
-  opacity: 0; transform: translateY(4px) scale(.98); transition: opacity var(--g-dur), transform var(--g-dur) var(--g-ease), overlay var(--g-dur) allow-discrete, display var(--g-dur) allow-discrete; }
+  transform: translateY(4px) scale(.98); }
 .g-tooltip[data-pos="bottom"] { position-area: block-end span-all; }
-.g-tooltip:popover-open { opacity: 1; transform: none; }
-@starting-style { .g-tooltip:popover-open { opacity: 0; transform: translateY(4px) scale(.98); } }
+.g-tooltip:popover-open { transform: none; transition: transform var(--g-dur) var(--g-ease); }
+@starting-style { .g-tooltip:popover-open { transform: translateY(4px) scale(.98); } }
 
 /* ---------- Parts of one line: a centred dot between the parts that are not empty; the first part has none ---------- */
 /* <span class="g-parts"><b>12 ms</b><span>Kyiv</span><span>host</span></span>   An empty part (no text, no spaces) gets no dot */
@@ -1031,8 +1029,8 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 :where(:is(.g-root,[role="listbox"]) details[open] > summary)::after { transform: none; }
 /* opening and closing slide the content: ::details-content + interpolate-size (without them the content just appears) */
 :root { interpolate-size: allow-keywords; }
-:where(:is(.g-root,[role="listbox"]) details)::details-content { block-size: 0; overflow: clip; contain: layout paint; opacity: 0; transition: block-size var(--g-dur-md) var(--g-ease), opacity var(--g-dur-md) var(--g-ease), content-visibility var(--g-dur-md) allow-discrete; }
-:where(:is(.g-root,[role="listbox"]) details[open])::details-content { block-size: auto; opacity: 1; }
+:where(:is(.g-root,[role="listbox"]) details)::details-content { block-size: 0; overflow: clip; contain: layout paint; transition: block-size var(--g-dur-md) var(--g-ease), content-visibility var(--g-dur-md) allow-discrete; }
+:where(:is(.g-root,[role="listbox"]) details[open])::details-content { block-size: auto; }
 :where(:is(.g-root,[role="listbox"]) details > :not(summary)) { padding: var(--g-gap-inner) 0 0; font-size: inherit; line-height: inherit; color: inherit; }
 :where(:is(.g-root,[role="listbox"]) details[open]:has(+ details) > :not(summary)) { padding-bottom: var(--g-gap); }   /* only before the next fold; the container pads the last one itself (a trailing <script>, <style> or any other sibling must not add space) */
 :where(:is(.g-root,[role="listbox"]) details:last-of-type:not([open]) > summary) { margin-bottom: calc((var(--g-h-lg) - 1lh) / -2); }   /* the last closed fold: the row is taller than its text; the empty half is taken back so the gap under the text equals the container padding */
@@ -1041,7 +1039,7 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 @media (min-width: 901px) {
   :where(:is(.g-root,[role="listbox"]) details[data-g-narrow]) { border-top: 0; }
   :where(:is(.g-root,[role="listbox"]) details[data-g-narrow] > summary) { display: none; }
-  :where(:is(.g-root,[role="listbox"]) details[data-g-narrow])::details-content { block-size: auto; opacity: 1; content-visibility: visible; transition: none; }
+  :where(:is(.g-root,[role="listbox"]) details[data-g-narrow])::details-content { block-size: auto; content-visibility: visible; transition: none; }
   :where(:is(.g-root,[role="listbox"]) details[data-g-narrow] > :not(summary)) { padding-top: 0; }
 }
 
@@ -1074,9 +1072,9 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 /* ---------- Toast ---------- */
 .g-toasts { position: fixed; z-index: 100; top: 16px; right: 16px; display: flex; flex-direction: column; gap: var(--g-gap); width: min(380px, calc(100vw - 32px)); pointer-events: none; }
 .g-toasts--bottom { top: auto; bottom: 16px; flex-direction: column-reverse; }
-.g-toast { display: flex; align-items: center; gap: var(--g-gap); padding: var(--g-gap); border-radius: var(--g-radius-card); pointer-events: auto; color: var(--g-text); transition: opacity var(--g-dur-md), transform var(--g-dur-md) var(--g-ease), display var(--g-dur-md) allow-discrete; }
-@starting-style { .g-toast { opacity: 0; transform: translateY(-14px) scale(.96); } }   /* enter */
-.g-toast[hidden] { display: none; opacity: 0; transform: translateY(-8px) scale(.97); }   /* leave: JS sets hidden, then removes the toast when the transition ends */
+.g-toast { display: flex; align-items: center; gap: var(--g-gap); padding: var(--g-gap); border-radius: var(--g-radius-card); pointer-events: auto; color: var(--g-text); transition: transform var(--g-dur-md) var(--g-ease), display var(--g-dur-md) allow-discrete; }
+@starting-style { .g-toast { transform: translateX(calc(100% + 24px)); } }   /* enter: from the edge of the screen, no fade (glass is never faded) */
+.g-toast[hidden] { display: none; transform: translateX(calc(100% + 24px)); }   /* leave: JS sets hidden, the toast slides off the screen, then JS removes it when the transition ends */
 .g-toast__icon { flex: none; width: var(--g-h-md); height: var(--g-h-md); border-radius: var(--g-radius-sm); display: grid; place-items: center; background: var(--g-accent); color: var(--g-accent-fg); }
 .g-toast--success .g-toast__icon { background: var(--g-success); color: #0d2a1b; }
 .g-toast--warning .g-toast__icon { background: var(--g-warning); color: #33220a; }
@@ -1094,7 +1092,7 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 @keyframes g-spin { to { transform: rotate(360deg); } }
 @keyframes g-indet { 0% { background-position: -61% 0; } 100% { background-position: 161% 0; } }
 @keyframes g-pop { from { transform: scale(.94) translateY(8px); } }   /* no opacity: a page may draw the glass of a dialog or popover itself, and a fade would show the content without it */
-@keyframes g-fade { from { opacity: 0; } }
+@keyframes g-fade { from { opacity: 0; } }   /* only for what is not glass (an icon, a spinner) */
 @media (prefers-reduced-motion: reduce) {
   .g-root *, .g-scene *, dialog, [popover], .g-toast { animation-duration: .001ms !important; transition-duration: .001ms !important; }
   .g-root button:is(:hover, [data-g-hover]), .g-root a:has(> article):is(:hover, [data-g-hover]) > article { transform: none; }
@@ -1121,28 +1119,27 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 .g-anim-rotate > :nth-child(2) { transform: rotateY(180deg); }
 .g-anim-rotate > :nth-child(1) { animation: g-a-rotate-front var(--g-anim-dur, 1.5s) var(--g-anim-ease) var(--g-anim-delay, 0s); }
 .g-anim-rotate > :nth-child(2) { animation: g-a-rotate-back var(--g-anim-dur, 1.5s) var(--g-anim-ease) var(--g-anim-delay, 0s); }
-/* Zoom: drops in from above (bigger, closer to you) and lands fast, while it fades in more slowly. Give list items random --g-anim-delay (or data-g-anim-random="ms" on the list) to make blocks fall one by one. */
-.g-anim-zoom { animation: g-a-zoom-fall var(--g-anim-dur, 1.5s) var(--g-anim-ease) var(--g-anim-delay, 0s) backwards, g-a-zoom-fade var(--g-anim-dur, 1.5s) ease-out var(--g-anim-delay, 0s) backwards; }
+/* Zoom: drops in from above (bigger, closer to you) and lands, blurred at first (no fade: glass is never faded). Give list items random --g-anim-delay (or data-g-anim-random="ms" on the list) to make blocks fall one by one. */
+.g-anim-zoom { animation: g-a-zoom-fall var(--g-anim-dur, 1.5s) var(--g-anim-ease) var(--g-anim-delay, 0s) backwards; }
 /* Keep animated panels on their own layer so the glass blur is not rebuilt (a one-frame flicker) when an animation starts or ends */
-.g-anim-appear, .g-anim-zoom, .g-anim-rotate > * { will-change: opacity, transform; }
+.g-anim-appear, .g-anim-zoom, .g-anim-rotate > * { will-change: transform; }
 /* Scroll: the element materialises as it enters the viewport; the browser drives it from the scroll position on the compositor (no JS, no scroll listener) */
 @supports (animation-timeline: view()) { .g-anim-scroll { animation: g-a-scroll linear both; animation-timeline: view(); animation-range: entry 0% entry min(30%, 300px); } }
 /* Menu items (popup menus and the nav "More"; the select lists do not) slide in like the list rows, one after another, 35ms apart (the first 10 set the pace) */
-[role="menu"]:popover-open > * { animation: g-slide-in var(--g-dur-md) var(--g-ease) backwards; animation-delay: calc((min(sibling-index(), 10) - 1) * 35ms); will-change: transform, opacity; }   /* stay on their own layer after the animation too: dropping the layer at the end re-snaps the text by a pixel against the icon */
+[role="menu"]:popover-open > * { animation: g-slide-in var(--g-dur-md) var(--g-ease) backwards; animation-delay: calc((min(sibling-index(), 10) - 1) * 35ms); will-change: transform; }   /* stay on their own layer after the animation too: dropping the layer at the end re-snaps the text by a pixel against the icon */
 /* .g-list rows added after load slide in from the left, one after another, 35ms apart (glass-ui.js marks them with data-g-new; the first 10 of a batch set the pace) */
 .g-list > li[data-g-new] { animation: g-slide-in var(--g-dur-md) var(--g-ease) backwards; animation-delay: calc(min(var(--g-i, 0), 9) * 35ms); }
 .g-anim-shimmer::after, .g-anim-ripple::after, .g-anim-highlight::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; }
 .g-anim-shimmer::after, .g-anim-ripple::after, .g-anim-highlight::after { will-change: opacity; }
 .g-anim--loop, .g-anim--loop::after, .g-anim-rotate.g-anim--loop > * { animation-iteration-count: infinite !important; }
-@keyframes g-a-appear { from { opacity: 0; transform: translateX(-24px); } }   /* in from the left, as a new row of Glass.morph comes in */
-@keyframes g-a-scroll { from { opacity: 0; transform: translateY(40px) scale(.96); } }
-@keyframes g-slide-in { from { opacity: 0; transform: translateX(-24px); } }
+@keyframes g-a-appear { 0% { visibility: hidden; transform: translateX(-24px); } 1%, 100% { visibility: visible; } }   /* in from the left, as a new row of Glass.morph comes in */
+@keyframes g-a-scroll { from { transform: translateY(40px) scale(.96); } }
+@keyframes g-slide-in { 0% { visibility: hidden; transform: translateX(-24px); } 1%, 100% { visibility: visible; } }
 @keyframes g-a-shimmer { from { background-position: -150% 0; opacity: 1; } to { background-position: 250% 0; opacity: 1; } }
 @keyframes g-a-ripple { from { --g-r: 0%; } to { --g-r: 150%; } }
 @keyframes g-a-ripple-fade { from { opacity: .9; } to { opacity: 0; } }
 @keyframes g-a-pulse { 0% { outline-width: 0; outline-color: rgba(255,255,255,.5); } 100% { outline-width: 30px; outline-color: rgba(255,255,255,0); } }
 @keyframes g-a-zoom-fall { from { transform: scale(1.9); filter: blur(6px); } }
-@keyframes g-a-zoom-fade { from { opacity: 0; } }
 @keyframes g-a-rotate-front { to { transform: rotateY(360deg); } }
 @keyframes g-a-rotate-back { from { transform: rotateY(180deg); } to { transform: rotateY(540deg); } }
 @keyframes g-a-highlight { from { opacity: 1; } to { opacity: 0; } }

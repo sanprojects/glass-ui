@@ -575,9 +575,9 @@
           });
           if (enter.length) settled(() => enter.forEach(e => later(e, 'g-morph-enter', end + 50, () => { e.style.removeProperty('--g-morph-enter'); e.style.removeProperty('--g-morph-d'); })));
           glide.forEach(([e, dx, dy]) => { const d = waveOf(e); e.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { id: 'g-morph', duration: end - d, delay: d, easing: T.ease, fill: 'backwards' }); });   /* all in place at once */
-          /* gone out of the viewport: held where it stood, it fades out as a ghost does; then it is in its new place, out of sight */
+          /* gone out of the viewport: held where it stood, it is hidden as a ghost is; then it is in its new place, out of sight */
           away.forEach(([e, dx, dy]) => { const d = waveOf(e), from = `translate(${dx}px, ${dy}px)`, to = `translate(${dx + 24}px, ${dy}px)`, run = ctx.until - d;
-            e.animate([{ transform: from, opacity: 1, easing: T.ease }, { transform: to, opacity: 0, offset: Math.min(1, ctx.run(d) / run) }, { transform: to, opacity: 0 }], { id: 'g-morph', duration: run, delay: d, fill: 'backwards' }); });
+            e.animate([{ transform: from, visibility: 'visible', easing: T.ease }, { transform: to, visibility: 'hidden', offset: Math.min(1, ctx.run(d) / run) }, { transform: to, visibility: 'hidden' }], { id: 'g-morph', duration: run, delay: d, fill: 'backwards' }); });
           ctx.entering = []; ctx.moves = new Map(); ctx.pre = new Map(); ctx.words = []; ctx.h0 = null;
         }
       };
