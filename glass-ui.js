@@ -740,16 +740,21 @@
    * and the direct children with data-g-collapse. The one with the lowest data-g-priority goes first (a number; the later in the bar, the lower by default). A row is named by
    * data-g-label, aria-label, title or the text of its item; a link is a link, anything else presses the item. #menu is a menu of the page (data-g-items marks where the rows go, at its start
    * by default): its own rows are always there, so the button stays while one of them is shown (not hidden, not display: none). Without a name the kit makes the menu.
-   * <nav data-g-overflowing> while an item is in the menu. data-g-overflow-label / data-g-overflow-icon name the button ("More", chevron-down). */
+   * <nav data-g-overflowing> while an item is in the menu. data-g-overflow-label / data-g-overflow-icon name the button ("More", chevron-down).
+   * A page that wants no change of the bar when the kit comes prints the button itself (<button data-g-overflow-btn> as the last of the bar's <div>) and lays the bar out
+   * in its final shape with a stylesheet until <nav data-g-ready> (set before the first pass; a phone: hide the title and the buttons that go to the menu). */
   function navOverflow(nav) {
     const bare = !nav.hasAttribute('data-g-overflow'); if (bare) { nav.setAttribute('data-g-overflow', ''); owns(nav, 'data-g-overflow'); }   // a plain <nav> takes the attribute: the CSS of the bar is on it
     const named = nav.getAttribute('data-g-overflow'), find = named && document.querySelector(named);
     const menu = find || part(el('div')); if (!menu.parentNode) document.body.appendChild(menu);
     const id = menu.id || (menu.id = 'g-menu-' + (++uid));
     let box = $$(':scope > div', nav).filter(d => d !== menu).pop(); if (!box) box = nav.appendChild(part(el('div')));
-    const btn = part(attrs(el('button'), { type: 'button', 'data-icon': data(nav, 'overflow-icon', 'chevron-down'), 'aria-label': data(nav, 'overflow-label', 'More'), 'data-g-menu': '#' + id, 'data-g-menu-hover': '', 'data-g-align': 'end' }));
-    const sib = box.querySelector(':scope > [data-size]'); if (sib) btn.setAttribute('data-size', sib.getAttribute('data-size'));
-    box.appendChild(btn); mount1(btn, MOUNTS.find(m => m[0] === '[data-g-menu]'));
+    // the button of the menu: the page's own (<button data-g-overflow-btn> in the bar's <div>, there from the first paint, so the bar does not change when the kit comes), or made here
+    const given = box.querySelector(':scope > [data-g-overflow-btn]'), btn = given || part(el('button'));
+    attrs(btn, { type: 'button', 'data-icon': data(nav, 'overflow-icon', btn.getAttribute('data-icon') || 'chevron-down'), 'aria-label': data(nav, 'overflow-label', btn.getAttribute('aria-label') || 'More'), 'data-g-menu': '#' + id, 'data-g-menu-hover': '', 'data-g-align': 'end' });
+    if (given) owns(btn, 'data-g-menu', 'data-g-menu-hover', 'data-g-align');
+    const sib = box.querySelector(':scope > [data-size]'); if (sib && sib !== btn) btn.setAttribute('data-size', sib.getAttribute('data-size'));
+    if (!given) box.appendChild(btn); mount1(btn, MOUNTS.find(m => m[0] === '[data-g-menu]'));
     const fp = mem(btn, 'fp'); let busy = false;
     const hide = n => { owns(n, 'data-g-off'); n.setAttribute('data-g-off', ''); };
     const shown = n => getComputedStyle(n).display !== 'none';
@@ -826,6 +831,7 @@
     if (window.ResizeObserver) new ResizeObserver(() => layout()).observe(nav); else window.addEventListener('resize', () => layout());
     new MutationObserver(rs => { if (rs.some(r => r.target !== menu)) layout(true); }).observe(menu, { attributes: true, attributeFilter: ['hidden', 'class', 'style'], subtree: true });   // a row of the page shown or hidden
     document.fonts?.ready.then(() => layout(true));
+    nav.setAttribute('data-g-ready', ''); owns(nav, 'data-g-ready');   // from here on the kit lays the bar out: a stylesheet that held the bar in its final shape before (a phone: no title, the buttons in the menu) lets go, in the same frame
     layout(true);
     return mem(nav, 'overflow', { refresh: () => layout(true) });
   }
