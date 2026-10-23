@@ -142,6 +142,15 @@ Also in the demo, without screenshots here:
 
 Each file also ships as `.min.css` / `.min.js`.
 
+**Gradient background across pages.** The WebGL gradient (`data-g-gradient`) goes on from page to page where it was: leaving a page stores its time and pose in `sessionStorage`, and an inline script right after the scene element puts that pose on it before the first paint, so the CSS gradient that stands until the WebGL one is built is the frame the last page left with:
+
+```html
+<div class="scene" id="scene" data-scene="gradient" data-g-gradient aria-hidden="true"></div>
+<script>try{document.getElementById('scene').style.cssText+=(function(g){return g&&/^[\w\s:;.%#-]*$/.test(g.css)?g.css:''})(JSON.parse(sessionStorage.getItem('g-gradient')))}catch(e){}</script>
+```
+
+The CSS gradient of the scene draws what the WebGL one draws at its start (no shade over it, the `--gx`/`--gy` defaults of the demo), so the change from one to the other does not show.
+
 **`glass-load.json`** lists the files in the order a page links them (the cascade) and how: `block` (the first paint waits for it), `late` (icons: custom properties only, so the first paint does not wait for it and nothing moves when it comes; linked as above) and `defer` (scripts). A page that generates its `<head>` reads it instead of listing the files by hand; `test/load.test.mjs` keeps it complete and keeps a late file paint-only.
 
 ## Good to know

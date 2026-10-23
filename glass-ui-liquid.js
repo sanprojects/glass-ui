@@ -128,7 +128,10 @@
    * The same four soft blobs as the CSS gradient, drawn by the GPU so the page can scroll and blur over it cheaply. The blobs drift slowly (the shared timer
    * of Glass.scene, one speed with the liquid). Colours come from --sc0 (ground) and --sc1..--sc4 (blobs); change them any time. It draws only while
    * data-scene="gradient" (or the attribute is absent), and is built after load the first time that is so: the CSS gradient is the first frame.
-   * Adds .is-gl to the host so CSS can drop its own gradient; without WebGL the CSS one stays. */
+   * Adds .is-gl to the host so CSS can drop its own gradient; without WebGL the CSS one stays.
+   * From page to page it goes on where it was: leaving a page stores its time and its pose (--gx1..--gy4, the colours --sc0..--sc4 when set) in
+   * sessionStorage "g-gradient" as { t, css }; the next page puts css on the host before its first paint (an inline script right after it, README)
+   * and the drift goes on from t. */
   var GR_FRAG = 'precision mediump float; uniform vec2 r; uniform vec3 c0,c1,c2,c3,c4; uniform vec4 b1,b2,b3,b4;\n' +
     'float hash(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }\n' +
     'float a(vec4 b, vec2 uv){ return 1.-smoothstep(0.,1.,length((uv-b.xy)/b.zw)); }\n' +
@@ -143,6 +146,7 @@
     if (host.__gradient) return host.__gradient;
     var gl = null, cv, uR, uC, uB, ready = false, failed = false;
     var t = 0, W = 0, H = 0, off = null, visible = true, drift = GR_BLOBS.map(function () { return [0, 0]; });
+    try { var kept = JSON.parse(sessionStorage.getItem('g-gradient')); if (kept && isFinite(kept.t)) t = +kept.t; } catch (e) {}
     function build() {   /* false without WebGL: the CSS gradient stays */
       var q = quad(GR_FRAG); if (!q) { failed = true; return false; }
       gl = q.gl; cv = q.cv;
@@ -157,7 +161,7 @@
       uC.forEach(function (u, i) { var v = host.style.getPropertyValue('--sc' + i).trim(); gl.uniform3fv(u, hex3(/^#[0-9a-f]{6}$/i.test(v) ? v : d[i])); });
     }
     function size() {
-      var w = host.clientWidth || 1, h = host.clientHeight || 1, s = Math.min(1, 1280 / w), nw = Math.max(64, Math.round(w * s)), nh = Math.max(64, Math.round(h * s));
+      var w = cv.clientWidth || host.clientWidth || 1, h = cv.clientHeight || host.clientHeight || 1, s = Math.min(1, 1280 / w)   /* the canvas: CSS may draw it past the host */, nw = Math.max(64, Math.round(w * s)), nh = Math.max(64, Math.round(h * s));
       if (nw !== W || nh !== H) { W = cv.width = nw; H = cv.height = nh; gl.viewport(0, 0, W, H); gl.uniform2f(uR, W, H); }
     }
     function frame() {
@@ -172,6 +176,14 @@
       cv.style.display = on() ? '' : 'none'; if (!on()) return; size(); colours(); pose(); frame();
     }
     function step(dt) { if (!on() || !visible) return false; t += dt; size(); pose(); frame(); return true; }
+    function keep() {   /* the pose this page leaves with: the next one starts from it */
+      if (!on()) return;
+      pose();
+      var css = drift.map(function (d, i) { return '--gx' + (i + 1) + ':' + d[0].toFixed(2) + '%;--gy' + (i + 1) + ':' + d[1].toFixed(2) + '%;'; }).join('');
+      for (var i = 0; i < 5; i++) { var v = host.style.getPropertyValue('--sc' + i).trim(); if (v) css += '--sc' + i + ':' + v + ';'; }
+      try { sessionStorage.setItem('g-gradient', JSON.stringify({ t: t, css: css })); } catch (e) {}
+    }
+    window.addEventListener('pageswap', keep); window.addEventListener('pagehide', keep);
     new MutationObserver(still).observe(host, { attributes: true, attributeFilter: ['style', 'data-scene'] });
     new MutationObserver(still).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     if (window.IntersectionObserver) new IntersectionObserver(function (e) { visible = e[0].isIntersecting; }).observe(host);
