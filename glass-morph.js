@@ -6,6 +6,8 @@
  * Replaces the content of `target` with `next` (an element or an HTML string) and animates the difference, for ANY elements at any depth:
  *   - all at once, nothing waits: an element that is gone fades out where it stood (.g-morph-ghost, out of the flow) while the new ones
  *     slide in (.g-morph-enter, one after another), the rest glides to its new place and the box takes its new height; all end together;
+ *     one that something comes over (the new one of its place, one that glides there) is gone the moment that shows: never one under another
+ *     (glass shows what is under it);
  *   - an element that is in both trees stays the same node, it is patched in place (attributes, text): nothing replays on it, focus, scroll,
  *     what the user typed and animations that run survive;
  *   - an element that is in both trees but stands in another place (a list that was sorted again) glides there from where it stood (opts.move);
@@ -416,9 +418,9 @@
        place it stood (wave: viewport x, y -> ms of delay), on the same curve (ease) and the same way (to the right), and fades out in run(delay) ms. */
     function ghost(list, run, until, wave) {
       /* parent -> [how many ghosts it still holds, static, its own isolation]. Meanwhile a static parent is positioned for them, and isolated: the
-         ghosts stand under its content (z-index -1), what comes in at their place covers them, and they stay over its background */
+         ghosts stand under its content (z-index -1) and over its background; one that something comes over is hidden the moment that shows (cut) */
       const held = new Map(), all = [], byParent = new Map();
-      list.forEach(([e, p, x, y, w, h, flat, vx, vy, disp]) => {
+      list.forEach(([e, p, x, y, w, h, flat, vx, vy, disp, cut]) => {
         if (!p.isConnected) return;
         if (!held.has(p)) { held.set(p, [0, flat, p.style.isolation]); p.style.isolation = 'isolate'; }
         const hp = held.get(p); hp[0]++;
@@ -427,8 +429,9 @@
         Object.assign(e.style, { position: 'absolute', left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px', margin: '0', pointerEvents: 'none', boxSizing: 'border-box', counterIncrement: 'none', counterSet: 'none', counterReset: 'none', zIndex: '-1' });
         /* it fades out by the CSS of .g-morph-ghost (glass-morph.css): when (--g-morph-d, with the new one of its place) and how long (--g-morph-run).
            Both inherit: a page can put that animation on a part of it instead (the card in a link, ...) */
-        const d = wave(vx, vy);
-        e.style.setProperty('--g-morph-d', d + 'ms'); e.style.setProperty('--g-morph-run', run(d) + 'ms');
+        /* cut: something comes over it then; it is hidden at once (1 ms: the slide is not seen), not shown under the new one */
+        const d = cut == null ? wave(vx, vy) : Math.min(cut, wave(vx, vy));
+        e.style.setProperty('--g-morph-d', d + 'ms'); e.style.setProperty('--g-morph-run', (cut == null ? run(d) : 1) + 'ms');
         e.classList.add('g-morph-ghost'); e.setAttribute('aria-hidden', 'true'); e.inert = true;
         /* not a row of the layout: the columns of a .g-list count the rows shown (:nth-child(n):not([hidden]) in glass-ui.css). A ghost that counted
            made the columns follow it, the rows that stay reflowed, and placed() took the ghost away at once. [hidden] would hide it, so its display is put back */
@@ -495,7 +498,8 @@
           if (kit.fitTable) new Set(scope.flatMap(s => [...$$('table', s), s.closest('table')])).forEach(t => { if (t) kit.fitTable(t); });
           const at = new Map();   /* where in the viewport each element that is animated starts: the wave reaches it from there */
           const kept = [];   /* [element, its rect]: where what stays stands in the new layout, without the ghosts (see placed) */
-          const enter = o.enter !== false ? ctx.entering.filter(e => { if ((ctx.floats && ctx.floats(e)) || said(e)) return false; const r = e.getBoundingClientRect(); at.set(e, [r.left, r.top]); kept.push([e, r]); return onScreen(r); }).slice(0, MAX) : [];
+          const cover = [];   /* [element, where it ends]: what comes in or glides, the ghosts under it are cut (see ctx.run) */
+          const enter = o.enter !== false ? ctx.entering.filter(e => { if ((ctx.floats && ctx.floats(e)) || said(e)) return false; const r = e.getBoundingClientRect(); at.set(e, [r.left, r.top]); kept.push([e, r]); if (!onScreen(r)) return false; cover.push([e, r]); return true; }).slice(0, MAX) : [];
           const hidden = ctx.words.filter(([host]) => !inView(host));   /* marked words out of the viewport: plain text at once */
           const box = target.getBoundingClientRect(), bs = getComputedStyle(target);
           const extra = bs.boxSizing === 'border-box' ? 0 : ['paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth'].reduce((v, k) => v + (parseFloat(bs[k]) || 0), 0);
@@ -528,7 +532,7 @@
                  out of it fades out where it stood (a glide over thousands of pixels would only flash across the screen) */
               at.set(e, on && !seen ? [l.left, l.top] : [l.left + r[0], l.top + r[1]]);   /* one that comes in: where it ends; one that glides or goes: where it stood */
               if (on && !seen && o.enter !== false) { came.add(e); enter.push(e); }
-              else if (on) { gliding.set(e, [r[0], r[1]]); glide.push([e, dx, dy]); }
+              else if (on) { gliding.set(e, [r[0], r[1]]); glide.push([e, dx, dy]); cover.push([e, l]); }
               else if (seen) { gliding.set(e, [r[0], r[1]]); away.push([e, dx, dy]); }
             });
             if (came.size) enter.sort((x, y) => x.compareDocumentPosition(y) & 4 ? -1 : 1).splice(MAX);
@@ -553,6 +557,13 @@
           ctx.wave = (x, y) => Math.round(((line.get(Math.round(y)) || 0) + (col.get(Math.round(x)) || 0)) * step);
           ctx.run = d => Math.max(60, ctx.fade - d, (end - d) * .6);   /* how long a row that goes fades out: before the new one of its place is in */
           const waveOf = e => { const p = at.get(e); return p ? ctx.wave(p[0], p[1]) : 0; };
+          /* A ghost with something over it (what comes in at its place, what glides there) is gone the moment that shows, without its slide: what
+             is new is often glass, and glass shows what is under it, so the old one would be seen through the new one (a menu under a menu). g[10]:
+             when the first of them shows; a ghost with nothing over it (a row that is only gone) slides out as before. A parent that glides is not
+             over it: the ghost stands over its background */
+          ctx.ghosts.forEach(g => { if (g[7] == null) return; cover.forEach(([e, r]) => {
+            if (!e.contains(g[1]) &&Math.min(g[7] + g[4], r.right) - Math.max(g[7], r.left) > 2 && Math.min(g[8] + g[5], r.bottom) - Math.max(g[8], r.top) > 2) g[10] = Math.min(g[10] ?? Infinity, waveOf(e));
+          }); });
           if (ctx.ghosts.length) placed(ghost(ctx.ghosts, ctx.run, ctx.until, ctx.wave), kept);
           if (ctx.onWrite) ctx.onWrite();
           if (enter.length || glide.length || away.length || ctx.ghosts.length || ctx.words.length || ctx.reels) gauge(Math.max(end, ctx.reels ? T.reel : 0, 300), ctx.probe);   /* does the browser keep up with it */

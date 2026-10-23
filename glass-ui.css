@@ -134,6 +134,9 @@
  * It is also the canvas: leave <html> without a background, or the body would paint over a fixed scene (z-index: -1). */
 :root { --g-page-bg: #00283c; }
 :where(body.g-root) { background-color: var(--g-page-bg); }
+/* the page never scrolls sideways: what is wider (a sliding ghost, a long word) is cut at the edge of the screen; clip is not a scroll box, sticky keeps working.
+ * Wide content scrolls in a box of its own (a table, a tablist) */
+:where(:root:has(> body.g-root)) { overflow-x: clip; }
 /* a link to a place on the page (#id) scrolls there instead of jumping; reduced motion: it jumps */
 @media (prefers-reduced-motion: no-preference) { html:has(> :is(.g-root, .g-scene)) { scroll-behavior: smooth; } }
 .g-scene--gradient {
@@ -547,6 +550,12 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 .g-select__value.is-placeholder { color: var(--g-text-4); }
 .g-select__trigger { --g-icon-size: var(--g-icon-md); --g-icon-color: var(--g-text-2); }
 .g-select__search { width: 100%; margin: 0 0 var(--g-gap-inner); min-height: var(--g-h-md); font-size: var(--g-fs-subhead); }
+/* iPhone: Safari zooms the page in when a field under 16px takes the focus, and does not zoom back out - the page is then wider than the screen and moves
+ * sideways under the finger (a horizontal scroll of the whole page, while typing into a filter). A field is 16px there, so the page stays at its scale.
+ * Only where Safari does it (-webkit-touch-callout exists on iOS alone); a site's own size for a field still wins (no weight here, but for the search of a select). */
+@supports (-webkit-touch-callout: none) {
+  :where(:is(.g-root,[role="listbox"]) :is(input:not([type="checkbox"],[type="radio"],[type="range"],[type="file"],[type="color"],[type="hidden"],[type="button"],[type="submit"],[type="reset"],[type="image"]),textarea,select)), .g-select__search { font-size: max(16px, var(--g-fs-subhead)); }
+}
 .g-select__empty { padding: var(--g-gap); font-size: var(--g-fs-footnote); color: var(--g-text-3); }
 
 /* ---------- Menu: the dropdown overlay (also the list of a select and the "More" of a nav) ----------
@@ -1109,7 +1118,7 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 
 /* ---------- Motion: add a class to any element. Plays once by default; add g-anim--loop to repeat. ----------
  * <div class="g-card g-anim-appear">…</div>
- * Effects: g-anim-appear, g-anim-shimmer, g-anim-ripple, g-anim-pulse, g-anim-highlight, g-anim-rotate, g-anim-zoom, g-anim-scroll (plays on scrolling into view)
+ * Effects: g-anim-appear, g-anim-shimmer, g-anim-ripple, g-anim-pulse, g-anim-highlight, g-anim-rotate, g-anim-zoom, g-anim-reveal (a text), g-anim-scroll (plays on scrolling into view)
  * Tune per element: --g-anim-delay (stagger lists), --g-anim-dur (default 1.5s), --g-anim-ease (default: ease-out). Replay from JS: Glass.animate(el, 'highlight').
  * shimmer, ripple and highlight draw on ::after (not for elements that already use ::after, e.g. chips). */
 @property --g-r { syntax: '<percentage>'; inherits: false; initial-value: 0%; }
@@ -1121,6 +1130,12 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 .g-anim-ripple::after { background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255,255,255,.45) 0, rgba(255,255,255,.18) var(--g-r), transparent var(--g-r)); animation: g-a-ripple var(--g-anim-dur, 1.5s) var(--g-anim-ease) var(--g-anim-delay, 0s) both, g-a-ripple-fade var(--g-anim-dur, 1.5s) ease-in var(--g-anim-delay, 0s) both; }
 .g-anim-pulse { outline: 0 solid transparent; outline-offset: 0; animation: g-a-pulse var(--g-anim-dur, 1.5s) var(--g-anim-ease) var(--g-anim-delay, 0s); }
 .g-anim-highlight::after { opacity: 0; background: rgba(255,255,255,.3); animation: g-a-highlight var(--g-anim-dur, 1.5s) var(--g-anim-ease) var(--g-anim-delay, 0s); }
+/* Reveal: a text appears. All of it is faint (--g-reveal-from of its colour) and a wave colours it in, left to right: a gradient clipped to the letters
+   slides over them (one layer, no opacity). Put it on the text itself (a span, a heading), not on a card: its background becomes the gradient.
+   On an inline element of several lines the wave goes over all its lines at once. No color-mix: the text as it is */
+@supports (color: color-mix(in srgb, red 50%, transparent)) {
+  .g-anim-reveal { background: linear-gradient(90deg, currentColor 40%, color-mix(in srgb, currentColor var(--g-reveal-from, 15%), transparent) 60%) 100% 0 / 300% 100% no-repeat; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: g-a-reveal var(--g-anim-dur, 1.5s) var(--g-anim-ease) var(--g-anim-delay, 0s) both; }
+}
 /* Rotate: a card with two sides. The wrapper has exactly two children: the front, then the back. One full turn shows the back half-way (a softer ease-out than the others, so the turn can be seen). */
 .g-anim-rotate { display: grid; perspective: 900px; }
 .g-anim-rotate > * { grid-area: 1 / 1; backface-visibility: hidden; }
@@ -1151,7 +1166,8 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 @keyframes g-a-rotate-front { to { transform: rotateY(360deg); } }
 @keyframes g-a-rotate-back { from { transform: rotateY(180deg); } to { transform: rotateY(540deg); } }
 @keyframes g-a-highlight { from { opacity: 1; } to { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { :is(.g-anim-appear, .g-anim-zoom, .g-anim-shimmer, .g-anim-ripple, .g-anim-pulse, .g-anim-highlight), :is(.g-anim-shimmer, .g-anim-ripple, .g-anim-highlight)::after, .g-anim-rotate > * { animation-duration: .001ms !important; animation-iteration-count: 1 !important; } }
+@keyframes g-a-reveal { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) { :is(.g-anim-appear, .g-anim-zoom, .g-anim-shimmer, .g-anim-ripple, .g-anim-pulse, .g-anim-highlight, .g-anim-reveal), :is(.g-anim-shimmer, .g-anim-ripple, .g-anim-highlight)::after, .g-anim-rotate > * { animation-duration: .001ms !important; animation-iteration-count: 1 !important; } }
 
 
 /* data-g-lazy: a long part of a page (a group of a thousand rows) that the browser lays out and paints only when it is near the viewport; until then it
@@ -1250,7 +1266,7 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 /* Toggle button: <button aria-pressed="true"> gets the same white pill as a selected tab */
 :where(:is(.g-root,[role="listbox"]) button[aria-pressed="true"]:not([class^="g-"], [class*=" g-"], [data-variant])) { background: rgba(255,255,255,.92); color: var(--g-text-inverse); box-shadow: 0 1px 3px rgba(0,0,0,.14); }
 
-@view-transition { navigation: auto; }
+/* no cross-document view transition: the snapshot of a page is flat, its glass goes grey for the time of it (iOS Safari) - a page change is a plain page load */
 
 /* the gap between the panel's children is the panel's gap: a child that brings its own margin (a site-level class) would add to it */
 .g-shell > aside > * { margin: 0; }

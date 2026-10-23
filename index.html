@@ -632,7 +632,7 @@ try{document.getElementById('scene').style.cssText+=(function(g){return g&&/^[\w
 
 
   <section class="sec g-glass g-anim-scroll" id="motion" data-title="Motion">
-    <div class="sec__head"><h2>Motion</h2><p class="g-desc">Eight effects you can put on any element with a class. Each plays once; add <span class="inline-code">g-anim--loop</span> to repeat it. The ninth, Wave, needs no class: <span class="inline-code">Glass.morph</span> runs it over the new words of a text that changed. The tiles below replay on a timer so you can watch them.</p></div>
+    <div class="sec__head"><h2>Motion</h2><p class="g-desc">Nine effects you can put on any element with a class. Each plays once; add <span class="inline-code">g-anim--loop</span> to repeat it. The tenth, Wave, needs no class: <span class="inline-code">Glass.morph</span> runs it over the new words of a text that changed. The tiles below replay on a timer so you can watch them.</p></div>
     <div class="pair">
       <div class="m-grid">
         <div class="m-item"><div class="m-tile g-anim-appear" data-g-anim-loop="2800">appear</div><h4>Appear</h4><small>Fades in while sliding in from the left.</small><small data-muted>1.5 s ease-out</small></div>
@@ -644,6 +644,7 @@ try{document.getElementById('scene').style.cssText+=(function(g){return g&&/^[\w
         <div class="m-item"><div class="m-tile g-anim-zoom" data-g-anim-loop="2800">zoom</div><h4>Zoom</h4><small>Drops from above and lands, fading in. For lists that build up block by block.</small><small data-muted>1.5 s ease-out</small></div>
         <div class="m-item"><div class="m-tile g-anim-scroll">scroll</div><h4>Scroll</h4><small>Materialises as it scrolls into view. No script.</small></div>
         <div class="m-item"><div class="m-tile m-wave" id="waveDemo" aria-live="off"><span>A quiet morning by the sea</span></div><h4>Wave</h4><small>New words of a changed text run a soft wave, left to right. <span class="inline-code">Glass.morph</span>, no markup.</small><small data-muted>0.7 s · text swaps on a timer</small></div>
+        <div class="m-item"><div class="m-tile m-wave"><span class="g-anim-reveal" data-g-anim-loop="2800">A quiet morning by the sea</span></div><h4>Reveal</h4><small>A text appears: it starts faint and a wave colours it in, left to right. Put it on the text, not on a card.</small><small data-muted>1.5 s ease-out</small></div>
         </div>
       <div class="code"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0">&lt;article class="g-anim-appear"&gt;…&lt;/article&gt;
 &lt;article class="g-anim-pulse g-anim--loop"&gt;…&lt;/article&gt;
@@ -653,6 +654,9 @@ try{document.getElementById('scene').style.cssText+=(function(g){return g&&/^[\w
 &lt;/ul&gt;
 
 &lt;div class="g-anim-rotate"&gt;&lt;div&gt;front&lt;/div&gt;&lt;div&gt;back&lt;/div&gt;&lt;/div&gt;
+
+/* a text appears: faint, then a wave colours it in (on the text, not on a card) */
+&lt;h2&gt;&lt;span class="g-anim-reveal"&gt;Welcome back&lt;/span&gt;&lt;/h2&gt;
 
 /* stagger a list */
 &lt;li class="g-anim-appear" style="--g-anim-delay:.08s"&gt;…&lt;/li&gt;

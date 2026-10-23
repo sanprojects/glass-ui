@@ -116,7 +116,15 @@
       start: start, stop: stop,
       setColors: function (p, l) { day = false; pal = p; light = l || light; if (gl) { paint(pal, light); if (!running) still(); } },
       setLift: function (v) { lift = +v || 0; if (gl && day) { paintDay(); if (!running) still(); } },   /* 0..1 lightens the day cycle (light theme) */
-      setDay: function (on) { day = !!on; if (day) ph = .3; if (gl) { colours(); if (!running) still(); } }
+      setDay: function (on) { day = !!on; if (day) ph = .3; if (gl) { colours(); if (!running) still(); } },
+      /* the colour at (u, v) of the canvas, 0..1 from its top left, or null before the canvas: a frame is drawn and read back in the same task (the buffer is not kept) */
+      pixel: function (u, v) {
+        if (!gl || !W) return null;
+        var p = new Uint8Array(4); frame();
+        gl.readPixels(Math.min(W - 1, Math.max(0, Math.floor(u * W))), Math.min(H - 1, Math.max(0, Math.floor((1 - v) * H))), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, p);
+        return [p[0] / 255, p[1] / 255, p[2] / 255];
+      },
+      canvas: function () { return gl ? cv : null; }
     };
     host.__liquid = api; return api;
   }
@@ -156,9 +164,21 @@
       off = G.scene.add(step);
       return true;
     }
-    function colours() {
+    function pal() {
       var d = document.documentElement.getAttribute('data-theme') === 'light' ? GR_LIGHT : GR_DARK;
-      uC.forEach(function (u, i) { var v = host.style.getPropertyValue('--sc' + i).trim(); gl.uniform3fv(u, hex3(/^#[0-9a-f]{6}$/i.test(v) ? v : d[i])); });
+      return d.map(function (c, i) { var v = host.style.getPropertyValue('--sc' + i).trim(); return hex3(/^#[0-9a-f]{6}$/i.test(v) ? v : c); });
+    }
+    function colours() { var p = pal(); uC.forEach(function (u, i) { gl.uniform3fv(u, p[i]); }); }
+    /* what the shader draws at (u, v), 0..1 from the top left, worked out here (no read of the GPU, no grain): the colour of the bars (tint below) */
+    function colorAt(u, v) {
+      var c = pal(), col = c[0];
+      pose();
+      for (var i = 3; i >= 0; i--) {
+        var b = GR_BLOBS[i], x = (u - (b[0] + drift[i][0]) / 100) / (b[2] / 100 * b[4]), y = (v - (b[1] + drift[i][1]) / 100) / (b[3] / 100 * b[4]),
+          s = Math.min(1, Math.sqrt(x * x + y * y)), a = 1 - s * s * (3 - 2 * s), k = c[i + 1];
+        col = col.map(function (q, n) { return q + (k[n] - q) * a; });
+      }
+      return col;
     }
     function size() {
       var w = cv.clientWidth || host.clientWidth || 1, h = cv.clientHeight || host.clientHeight || 1, s = Math.min(1, 1280 / w)   /* the canvas: CSS may draw it past the host */, nw = Math.max(64, Math.round(w * s)), nh = Math.max(64, Math.round(h * s));
@@ -190,9 +210,77 @@
     var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(still, 200); });
     document.addEventListener('visibilitychange', function () { if (!document.hidden && visible) still(); });   /* see the liquid above */
     later(function () { ready = true; still(); });
-    host.__gradient = { redraw: still };
+    host.__gradient = { redraw: still, on: on, colorAt: colorAt, canvas: function () { return gl && on() ? cv : null; } };
     return host.__gradient;
   }
   G.gradient = gradient;
   G.mount('[data-g-gradient]', function (h) { gradient(h); });
+
+  /* Colour of the bars (Safari 26 on iOS) -------------------------------
+   * <div class="scene" data-g-gradient data-g-tint>
+   * Safari tints its status bar and its toolbar with the page's background colour (the body's). With data-g-tint the body takes the colour of the
+   * scene at the top left corner of the screen, so the bars go on from the background: the gradient worked out from its blobs, the liquid
+   * (a [data-g-liquid] shown in it) read back from its canvas, a photo (background center/cover) from a 1px canvas, else the scene's background colour;
+   * under the scene's ::after when that is a plain linear-gradient (a shade). It follows the drift once a second while the page is shown and writes
+   * only a colour that changed (and meta theme-color, for the browsers that read it). The last one is kept in sessionStorage "g-tint": an inline
+   * script at the top of the body puts it on before the first paint (README), so a page change does not flash the stylesheet's colour.
+   * With nothing to take (an image of another origin, a scene not drawn yet) the body keeps what it has. */
+  function rgba(s) {   /* "rgb(1, 2, 3)" / "rgba(1, 2, 3, .5)" -> [r, g, b, a], 0..1 */
+    var m = /rgba?\(([^)]+)\)/.exec(s || ''), p = m ? m[1].split(/[\s,\/]+/).filter(Boolean).map(parseFloat) : [];
+    return p.length < 3 ? null : [p[0] / 255, p[1] / 255, p[2] / 255, p.length > 3 ? p[3] : 1];
+  }
+  var PHOTOS = {};
+  function photo(host, r, done) {   /* the pixel of a center/cover background image at the screen's corner; null while it loads (done runs then) */
+    var cs = getComputedStyle(host), m = /url\((['"]?)(.*?)\1\)/.exec(cs.backgroundImage);
+    if (!m || cs.backgroundSize !== 'cover' || cs.backgroundPosition !== '50% 50%') return null;
+    var e = PHOTOS[m[2]];
+    if (!e) { e = PHOTOS[m[2]] = { img: new Image() }; e.img.onload = function () { e.ok = true; done(); }; e.img.src = m[2]; return null; }
+    if (!e.ok) return null;
+    var at = [r.left, r.top, r.width, r.height].join();
+    if (e.at === at) return e.col;
+    var w = e.img.naturalWidth, h = e.img.naturalHeight, s = Math.max(r.width / w, r.height / h),
+      x = Math.min(w - 1, Math.max(0, (-r.left - (r.width - w * s) / 2) / s)), y = Math.min(h - 1, Math.max(0, (-r.top - (r.height - h * s) / 2) / s));
+    try {
+      var cv = e.cv || (e.cv = document.createElement('canvas')); cv.width = cv.height = 1;
+      var cx = cv.getContext('2d', { willReadFrequently: true }); cx.drawImage(e.img, x, y, 1, 1, 0, 0, 1, 1);
+      var d = cx.getImageData(0, 0, 1, 1).data; e.col = [d[0] / 255, d[1] / 255, d[2] / 255];
+    } catch (err) { e.col = null; }   /* an image of another origin taints the canvas */
+    e.at = at; return e.col;
+  }
+  function tint(host) {
+    var last = '', meta = document.querySelector('meta[name="theme-color"]'), qt = 0;
+    function corner() {   /* [r, g, b] 0..1 of the scene at the top left of the screen */
+      var r = host.getBoundingClientRect(), g = host.__gradient, col = null, lq, c;
+      if (g && g.on()) { c = (g.canvas() || host).getBoundingClientRect(); return g.colorAt(-c.left / c.width, -c.top / c.height); }   /* no shade over it */
+      lq = host.querySelector('[data-g-liquid]');
+      if (lq && lq.getClientRects().length) {
+        c = lq.__liquid && lq.__liquid.canvas();
+        if (c) { var cr = c.getBoundingClientRect(); col = lq.__liquid.pixel(-cr.left / cr.width, -cr.top / cr.height); }
+        col = col || rgba(getComputedStyle(lq).backgroundColor);
+      } else col = photo(host, r, run) || rgba(getComputedStyle(host).backgroundColor);
+      if (!col || col[3] === 0) return null;
+      var a = getComputedStyle(host, '::after'), m = a.mixBlendMode === 'normal' && /^linear-gradient\((rgba?\([^)]*\)), (rgba?\([^)]*\))\)$/.exec(a.backgroundImage);
+      if (m) {
+        var v = Math.min(1, Math.max(0, -r.top / r.height)), o0 = rgba(m[1]), o1 = rgba(m[2]), o = o0.map(function (q, n) { return q + (o1[n] - q) * v; });
+        col = col.map(function (q, n) { return n < 3 ? q * (1 - o[3]) + o[n] * o[3] : q; });
+      }
+      return col;
+    }
+    function run() {
+      if (document.hidden) return;
+      var col = corner(); if (!col) return;
+      var hex = '#' + col.slice(0, 3).map(function (q) { return ('0' + Math.round(Math.max(0, Math.min(1, q)) * 255).toString(16)).slice(-2); }).join('');
+      if (hex === last) return;
+      last = hex; document.body.style.backgroundColor = hex;
+      if (meta) meta.setAttribute('content', hex);
+      try { sessionStorage.setItem('g-tint', hex); } catch (e) {}
+    }
+    function soon() { cancelAnimationFrame(qt); qt = requestAnimationFrame(run); }   /* after the scene has taken a change in */
+    new MutationObserver(soon).observe(host, { attributes: true, attributeFilter: ['style', 'data-scene'] });
+    new MutationObserver(soon).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    window.addEventListener('resize', soon); document.addEventListener('visibilitychange', soon);
+    setInterval(run, 1000);
+    run();
+  }
+  G.mount('[data-g-tint]', tint);
 })(window.Glass);

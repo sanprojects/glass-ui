@@ -39,8 +39,8 @@
     animation: g-morph-word var(--g-wave-run) linear calc(var(--g-wave-at, 0) * var(--g-wave-span)) backwards;
   }
 }
-/* the old content fading out where it stood (the script places it), under what comes in at its place: to the right, with the new one of its place
-   (--g-morph-d), done a little before the rest (--g-morph-run). Both inherit: a page can put this animation on a part of it.
+/* the old content fading out where it stood (the script places it): to the right, with the new one of its place (--g-morph-d), done a little
+   before the rest (--g-morph-run). One that something comes over is hidden the moment that shows (the script gives it a run of 1 ms). Both inherit: a page can put this animation on a part of it.
    It is gone at 40% of its run, as the new one of its place is whole at 40% of its own: a whole new text over an old one that still shows reads as both at once */
 @keyframes g-morph-away { 0% { transform: none; } 40% { transform: translateX(10px); visibility: visible; } 40.1%, 100% { transform: translateX(24px); visibility: hidden; } }
 .g-morph-ghost { z-index: -1; animation: g-morph-away var(--g-morph-run, 180ms) var(--g-ease, cubic-bezier(.3,.7,.25,1)) var(--g-morph-d, 0ms) both !important; }
