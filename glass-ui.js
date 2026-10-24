@@ -417,17 +417,20 @@
       const h = host(t); if (tip.parentNode !== h) h.appendChild(tip);
       tip.textContent = t.getAttribute('data-g-tip'); tip.id = tip.id || 'g-tooltip'; t.setAttribute('aria-describedby', tip.id);
       tip.setAttribute('data-pos', t.getAttribute('data-tip-position') === 'bottom' ? 'bottom' : 'top');   // CSS flips it when there is no room
-      if (prev) prev.style.removeProperty('anchor-name');
+      if (prev !== t) { if (prev) drop(prev); kept.set(t, list(t.style.getPropertyValue('anchor-name'))); }
       name(t); prev = t; watch.disconnect(); watch.observe(t, { attributes: true, attributeFilter: ['aria-selected', 'aria-current', 'aria-pressed', 'class'] });
       if (tip.showPopover && !tip.matches(':popover-open')) tip.showPopover();
     }
     /* the tip adds its name to the element's own (a selected tab keeps --g-tab, its pill hangs on it). Clicking the tab under the pointer makes it selected
        while the tip is still up: the names are read again then, or the inline --g-tip alone would cut the pill loose from the tab. */
-    function name(t) {
+    function name(t) {   // the names the element keeps: the ones set inline by others (a panel's --g-a*) and the stylesheet's (a selected tab's --g-tab); the tip adds its own
+      const own = list(t.style.getPropertyValue('anchor-name'));
       t.style.removeProperty('anchor-name');
-      const names = getComputedStyle(t).anchorName;
-      t.style.setProperty('anchor-name', names && names !== 'none' ? names + ', --g-tip' : '--g-tip');
+      const names = [...own, ...list(getComputedStyle(t).anchorName)];
+      t.style.setProperty('anchor-name', [...new Set([...names, '--g-tip'])].join(', '));
     }
+    const kept = new WeakMap(), list = s => (s || '').split(',').map(n => n.trim()).filter(n => n && n !== 'none' && n !== '--g-tip');
+    function drop(t) { const own = kept.get(t); if (own && own.length) t.style.setProperty('anchor-name', own.join(', ')); else t.style.removeProperty('anchor-name'); }   /* the tip leaves: the names others set inline come back */
     const watch = new MutationObserver(() => { if (prev) name(prev); });   /* prev keeps the name after the tip is hidden (it fades out on it), so it is watched until the next tip */
     function hide() { if (!tip) return; if (cur) cur.removeAttribute('aria-describedby'); cur = null; if (tip.hidePopover && tip.matches(':popover-open')) tip.hidePopover(); }
     /* <button title="Duplicate project">: the native title of any element inside .g-root is taken over (moved to data-g-tip, so the browser does not show its own tip).
