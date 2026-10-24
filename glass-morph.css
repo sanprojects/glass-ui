@@ -45,8 +45,8 @@
 @keyframes g-morph-away { 0% { transform: none; } 40% { transform: translateX(10px); visibility: visible; } 40.1%, 100% { transform: translateX(24px); visibility: hidden; } }
 .g-morph-ghost { z-index: -1; animation: g-morph-away var(--g-morph-run, 180ms) var(--g-ease, cubic-bezier(.3,.7,.25,1)) var(--g-morph-d, 0ms) both !important; }
 /* Glass.morph measures the patched box at once, before the browser has told which of them are on the screen: for those reads they are all laid out
-   (else a new or changed one stands at a guessed size, and what glides would aim wrong). Only [data-g-lazy] is named: switching it touches nothing else */
-[data-g-measure] [data-g-lazy] { content-visibility: visible; }
+   (else a new or changed one stands at a guessed size, and what glides would aim wrong). Glass.morph marks only the [data-g-lazy] boxes it needs: switching them touches nothing else */
+[data-g-lazy][data-g-measure] { content-visibility: visible; }
 /* A browser that does not keep up (glass-morph.js steps the motion down, <html data-g-motion>): the new words only tint; from step 2 what is
    new only appears (no fade: glass is never faded) */
 [data-g-motion] .g-morph-word { background: none; -webkit-text-fill-color: currentColor; animation: g-morph-word-calm var(--g-wave-run) ease-out; }

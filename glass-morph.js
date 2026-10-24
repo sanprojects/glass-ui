@@ -499,7 +499,10 @@
           /* after the patch the browser has not yet told which [data-g-lazy] boxes are on the screen (it does so in the next frame) and lays out
              a new or changed one at a guessed or stale size: while these reads run, all of them are laid out as they are (data-g-measure, the kit's CSS) */
           const scope = ctx.scope || [target];   /* the watched page: only where it changed */
-          scope.forEach(s => s.setAttribute('data-g-measure', ''));
+          /* a lazy list that tells its row count (--g-items) and stands far from the viewport has its real height without being laid out, and nothing in it is read: it stays skipped */
+          const lazy = [...new Set(scope.flatMap(s => [...$$('[data-g-lazy]', s), s.closest('[data-g-lazy]')]))].filter(Boolean);
+          const measure = lazy.some(l => l.style.getPropertyValue('--g-items')) ? lazy.filter(l => { if (!l.style.getPropertyValue('--g-items')) return true; const r = l.getBoundingClientRect(); return r.bottom > -innerHeight && r.top < innerHeight * 2; }) : lazy;
+          measure.forEach(l => l.setAttribute('data-g-measure', ''));
           /* the columns of a [data-g-fit] take the width of the new words first (else they would after this, and the rows would not end where they are read) */
           new Set(scope.flatMap(s => [...$$('[data-g-fit]', s), s.closest('[data-g-fit]')])).forEach(b => { if (b) fitBox(b); });
           /* so do the columns of a table (the kit's colgroup: else the new rows are read at the browser's widths, and the cells jump to the kit's in the next frame) */
@@ -577,7 +580,7 @@
           /* the entering rows keep their class until two frames and end + 50 ms from now (see below), the new words run --g-morph-word */
           RUN = Math.max(RUN, performance.now() + Math.max(ctx.until, ctx.words.length ? T.word : 0) + 150);
           if (enter.length || glide.length || away.length || ctx.ghosts.length || ctx.words.length || ctx.reels) gauge(Math.max(end, ctx.reels ? T.reel : 0, 300), ctx.probe);   /* does the browser keep up with it */
-          scope.forEach(s => s.removeAttribute('data-g-measure'));   /* the reads are done: what is out of the viewport is skipped again in the next frame */
+          measure.forEach(l => l.removeAttribute('data-g-measure'));   /* the reads are done: what is out of the viewport is skipped again in the next frame */
           hidden.forEach(([, finish]) => finish());
           /* the box takes its new height smoothly, so what is below it does not jump (overflow clipped along Y meanwhile; X stays visible for the slides) */
           const h1 = box.height;
