@@ -71,7 +71,7 @@ Cards (static and fully clickable), badges, progress bars, ring and spinner, a s
 
 A dialog on the native `<dialog>` element (focus trap, Esc to close), tooltips, menus and toasts triggered from JavaScript. A menu panel (`<div role="menu" id="m">` for `data-g-menu="#m"` or `data-g-overflow="#m"`) carries its `role="menu"` in the markup: the kit's CSS keeps it hidden until the script makes it a popover, so the first paint has no flash of its items and no layout shift.
 
-A long part of a page marked `data-g-lazy` is laid out and painted only when it is near the viewport (until then it stands at `--g-lazy-h`, 500px by default). A lazy `.g-list` that tells its count of rows, `<ol class="g-list" data-g-lazy style="--g-items: 120">`, stands at its real height: the kit counts the columns that fit in its box, so nothing below it moves when it is drawn. Its parent becomes a size container for that (`container-type: inline-size`): keep the parent's width set by its own parent, not by its content.
+A long part of a page marked `data-g-lazy` is laid out and painted only when it is near the viewport (until then it stands at `--g-lazy-h`, 500px by default). A lazy `.g-list` is lazy row by row instead (`--g-list-row-h` stands in for each row not yet drawn), so it needs no count of rows and its parent is not made a container; `--g-items` is only a hint for `glass-morph.js`.
 
 <img src="docs/overlays.webp" alt="Dialog over blurred page" width="100%">
 

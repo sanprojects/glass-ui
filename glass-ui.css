@@ -152,9 +152,9 @@
 
 /* ---------- Flow: a plain container of kit blocks is a stack ----------
  * Elements carry no outer margin, so blocks dropped into a bare div (a server-rendered result, a fragment, a page section) would touch. <main> is left out: the frame of the page keeps its spacing to the page (see below). The PARENT owns the gap here too:
- * a div / section / aside with a kit block (alert, list, table, card, form...) among its children becomes a one-column grid with --g-gap between all of them.
+ * a div / section / aside with a kit block (alert, list, table, card, form...) among its children (one that has a sibling) becomes a one-column grid with --g-gap between all of them.
  * Zero specificity and first in the file: any container that sets its own layout (a flex or grid with its own gap, .g-stack, .g-prose, a hidden box) keeps it, so nothing is spaced twice. */
-:where(:is(.g-root, .g-root *):is(div, section, aside):not(.g-prose, [hidden]):has(> :is(.g-alert, .g-list, .g-stack, .g-cluster, .g-file, .g-empty, [data-grid], table, article, blockquote, form, fieldset) + *, > * + :is(.g-alert, .g-list, .g-stack, .g-cluster, .g-file, .g-empty, [data-grid], table, article, blockquote, form, fieldset))) { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: var(--g-gap); }
+:where(:is(.g-root, .g-root *):is(div, section, aside):not(.g-prose, [hidden]):has(> :is(.g-alert, .g-list, .g-stack, .g-cluster, .g-file, .g-empty, [data-grid], table, article, blockquote, form, fieldset):not(:only-child))) { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: var(--g-gap); }
 
 /* ---------- Typography: native elements ---------- */
 :where(:is(.g-root,[role="listbox"]) :is(h1, h2, h3, h4, h5, h6, p, ul, ol, dl, dd, figure, pre, blockquote, hr)) { margin: 0; }
@@ -1172,19 +1172,8 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 
 
 /* data-g-lazy: a long part of a page (a group of a thousand rows) that the browser lays out and paints only when it is near the viewport; until then it
-   stands at --g-lazy-h, once drawn at its real height. Keep in mind it keeps its CSS counters to itself (a numbering through several of them: counter-set on its first row) */
+   stands at --g-lazy-h, once drawn at its real height (a .g-list is lazy by its rows, see below, and needs no height). Keep in mind it keeps its CSS counters to itself (a numbering through several of them: counter-set on its first row) */
 [data-g-lazy] { content-visibility: auto; contain-intrinsic-block-size: auto var(--g-lazy-h, 500px); }
-/* A lazy list that tells its count of rows (<ol class="g-list" data-g-lazy style="--g-items: 120">) stands at its real height until drawn, so nothing below it
-   moves when it is: the rows over the columns that fit in its box, as the list lays them out (--g-col-min wide, --g-gap between, --g-cap at most), --g-list-row-h each.
-   The box is measured as a container: the parent of the list gets container-type: inline-size (keep its width set by its own parent, not by its content).
-   tan(atan2(a, b)) is a / b of two lengths as a number. A browser without these functions keeps the 500px */
-@supports (width: calc(round(down, tan(atan2(1cqi, 1px)), 1) * 1px)) {
-  :where(:has(> .g-list[data-g-lazy])) { container-type: inline-size; }
-  .g-list[data-g-lazy] {
-    --g-lazy-cols: clamp(1, round(down, tan(atan2(100cqi + var(--g-gap), var(--g-col-min) + var(--g-gap))) + .001, 1), var(--g-cap, 99));
-    --g-lazy-h: calc(round(up, var(--g-items) / var(--g-lazy-cols), 1) * var(--g-list-row-h));
-  }
-}
 /* The rows of a lazy list are lazy one by one, not the list as a whole: a list that is on the screen at all would have all its rows (a thousand) styled and laid
    out at once (a swap of such a list took 0.74 s at 4x slower CPU, 0.51 s with the rows lazy). Now only the rows near the viewport are, the others stand at
    --g-list-row-h (once drawn, at their real height). The numbering of the rows goes on through them as it did */
