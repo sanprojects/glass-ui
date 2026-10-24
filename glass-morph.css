@@ -77,3 +77,5 @@
 .g-reel__cell--new, .g-reel__cell--gone { animation-duration: var(--g-morph-reel); animation-timing-function: cubic-bezier(.12,.75,.25,1); animation-fill-mode: both; animation-delay: calc(var(--g-reel-d, 0ms) + var(--g-reel-shift, 0ms)); }
 .g-reel__cell--new { animation-name: g-reel-grow; }
 .g-reel__cell--gone { animation-name: g-reel-shrink; }
+/* a board in a huge table (the script marks it): its digits turn, but the cell does not change its width during the run: the width is laid out for the whole table every frame */
+.g-reel--still .g-reel__cell--new, .g-reel--still .g-reel__cell--gone { animation: none; }

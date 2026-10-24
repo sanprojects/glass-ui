@@ -306,6 +306,47 @@ test('watch: innerHTML written by a script: the row that went fades out, the new
     { ghosts: 'alpha', entering: 'delta,omega', gliding: 'beta,gamma', reels: true, boardSlides: false, kept: true, after: { ghosts: 0, anims: 0, reels: 0, text: 'Found: 4 beta gamma delta omega' } });
 });
 
+test('watch: a digit that comes into a table of thousands of cells does not widen its cell during the run (the digits still turn); in a small table it does', async () => {
+  const probe = rows => `
+    Glass.morph.motion(0);   // a slow machine steps the motion down for the tab: the reels would not run
+    const t = document.createElement('table'); t.innerHTML = '<tbody><tr><td class="n">9</td></tr>' + '<tr><td>x</td></tr>'.repeat(${rows}) + '</tbody>'; box.appendChild(t);
+    await new Promise(r => setTimeout(r, ${rows} > 100 ? 3000 : 100));   // the update that brought the table in is over (a number that is in an update still going is new content, it does not turn)
+    Glass.morph.motion(0);
+    box.querySelector('.n').textContent = '10';
+    for (let i = 0; i < 160 && !box.querySelector('.g-reel--still, .g-reel__cell--new'); i++) await new Promise(r => setTimeout(r, 50));   // a busy machine patches later
+    await new Promise(r => setTimeout(r, 60));
+    const cell = box.querySelector('.g-reel__cell--new');
+    out.cell = !!cell; out.still = !!box.querySelector('.g-reel--still');
+    out.widthAnimated = !!cell && cell.getAnimations().some(a => a.animationName === 'g-reel-grow');
+    out.turning = box.querySelectorAll('.g-reel__strip').length > 0;`;
+  const big = await watched('', probe(2500), 1200), small = await watched('', probe(3), 1200);
+  assert.deepEqual({ cell: big.cell, still: big.still, widthAnimated: big.widthAnimated, turning: big.turning }, { cell: true, still: true, widthAnimated: false, turning: true });
+  assert.deepEqual({ cell: small.cell, still: small.still, widthAnimated: small.widthAnimated, turning: small.turning }, { cell: true, still: false, widthAnimated: true, turning: true });
+});
+
+test('watch: a number that has turned (the same count of digits) goes back to text without fitting the table again; one that gained a digit does fit it', async () => {
+  const probe = (from, to) => `
+    Glass.morph.motion(0);
+    box.classList.add('g-root'); const wrap = document.createElement('div'); box.appendChild(wrap);
+    wrap.innerHTML = '<table><tbody><tr><td class="n">${from} pcs</td><td>name</td></tr><tr><td>a very long first column of the other row</td><td>x</td></tr></tbody></table>';
+    const t = wrap.firstChild, fit = () => t.querySelector(':scope > colgroup[data-g-fit]');
+    for (let i = 0; i < 40 && !fit(); i++) await new Promise(r => setTimeout(r, 50));
+    await new Promise(r => setTimeout(r, 200));
+    const n = t.querySelector('.n'); Glass.morph.motion(0);
+    n.textContent = '${to} pcs';
+    for (let i = 0; i < 40 && !box.querySelector('.g-reel'); i++) await new Promise(r => setTimeout(r, 25));
+    out.turning = !!box.querySelector('.g-reel');
+    await new Promise(r => setTimeout(r, 120));   // the fit of the update itself is done: what follows is the end of the run
+    const g0 = fit(), w0 = n.getBoundingClientRect().width;
+    for (let i = 0; i < 80 && box.querySelector('.g-reel'); i++) await new Promise(r => setTimeout(r, 50));   // over
+    await new Promise(r => setTimeout(r, 200));
+    out.refit = fit() !== g0; out.over = !box.querySelector('.g-reel'); out.text = n.textContent; out.dw = Math.abs(n.getBoundingClientRect().width - w0);`;
+  const same = await watched('', probe(41, 42), 100), more = await watched('', probe(9, 10), 100);
+  assert.deepEqual({ turning: same.turning, over: same.over, text: same.text, refit: same.refit }, { turning: true, over: true, text: '42 pcs', refit: false });
+  assert.ok(same.dw < 0.5, 'the board is as wide as the text that takes its place: ' + same.dw);
+  assert.deepEqual({ turning: more.turning, over: more.over, text: more.text, refit: more.refit }, { turning: true, over: true, text: '10 pcs', refit: true });
+});
+
 test('watch: rows taken out and put in one by one (as a framework does), and a row moved: only those animate, the moved one glides', async () => {
   const r = await watched('<ul class="g-list"><li data-key="1">one</li><li data-key="2">two</li><li data-key="3">three</li></ul>', `
     const ul = box.querySelector('ul'), li = n => ul.querySelector('[data-key="' + n + '"]');

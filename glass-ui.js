@@ -1083,8 +1083,19 @@
     out.forEach(x => { const c = document.createElement('col'); c.style.width = (x / tot * 100).toFixed(3) + '%'; cg.appendChild(c); });
     t.insertBefore(cg, t.firstChild); t.style.tableLayout = 'fixed';
   }
+  /* a table that glass-morph has just fitted in an update: what changed in it so far is in that fit, the frame after it need not fit it again (4000 rows: ~230 ms of layout) */
+  let fitted = t => {}, quiet = (n, fn) => fn();
   function fitTables() {
-    const todo = new Set(); let raf = 0;
+    const todo = new Set(); let raf = 0; const watchers = new WeakMap();
+    fitted = t => { todo.delete(t); const mo = watchers.get(t); if (mo) mo.takeRecords(); };
+    /* fn changes the content of a table in a way that cannot change its columns (a number that has turned goes back to the plain text of the same width): no fit for it.
+       What was waiting in the observer before fn is not fn's: it still brings the fit */
+    quiet = (n, fn) => {
+      const t = n.closest && n.closest('table'), mo = t && watchers.get(t);
+      if (!mo) return fn();
+      if (mo.takeRecords().length) later(t);
+      fn(); mo.takeRecords();
+    };
     const later = t => { todo.add(t); if (!raf) raf = requestAnimationFrame(() => { raf = 0; const l = [...todo]; todo.clear(); l.forEach(tableFit); }); };
     const ro = window.ResizeObserver ? new ResizeObserver(es => es.forEach(e => { const t = e.target.querySelector(':scope > table'); if (t) later(t); })) : null;
     const seen = new WeakSet();
@@ -1093,7 +1104,7 @@
       if (!seen.has(t)) {
         seen.add(t);
         if (ro) ro.observe(t.parentElement);
-        if (window.MutationObserver) new MutationObserver(recs => { if (recs.some(r => ![...r.addedNodes, ...r.removedNodes].every(n => n.nodeName === 'COLGROUP'))) later(t); }).observe(t, { childList: true, subtree: true, characterData: true });
+        if (window.MutationObserver) { const mo = new MutationObserver(recs => { if (recs.some(r => ![...r.addedNodes, ...r.removedNodes].every(n => n.nodeName === 'COLGROUP'))) later(t); }); mo.observe(t, { childList: true, subtree: true, characterData: true }); watchers.set(t, mo); }
       }
       later(t);
     };
@@ -1104,9 +1115,26 @@
     }))).observe(document.documentElement, { childList: true, subtree: true });
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { $$('table').forEach(one); });
   }
+  /* <body class="g-root"> with a fixed shell in it (.g-shell--tools, .g-shell[data-fixed]) is one screen tall: the CSS names it by data-g-fixed, and this puts the attribute on.
+     Not a :has() on <body> in the CSS: that restyles every element of the page on each change in it (4000 table rows: 520 ms of style per refresh, 25 ms without). A body that has the attribute from the server keeps it. */
+  function fixedFrame() {
+    const SHELL = '.g-shell--tools, .g-shell[data-fixed]', body = document.body;
+    if (!body || !body.classList.contains('g-root')) return;
+    let auto = false;
+    const check = () => {
+      const has = !!body.querySelector(SHELL);
+      if (has && !body.hasAttribute('data-g-fixed')) { body.setAttribute('data-g-fixed', ''); auto = true; }
+      else if (!has && auto) { body.removeAttribute('data-g-fixed'); auto = false; }
+    };
+    const shell = n => n.nodeType === 1 && (n.matches(SHELL) || (!!n.firstElementChild && !!n.querySelector(SHELL)));
+    check();
+    if (window.MutationObserver) new MutationObserver(recs => {
+      if (recs.some(r => r.type === 'attributes' ? r.target.matches('.g-shell') : [...r.addedNodes, ...(auto ? r.removedNodes : [])].some(shell))) check();
+    }).observe(body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-fixed'] });
+  }
   function start() {
     addressForms();   /* first: its snapshot of <main> is the markup as it came, before anything here builds its parts */
-    fitLate(); newRows(); busyForms(); fitTables();
+    fixedFrame(); fitLate(); newRows(); busyForms(); fitTables();
     hints(document);   // the "?" markers take room in their elements: add them before the first paint, so nothing shifts when they would appear later
     ['pointerover', 'pointerdown', 'keydown', 'focusin', 'click'].forEach(t => { document.addEventListener(t, lazy, true); });
     requestAnimationFrame(() => {
@@ -2050,7 +2078,8 @@
   global.Glass = Object.assign(global.Glass || {}, {
     init, animate, busy, fileProgress, ruler, toast, setProgress, validate, nav: navAuto, syncClock,
     fit: box => { if (box._gFit) box._gFit(); else mount1(box, ['[data-g-fit]', initFit]); },   /* measure a [data-g-fit] box now (glass-morph.js, in the reads of an update) */
-    fitTable: t => { if (t.matches(FIT_T)) tableFit(t); },   /* the columns of a table fit its box now (glass-morph.js, in the reads of an update) */
+    quiet: (n, fn) => quiet(n, fn),   /* fn changes a table in a way that cannot change its columns: it needs no fit (glass-morph.js, a reel that is over) */
+    fitTable: t => { if (t.matches(FIT_T)) { tableFit(t); fitted(t); } },   /* the columns of a table fit its box now (glass-morph.js, in the reads of an update) */
     /* for glass-morph.js: the kit's parts that run by themselves (their own animations, built and changed by the kit): not content to animate */
     morphSkip: (global.Glass && global.Glass.morphSkip ? global.Glass.morphSkip + ', ' : '') +   /* what the page set before (ads, other scripts' widgets) stays */
       '.g-select, .g-tooltip, .g-toasts, .g-more, .g-clamp__btn, .g-ruler, .g-input-wrap, .g-busy-bar, .g-busy-lines, [data-g-pager], [data-g-file], ' +

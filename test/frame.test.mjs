@@ -64,3 +64,25 @@ test('a long page: the document scrolls, the footer comes after the content', as
   assert.ok(m.footerBottom > m.innerH, 'the footer is below the fold');
   await page.close();
 });
+
+/* the frame is data-g-fixed on <body>: glass-ui.js sets it for a fixed shell that is in the page, also one put in later, and takes back only what it set */
+test('a shell put in later makes the frame, taken out it gives it back; data-g-fixed from the server stays', async () => {
+  const page = await open('short');
+  const has = () => page.evaluate(() => document.body.hasAttribute('data-g-fixed'));
+  assert.equal(await has(), false, 'no shell: no frame');
+  await page.evaluate(() => { const s = document.createElement('div'); s.className = 'g-shell g-shell--tools'; s.id = 'late'; s.innerHTML = '<aside>p</aside><main>w</main>'; document.querySelector('main').append(s); });
+  await page.waitForFunction(() => document.body.hasAttribute('data-g-fixed'));
+  const m = await measure(page);
+  assert.ok(m.docScroll <= 1, 'the frame is one screen tall: ' + m.docScroll);
+  await page.evaluate(() => document.getElementById('late').remove());
+  await page.waitForFunction(() => !document.body.hasAttribute('data-g-fixed'));
+  await page.evaluate(() => { const s = document.createElement('div'); s.className = 'g-shell'; s.innerHTML = '<aside>p</aside><main>w</main>'; s.id = 'attr'; document.querySelector('main').append(s); s.setAttribute('data-fixed', ''); });
+  await page.waitForFunction(() => document.body.hasAttribute('data-g-fixed'));
+  await page.evaluate(() => document.getElementById('attr').remove());
+  await page.waitForFunction(() => !document.body.hasAttribute('data-g-fixed'));
+  await page.evaluate(() => { document.body.setAttribute('data-g-fixed', ''); });
+  await page.evaluate(() => { const s = document.createElement('div'); s.className = 'g-shell g-shell--tools'; s.id = 'late'; document.querySelector('main').append(s); s.remove(); });
+  await page.waitForTimeout(100);
+  assert.equal(await has(), true, 'the server\'s attribute is not taken back');
+  await page.close();
+});

@@ -261,6 +261,9 @@
       document.body.insertAdjacentHTML('beforeend', '<svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">' +
         [1.5, 3, 5].map((v, i) => `<filter id="g-reel-blur-${i + 1}" x="-20%" y="-50%" width="140%" height="200%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="0 ${v}"/></filter>`).join('') + '</svg>');
     }
+    /* A table of thousands of cells: a digit that comes or goes does not widen / narrow its cell during the run (max-width lays the whole table out every frame, ~12 ms at 4000 rows):
+       it stands at its full width (the board is .g-reel--still), the digits turn as before */
+    const hugeTable = board => { const t = board.closest('table'); return !!t && t.rows.length * (t.rows[0] ? t.rows[0].cells.length || 1 : 1) >= 2000; };
     const el = (cls, text) => { const e = document.createElement('span'); e.className = cls; if (text != null) e.textContent = text; return e; };
     /* Replaces the text node `t` (a number) with a board of reels that shows `to` at the end. The characters are aligned to the right and a reel runs only
        where the digit changed. When it is over, the board is a plain text node again. */
@@ -291,10 +294,11 @@
          (sanstv.ru/admin/online: a table of thousands of rows, a few dozen numbers turning, ~4 s of layout) */
       board._arm = () => {
         const cs = board.parentElement ? getComputedStyle(board.parentElement) : null, h = (cs && parseFloat(cs.lineHeight)) || (cs ? parseFloat(cs.fontSize) : 16) * 1.25;
-        const ws = $$('.g-reel__cell--new, .g-reel__cell--gone', board).map(c => [c, c.firstChild.getBoundingClientRect().width]);
-        return () => { board.style.setProperty('--g-reel-h', h + 'px'); ws.forEach(([c, w]) => c.style.setProperty('--g-reel-w', w + 'px')); };
+        const ws = $$('.g-reel__cell--new, .g-reel__cell--gone', board).map(c => [c, c.firstChild.getBoundingClientRect().width]), still = ws.length && hugeTable(board);
+        return () => { board.style.setProperty('--g-reel-h', h + 'px'); if (still) board.classList.add('g-reel--still'); else ws.forEach(([c, w]) => c.style.setProperty('--g-reel-w', w + 'px')); };
       };
-      board._finish = () => { clearTimeout(board._timer); if (board.parentNode) { const p = board.parentNode; p._gRun = null; p.replaceChild(document.createTextNode(to), board); p.normalize(); unseen(p); } };   /* normalize: the text around a number that turned is one text again */
+      const flat = !board.querySelector('.g-reel__cell--new, .g-reel__cell--gone');   /* no digit comes or goes: the board is as wide as the text that takes its place */
+      board._finish = () => { clearTimeout(board._timer); if (board.parentNode) { const p = board.parentNode, swap = () => { p._gRun = null; p.replaceChild(document.createTextNode(to), board); p.normalize(); }; if (flat && kit.quiet) kit.quiet(p, swap); else swap(); unseen(p); } };   /* normalize: the text around a number that turned is one text again */
       settled(() => { if (board.parentNode) board._timer = setTimeout(board._finish, T.reel + Math.max(changed - 1, 0) * T.reelStagger + 60); });
       return board;
     }
@@ -363,6 +367,7 @@
       s.style.setProperty('--g-wave-at', at.toFixed(3));
       return s;
     }
+    const faraway = (ctx, el) => { if (ctx.far) for (let p = el; p; p = p.parentElement) if (ctx.far.has(p)) return true; return false; };
     /* phase 2: patch `op` (live) to look like `np` */
     function reconcile(op, np, o, ctx) {
       const oldL = kids(op), newL = kids(np), m = match(oldL, newL, o, () => sameButDigits(op, np)), pairOf = new Map(), oldTexts = [...op.childNodes].filter(n => n.nodeType === 3);
@@ -403,8 +408,8 @@
             node = t;
             if (t.nodeValue !== nk.nodeValue) {
               const parts = ctx.play && o.reel !== false && t.parentElement ? numSplit(t.nodeValue, nk.nodeValue) : null;   /* only numbers changed: they turn, the text around them stays */
-              if (parts && inView(t.parentElement)) { const d = reelsOf(parts, ctx.T); node = d.frag; (ctx.arms || (ctx.arms = [])).push(...d.boards); }   /* the old node stays at the cursor and goes below */
-              else if (ctx.play && o.flash !== false && t.parentElement && (node = words(t, nk.nodeValue, ctx))) { /* the new words (the whole text when none is new) are marked; the old node goes below */ }
+              if (parts && (ctx.view && ctx.view.has(t.parentElement) ? ctx.view.get(t.parentElement) : inView(t.parentElement))) { const d = reelsOf(parts, ctx.T); node = d.frag; (ctx.arms || (ctx.arms = [])).push(...d.boards); }   /* the old node stays at the cursor and goes below */
+              else if (ctx.play && o.flash !== false && t.parentElement && !faraway(ctx, t.parentElement) && (node = words(t, nk.nodeValue, ctx))) { /* the new words (the whole text when none is new) are marked; the old node goes below */ }
               else { node = t; t.nodeValue = nk.nodeValue; }
             }
           }
@@ -658,6 +663,18 @@
             const at = e => { const s = skipped(e); return s ? { box: s[0], at: s[1] } : e.getBoundingClientRect(); };
             g.claimed.forEach(e => { if (!ctx.moves.has(e)) ctx.moves.set(e, at(e)); });
             moved.forEach(e => { if (!ctx.moves.has(e) && e.isConnected) ctx.pre.set(e, at(e)); });
+          }
+          if (o.flash !== false) {   /* what stands more than a screen away from the viewport: its words do not light up (they would be put back to plain text in flush, 3820 spans and animations in a table of 4000 rows) */
+            const far = ctx.far = new WeakSet(), todo = [target];
+            for (let p; (p = todo.pop());) for (const c of p.children) {
+              const s = skipped(c), r = s ? s[1] : c.getBoundingClientRect();
+              if (r.width || r.height) { if (r.bottom < -innerHeight || r.top > innerHeight * 2 || r.right < -innerWidth || r.left > innerWidth * 2) { far.add(c); continue; } }
+              if (!s) todo.push(c);
+            }
+          }
+          if (o.reel !== false) {   /* where the numbers stand: asked in reconcile, after the writes, each read would lay the page out again (a table of thousands of cells: seconds) */
+            const view = ctx.view = new WeakMap(), w = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
+            for (let n; (n = w.nextNode());) { const h = n.parentElement; if (h && !view.has(h) && /\d/.test(n.nodeValue)) view.set(h, !skipped(h) && inView(h)); }
           }
           const flat = new Map(), isFlat = p => { if (!flat.has(p)) flat.set(p, getComputedStyle(p).position === 'static'); return flat.get(p); };
           ghosts = leaving.slice(0, MAX).map(e => { const p = e.parentElement; if (!p || skipped(e) || said(e)) return null; const r = e.getBoundingClientRect(); if (!onScreen(r)) return null; const pr = p.getBoundingClientRect(); return [e, p, r.left - pr.left - p.clientLeft + p.scrollLeft, r.top - pr.top - p.clientTop + p.scrollTop, r.width, r.height, isFlat(p), r.left, r.top, getComputedStyle(e).display]; }).filter(Boolean);

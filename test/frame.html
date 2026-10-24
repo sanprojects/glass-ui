@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The frame of a themed page: the footer at the bottom, a fixed shell scrolls inside</title>
 <link rel="stylesheet" href="../glass-ui.css">
+<script src="../glass-ui.js"></script>
 </head>
 <body class="g-root">
 <nav><a href="#">home</a></nav>
@@ -15,7 +16,7 @@
 </main>
 <footer id="footer"><a href="#">licence</a></footer>
 <script>
-  // the case decides which part is in the page at all (a hidden shell would still match the :has() of the frame)
+  // the case decides which part is in the page at all (a hidden shell would still make the frame)
   const keep = { fixed: '#shell', short: '#short', long: '#tall' }[new URLSearchParams(location.search).get('case') || 'short'];
   for (const id of ['shell', 'short', 'tall']) if ('#' + id !== keep) document.getElementById(id).remove();
 </script>
