@@ -1176,9 +1176,10 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 [data-g-lazy] { content-visibility: auto; contain-intrinsic-block-size: auto var(--g-lazy-h, 500px); }
 /* The rows of a lazy list are lazy one by one, not the list as a whole: a list that is on the screen at all would have all its rows (a thousand) styled and laid
    out at once (a swap of such a list took 0.74 s at 4x slower CPU, 0.51 s with the rows lazy). Now only the rows near the viewport are, the others stand at
-   --g-list-row-h (once drawn, at their real height). The numbering of the rows goes on through them as it did */
+   --g-list-row-h (once drawn, at their real height). The numbering of the rows goes on through them as it did: the row itself stays as it is and its content is
+   the lazy part, because content-visibility: auto on the <li> contains its style, and Safari then takes its counter out of the list (every number is 0) */
 .g-list[data-g-lazy] { content-visibility: visible; }
-.g-list[data-g-lazy] > li { content-visibility: auto; contain-intrinsic-block-size: auto var(--g-list-row-h); }
+.g-list[data-g-lazy] > li > * { content-visibility: auto; contain-intrinsic-block-size: auto var(--g-list-row-h); }
 
 /* ---------- Busy box: Glass.busy(box, true | false | promise) ----------
  * While new content is on the way: after --g-busy-box-delay a thin line fades in and runs along the top edge of the box (the content stays as it is), and
