@@ -490,11 +490,11 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 :where(:is(.g-root,[role="listbox"]) input[type="number"])::-webkit-inner-spin-button, :where(:is(.g-root,[role="listbox"]) input[type="number"])::-webkit-outer-spin-button { appearance: none; margin: 0; }
 .g-input-wrap.g-stepper > input { padding: 0 40px; text-align: center; }
 /* Colour input: swatch opens the native picker, the field takes a hex value (data-g-color) */
-.g-color__swatch { position: absolute; left: 8px; width: 24px; height: 24px; border-radius: 50%; overflow: hidden; cursor: pointer; background: var(--c, #0A84FF);
+.g-color__swatch { position: absolute; left: var(--g-inset); width: 24px; height: 24px; border-radius: 50%; overflow: hidden; cursor: pointer; background: var(--c, #0A84FF);
   box-shadow: inset 0 0 0 1px rgba(var(--g-ov),.5); }
 .g-color__swatch:focus-within { box-shadow: inset 0 0 0 1px rgba(var(--g-ov),.5), var(--g-focus); }
 .g-color__swatch input { position: absolute; inset: -8px; width: calc(100% + 16px); height: calc(100% + 16px); opacity: 0; cursor: pointer; border: 0; padding: 0; }
-.g-input-wrap.g-color > input:not([type="color"]) { padding-left: 40px; text-transform: uppercase; letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+.g-input-wrap.g-color > input:not([type="color"]) { padding-left: calc(var(--g-inset) + 24px + var(--g-gap-inner)); text-transform: uppercase; letter-spacing: .04em; font-variant-numeric: tabular-nums; }
 :is(.g-field, .g-root fieldset):has([aria-invalid="true"]) .g-input-end:not([data-g-clear-input]) { color: var(--g-danger-text); }
 :is(.g-field, .g-root fieldset):has([aria-invalid="false"]) .g-input-end:not([data-g-clear-input]) { color: var(--g-success-text); }
 :is(.g-field, .g-root fieldset):has([aria-invalid]) .g-input-wrap > span[data-icon]:not(.g-input-end) { color: var(--g-text-2); }
