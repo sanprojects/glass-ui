@@ -429,6 +429,14 @@
        a read here, after the writes of the update, would make the page work out its styles once more). They fade out in `ms` and are taken away, all at once,
        at `until`: taking one away lays the page out, so they go when nothing moves any more, and in one go. Each starts with the new one of the
        place it stood (wave: viewport x, y -> ms of delay), on the same curve (ease) and the same way (to the right), and fades out in run(delay) ms. */
+    /* the progress of a CSS easing at time x (0..1): cubic-bezier(x1, y1, x2, y2) or a keyword; anything else is taken as linear */
+    function bezier(css) {
+      const k = { ease: [.25, .1, .25, 1], 'ease-in': [.42, 0, 1, 1], 'ease-out': [0, 0, .58, 1], 'ease-in-out': [.42, 0, .58, 1] }, m = /cubic-bezier\(([^)]*)\)/.exec(css);
+      const v = m ? m[1].split(',').map(Number) : k[css.trim()];
+      if (!v || v.length !== 4 || v.some(isNaN)) return x => x;
+      const at = (a, b, t) => 3 * a * (1 - t) * (1 - t) * t + 3 * b * (1 - t) * t * t + t * t * t;
+      return x => { let lo = 0, hi = 1; for (let i = 0; i < 24; i++) { const t = (lo + hi) / 2; if (at(v[0], v[2], t) < x) lo = t; else hi = t; } return at(v[1], v[3], (lo + hi) / 2); };
+    }
     function ghost(list, run, until, wave) {
       /* parent -> [how many ghosts it still holds, static, its own isolation]. Meanwhile a static parent is positioned for them, and isolated: the
          ghosts stand under its content (z-index -1) and over its background; one that something comes over is hidden the moment that shows (cut) */
@@ -547,7 +555,7 @@
               /* only what is on the screen before and after glides: one that comes from out of the viewport comes in as a new one does, one that goes
                  out of it fades out where it stood (a glide over thousands of pixels would only flash across the screen) */
               at.set(e, on && !seen ? [l.left, l.top] : [l.left + r[0], l.top + r[1]]);   /* one that comes in: where it ends; one that glides or goes: where it stood */
-              if (on && !seen && o.enter !== false) { came.add(e); enter.push(e); }
+              if (on && !seen && o.enter !== false) { came.add(e); enter.push(e); cover.push([e, l]); }
               else if (on) { gliding.set(e, [r[0], r[1]]); glide.push([e, dx, dy]); cover.push([e, l]); }
               else if (seen) { gliding.set(e, [r[0], r[1]]); away.push([e, dx, dy, l]); }
             });
@@ -572,7 +580,27 @@
           const step = lines + cols ? Math.min(T.stagger, Math.max(0, end - T.enter * .75) / (lines + cols)) : 0;
           ctx.wave = (x, y) => Math.round(((line.get(Math.round(y)) || 0) + (col.get(Math.round(x)) || 0)) * step);
           ctx.run = d => Math.max(60, ctx.fade - d, (end - d) * .6);   /* how long a row that goes fades out: before the new one of its place is in */
-          const waveOf = e => { const p = at.get(e); return p ? ctx.wave(p[0], p[1]) : 0; };
+          const late = new Map();   /* what comes in, when it shows: later than its wave when one that glides is still over its place */
+          const waveOf = e => { if (late.has(e)) return late.get(e); const p = at.get(e); return p ? ctx.wave(p[0], p[1]) : 0; };
+          /* One that glides away from the place of one that comes in is over it for a while (a row that is pushed down by the new ones above it
+             starts where they come in). What comes in shows when it has gone by: where its rect no longer meets the rect of the glide on the curve
+             of the glide (sampled), but not later than half of the run (the rest of the run it slides in as it does). */
+          if (enter.length && glide.length) {
+            const ease = bezier(T.ease), part = 16, rects = new Map(cover);
+            glide.forEach(([g, dx, dy]) => { const l = rects.get(g), d = waveOf(g), run = end - d;
+              enter.forEach(e => {
+                if (e === g || e.contains(g) || g.contains(e)) return;
+                const r = rects.get(e); if (!r) return;
+                const x0 = Math.min(l.left, l.left + dx), x1 = Math.max(l.right, l.right + dx), y0 = Math.min(l.top, l.top + dy), y1 = Math.max(l.bottom, l.bottom + dy);
+                if (Math.min(x1, r.right) - Math.max(x0, r.left) <= 2 || Math.min(y1, r.bottom) - Math.max(y0, r.top) <= 2) return;
+                for (let i = part - 1; i >= 0; i--) {
+                  const k = 1 - ease(i / part);
+                  if (Math.min(l.right + dx * k, r.right) - Math.max(l.left + dx * k, r.left) > 2 && Math.min(l.bottom + dy * k, r.bottom) - Math.max(l.top + dy * k, r.top) > 2) {
+                    late.set(e, Math.max(late.get(e) ?? 0, waveOf(e), Math.min(d + (i + 1) / part * run, end / 2))); break;
+                  }
+                }
+              }); });
+          }
           /* A ghost with something over it (what comes in at its place, what glides there) is gone the moment that shows, without its slide: what
              is new is often glass, and glass shows what is under it, so the old one would be seen through the new one (a menu under a menu). g[10]:
              when the first of them shows; a ghost with nothing over it (a row that is only gone) slides out as before. A parent that glides is not
@@ -586,6 +614,10 @@
             if (c === e || c.contains(e) || e.contains(c)) return;
             if (Math.min(p[0] + l.width, r.right) - Math.max(p[0], r.left) > 2 && Math.min(p[1] + l.height, r.bottom) - Math.max(p[1], r.top) > 2) a[4] = Math.min(a[4] ?? Infinity, waveOf(c));
           }); });
+          /* Held where they stood but drawn as they are now, two of them stand over each other (a 4-row list and a 58-row one, each at the old place of the
+             other's rows): they are not drawn at all, from the first frame (a[5]) */
+          away.forEach((a, i) => { for (let j = i + 1; j < away.length; j++) { const p = at.get(a[0]), q = at.get(away[j][0]), m = away[j][3];
+            if (p && q && Math.min(p[0] + a[3].width, q[0] + m.width) - Math.max(p[0], q[0]) > 2 && Math.min(p[1] + a[3].height, q[1] + m.height) - Math.max(p[1], q[1]) > 2) a[5] = away[j][5] = true; } });
           if (ctx.ghosts.length) placed(ghost(ctx.ghosts, ctx.run, ctx.until, ctx.wave), kept);
           if (ctx.onWrite) ctx.onWrite();
           /* the entering rows keep their class until two frames and end + 50 ms from now (see below), the new words run --g-morph-word */
@@ -611,8 +643,8 @@
           if (enter.length) settled(() => enter.forEach(e => later(e, 'g-morph-enter', end + 50, () => { e.style.removeProperty('--g-morph-enter'); e.style.removeProperty('--g-morph-d'); })));
           glide.forEach(([e, dx, dy]) => { const d = waveOf(e); e.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { id: 'g-morph', duration: end - d, delay: d, easing: T.ease, fill: 'backwards' }); });   /* all in place at once */
           /* gone out of the viewport: held where it stood, it is hidden as a ghost is; then it is in its new place, out of sight */
-          away.forEach(([e, dx, dy, , cut]) => { const d = cut == null ? waveOf(e) : Math.min(cut, waveOf(e)), from = `translate(${dx}px, ${dy}px)`, to = `translate(${dx + 24}px, ${dy}px)`, run = ctx.until - d;
-            e.animate([{ transform: from, visibility: 'visible', easing: T.ease }, { transform: to, visibility: 'hidden', offset: Math.min(1, (cut == null ? ctx.run(d) : 1) / run) }, { transform: to, visibility: 'hidden' }], { id: 'g-morph', duration: run, delay: d, fill: 'backwards' }); });
+          away.forEach(([e, dx, dy, , cut, gone]) => { const d = gone ? 0 : cut == null ? waveOf(e) : Math.min(cut, waveOf(e)), from = `translate(${dx}px, ${dy}px)`, to = `translate(${dx + 24}px, ${dy}px)`, run = ctx.until - d;
+            e.animate([{ transform: from, visibility: gone ? 'hidden' : 'visible', easing: T.ease }, { transform: to, visibility: 'hidden', offset: gone ? 0 : Math.min(1, (cut == null ? ctx.run(d) : 1) / run) }, { transform: to, visibility: 'hidden' }], { id: 'g-morph', duration: run, delay: d, fill: 'backwards' }); });
           ctx.entering = []; ctx.moves = new Map(); ctx.pre = new Map(); ctx.words = []; ctx.h0 = null;
         }
       };
