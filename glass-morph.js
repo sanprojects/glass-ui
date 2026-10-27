@@ -549,7 +549,7 @@
               at.set(e, on && !seen ? [l.left, l.top] : [l.left + r[0], l.top + r[1]]);   /* one that comes in: where it ends; one that glides or goes: where it stood */
               if (on && !seen && o.enter !== false) { came.add(e); enter.push(e); }
               else if (on) { gliding.set(e, [r[0], r[1]]); glide.push([e, dx, dy]); cover.push([e, l]); }
-              else if (seen) { gliding.set(e, [r[0], r[1]]); away.push([e, dx, dy]); }
+              else if (seen) { gliding.set(e, [r[0], r[1]]); away.push([e, dx, dy, l]); }
             });
             if (came.size) enter.sort((x, y) => x.compareDocumentPosition(y) & 4 ? -1 : 1).splice(MAX);
           }
@@ -580,6 +580,12 @@
           ctx.ghosts.forEach(g => { if (g[7] == null) return; cover.forEach(([e, r]) => {
             if (!e.contains(g[1]) &&Math.min(g[7] + g[4], r.right) - Math.max(g[7], r.left) > 2 && Math.min(g[8] + g[5], r.bottom) - Math.max(g[8], r.top) > 2) g[10] = Math.min(g[10] ?? Infinity, waveOf(e));
           }); });
+          /* One that goes out of the viewport is held where it stood and drawn as it is now (its new content, its new size: a list of 4 rows that became 58 stands
+             over what comes in at its place). It is covered the same way: gone the moment what comes in or glides there shows (a[4]: when) */
+          away.forEach(a => { const [e, , , l] = a, p = at.get(e); if (!p) return; cover.forEach(([c, r]) => {
+            if (c === e || c.contains(e) || e.contains(c)) return;
+            if (Math.min(p[0] + l.width, r.right) - Math.max(p[0], r.left) > 2 && Math.min(p[1] + l.height, r.bottom) - Math.max(p[1], r.top) > 2) a[4] = Math.min(a[4] ?? Infinity, waveOf(c));
+          }); });
           if (ctx.ghosts.length) placed(ghost(ctx.ghosts, ctx.run, ctx.until, ctx.wave), kept);
           if (ctx.onWrite) ctx.onWrite();
           /* the entering rows keep their class until two frames and end + 50 ms from now (see below), the new words run --g-morph-word */
@@ -605,8 +611,8 @@
           if (enter.length) settled(() => enter.forEach(e => later(e, 'g-morph-enter', end + 50, () => { e.style.removeProperty('--g-morph-enter'); e.style.removeProperty('--g-morph-d'); })));
           glide.forEach(([e, dx, dy]) => { const d = waveOf(e); e.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { id: 'g-morph', duration: end - d, delay: d, easing: T.ease, fill: 'backwards' }); });   /* all in place at once */
           /* gone out of the viewport: held where it stood, it is hidden as a ghost is; then it is in its new place, out of sight */
-          away.forEach(([e, dx, dy]) => { const d = waveOf(e), from = `translate(${dx}px, ${dy}px)`, to = `translate(${dx + 24}px, ${dy}px)`, run = ctx.until - d;
-            e.animate([{ transform: from, visibility: 'visible', easing: T.ease }, { transform: to, visibility: 'hidden', offset: Math.min(1, ctx.run(d) / run) }, { transform: to, visibility: 'hidden' }], { id: 'g-morph', duration: run, delay: d, fill: 'backwards' }); });
+          away.forEach(([e, dx, dy, , cut]) => { const d = cut == null ? waveOf(e) : Math.min(cut, waveOf(e)), from = `translate(${dx}px, ${dy}px)`, to = `translate(${dx + 24}px, ${dy}px)`, run = ctx.until - d;
+            e.animate([{ transform: from, visibility: 'visible', easing: T.ease }, { transform: to, visibility: 'hidden', offset: Math.min(1, (cut == null ? ctx.run(d) : 1) / run) }, { transform: to, visibility: 'hidden' }], { id: 'g-morph', duration: run, delay: d, fill: 'backwards' }); });
           ctx.entering = []; ctx.moves = new Map(); ctx.pre = new Map(); ctx.words = []; ctx.h0 = null;
         }
       };
