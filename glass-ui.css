@@ -1279,7 +1279,7 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 .g-input-wrap:has(> .g-input-note:not(:empty)) > input { padding-right: calc(var(--g-note-right) + 3.5em); }
 /* the note of a text field is a number (a count of results; Glass.morph turns its digits). When the field is narrow it goes, and what is typed has the whole field; the unit in a number field (g, kJ) stays */
 .g-input-wrap:has(> input:not([type="number"]) ~ .g-input-note) { container-type: inline-size; }
-@container (max-width: 16.25rem) { .g-input-wrap > input:not([type="number"]) ~ .g-input-note { display: none; } .g-input-wrap > input:not([type="number"]):has(~ .g-input-note) { padding-right: var(--g-note-right); } }
+@container (max-width: 15rem) { .g-input-wrap > input:not([type="number"]) ~ .g-input-note { display: none; } .g-input-wrap > input:not([type="number"]):has(~ .g-input-note) { padding-right: var(--g-note-right); } }
 
 /* ---------- Tile: <article data-tile> with icon, title, count. A square card, the same article as any other: put it in any grid or on its own.
  * Icon centred over the title, count in the top-right corner. --g-tile-max caps the size (250px). Make it a link by wrapping it in <a>. */
