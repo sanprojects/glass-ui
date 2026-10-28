@@ -1079,6 +1079,9 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
   [role="tablist"][data-variant="underline"] > * { border-bottom-color: transparent !important; }
   [role="tablist"] > * { transition: color var(--g-dur-md) var(--g-ease); }   /* the letters change colour in step with the sliding pill */
   [role="tablist"] > [aria-selected="true"], [role="tablist"]:not(:has([aria-selected="true"])) > :where(button, [role="tab"]):first-child { anchor-name: --g-tab; }
+  /* the tooltip of a tab takes its name here, not inline: an inline anchor-name written on the tab the pointer is about to choose cuts the pill's glide to the right short */
+  [role="tablist"] > [data-g-tipping] { anchor-name: --g-tip; }
+  [role="tablist"] > [aria-selected="true"][data-g-tipping], [role="tablist"]:not(:has([aria-selected="true"])) > :where(button, [role="tab"]):first-child[data-g-tipping] { anchor-name: --g-tab, --g-tip; }
   [role="tablist"]::after { content: ""; position: absolute; z-index: -1; pointer-events: none; position-anchor: --g-tab; left: anchor(left); right: anchor(right); top: anchor(top); bottom: anchor(bottom);
     border-radius: var(--g-radius-pill); background: rgba(255,255,255,.92); box-shadow: 0 1px 3px rgba(0,0,0,.14); transition: left var(--g-dur-md) var(--g-ease), right var(--g-dur-md) var(--g-ease); }
   [role="tablist"][data-variant="underline"]::after { top: calc(anchor(bottom) - 2px); bottom: auto; height: 2px; border-radius: 0; background: var(--g-ink); box-shadow: none; }
@@ -1273,7 +1276,10 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 .g-input-wrap:has(> .g-input-end:not([hidden]) ~ .g-input-end:not([hidden])) { --g-note-right: 74px; }
 .g-input-note { position: absolute; top: 50%; right: var(--g-note-right); transform: translateY(-50%); font-size: var(--g-fs-footnote); color: var(--g-text-3); white-space: nowrap; font-variant-numeric: tabular-nums; pointer-events: none; }
 .g-input-note:empty { display: none; }
-.g-input-wrap:has(> .g-input-note:not(:empty)) > input { padding-right: calc(var(--g-note-right) + 100px); }
+.g-input-wrap:has(> .g-input-note:not(:empty)) > input { padding-right: calc(var(--g-note-right) + 3.5em); }
+/* the note of a text field is a number (a count of results; Glass.morph turns its digits). When the field is narrow it goes, and what is typed has the whole field; the unit in a number field (g, kJ) stays */
+.g-input-wrap:has(> input:not([type="number"]) ~ .g-input-note) { container-type: inline-size; }
+@container (max-width: 16.25rem) { .g-input-wrap > input:not([type="number"]) ~ .g-input-note { display: none; } .g-input-wrap > input:not([type="number"]):has(~ .g-input-note) { padding-right: var(--g-note-right); } }
 
 /* ---------- Tile: <article data-tile> with icon, title, count. A square card, the same article as any other: put it in any grid or on its own.
  * Icon centred over the title, count in the top-right corner. --g-tile-max caps the size (250px). Make it a link by wrapping it in <a>. */

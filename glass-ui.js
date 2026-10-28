@@ -423,14 +423,16 @@
     }
     /* the tip adds its name to the element's own (a selected tab keeps --g-tab, its pill hangs on it). Clicking the tab under the pointer makes it selected
        while the tip is still up: the names are read again then, or the inline --g-tip alone would cut the pill loose from the tab. */
+    const ofTabs = t => t.parentNode && t.parentNode.getAttribute && t.parentNode.getAttribute('role') === 'tablist' && !t.style.getPropertyValue('anchor-name');   // a tab names the tip in CSS (data-g-tipping): an inline anchor-name on it kills the pill's glide to the right
     function name(t) {   // the names the element keeps: the ones set inline by others (a panel's --g-a*) and the stylesheet's (a selected tab's --g-tab); the tip adds its own
+      if (ofTabs(t)) { t.setAttribute('data-g-tipping', ''); return; }
       const own = list(t.style.getPropertyValue('anchor-name'));
       t.style.removeProperty('anchor-name');
       const names = [...own, ...list(getComputedStyle(t).anchorName)];
       t.style.setProperty('anchor-name', [...new Set([...names, '--g-tip'])].join(', '));
     }
     const kept = new WeakMap(), list = s => (s || '').split(',').map(n => n.trim()).filter(n => n && n !== 'none' && n !== '--g-tip');
-    function drop(t) { const own = kept.get(t); if (own && own.length) t.style.setProperty('anchor-name', own.join(', ')); else t.style.removeProperty('anchor-name'); }   /* the tip leaves: the names others set inline come back */
+    function drop(t) { t.removeAttribute('data-g-tipping'); const own = kept.get(t); if (own && own.length) t.style.setProperty('anchor-name', own.join(', ')); else t.style.removeProperty('anchor-name'); }   /* the tip leaves: the names others set inline come back */
     const watch = new MutationObserver(() => { if (prev) name(prev); });   /* prev keeps the name after the tip is hidden (it fades out on it), so it is watched until the next tip */
     function hide() { if (!tip) return; if (cur) cur.removeAttribute('aria-describedby'); cur = null; if (tip.hidePopover && tip.matches(':popover-open')) tip.hidePopover(); }
     /* <button title="Duplicate project">: the native title of any element inside .g-root is taken over (moved to data-g-tip, so the browser does not show its own tip).
@@ -967,11 +969,26 @@
     const b = document.createElement('button'); b.type = 'button'; b.className = 'g-input-end'; b.setAttribute('data-icon', 'x'); b.setAttribute('data-g-clear-input', ''); b.setAttribute('aria-label', 'Clear');
     i.after(part(b)); initClearInput(b);
   }
+  /* the note of a search field (a count of results): the page just writes the number (note.textContent = 12) and it turns its digits like an odometer (Glass.morph).
+     The field is not content for a watched page (Glass.morphSkip), so the note is watched here: the new text is taken back and morphed in */
+  function initNote(n) {
+    let shown = n.textContent;
+    new MutationObserver(function () {
+      if (n.querySelector('.g-reel, .g-morph-word, .g-morph-ghost')) return;   // glass-morph's own board, it is turning
+      const now = n.textContent, prev = shown, m = global.Glass && global.Glass.morph;
+      if (now === prev) return;
+      shown = now;
+      if (!prev || !now || !m || document.hidden) return;
+      n.textContent = prev;
+      m(n, now.replace(/&/g, '&amp;').replace(/</g, '&lt;'));
+      this.takeRecords();
+    }).observe(n, { childList: true, characterData: true, subtree: true });
+  }
   function initAnimRandom(w) { const max = +w.getAttribute('data-g-anim-random') || 800; [...w.children].forEach(c => { c.style.setProperty('--g-anim-delay', (Math.random() * max / 1000).toFixed(2) + 's'); }); }
 
   /* selector -> initialiser; each runs once per element (see mount) */
   const MOUNTS = [
-    ['[data-g-fit]', initFit],
+    ['[data-g-fit]', initFit], ['input:not([type="number"]) ~ .g-input-note', initNote],
     ['dialog', initDialog],
     ['[data-g-file]', initFile], ['[data-g-number]', numSync],
     ['[data-g-color]', initColor], ['[data-g-password]', initPassword], ['[data-g-clear-input]', initClearInput],
