@@ -1274,6 +1274,10 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 .g-input-wrap:has(> .g-input-note) { position: relative; --g-note-right: var(--g-inset); }
 .g-input-wrap:has(> .g-input-end:not([hidden])) { --g-note-right: 40px; }
 .g-input-wrap:has(> .g-input-end:not([hidden]) ~ .g-input-end:not([hidden])) { --g-note-right: 74px; }
+/* a field with a hint badge (the ?): its end controls already stand left of it (above), so the note stands left of them. Each end control is 28px + a 6px gap */
+:is(.g-field[title]:not([data-no-hint], [data-no-hint] *), .g-field[data-hint]) > .g-input-wrap:has(> .g-input-note), .g-input-wrap[data-hint]:has(> .g-input-note) { --g-note-right: calc(var(--g-inset) + 18px + var(--g-gap-inner)); }
+:is(.g-field[title]:not([data-no-hint], [data-no-hint] *), .g-field[data-hint]) > .g-input-wrap:has(> .g-input-end:not([hidden])), .g-input-wrap[data-hint]:has(> .g-input-end:not([hidden])) { --g-note-right: calc(var(--g-inset) + 18px + var(--g-gap-inner) / 2 + 34px); }
+:is(.g-field[title]:not([data-no-hint], [data-no-hint] *), .g-field[data-hint]) > .g-input-wrap:has(> .g-input-end:not([hidden]) ~ .g-input-end:not([hidden])), .g-input-wrap[data-hint]:has(> .g-input-end:not([hidden]) ~ .g-input-end:not([hidden])) { --g-note-right: calc(var(--g-inset) + 18px + var(--g-gap-inner) / 2 + 68px); }
 .g-input-note { position: absolute; top: 50%; right: var(--g-note-right); transform: translateY(-50%); font-size: var(--g-fs-footnote); color: var(--g-text-3); white-space: nowrap; font-variant-numeric: tabular-nums; pointer-events: none; }
 .g-input-note:empty { display: none; }
 .g-input-wrap:has(> .g-input-note:not(:empty)) > input { padding-right: calc(var(--g-note-right) + 3.5em); }
