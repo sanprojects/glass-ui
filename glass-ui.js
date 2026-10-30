@@ -729,7 +729,7 @@
     let ticking = false;
     window.addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(() => { ticking = false; spy(); }); } }, { passive: true });
     if (window.ResizeObserver) new ResizeObserver(() => layout()).observe(nav); else window.addEventListener('resize', layout);
-    document.fonts?.ready.then(layout);
+    document.fonts?.ready?.then(layout);
     build();
     return mem(ul, 'nav', { refresh: build });
   }
@@ -835,7 +835,7 @@
     }
     if (window.ResizeObserver) new ResizeObserver(() => layout()).observe(nav); else window.addEventListener('resize', () => layout());
     new MutationObserver(rs => { if (rs.some(r => r.target !== menu)) layout(true); }).observe(menu, { attributes: true, attributeFilter: ['hidden', 'class', 'style'], subtree: true });   // a row of the page shown or hidden
-    document.fonts?.ready.then(() => layout(true));
+    document.fonts?.ready?.then(() => layout(true));
     nav.setAttribute('data-g-ready', ''); owns(nav, 'data-g-ready');   // from here on the kit lays the bar out: a stylesheet that held the bar in its final shape before (a phone: no title, the buttons in the menu) lets go, in the same frame
     layout(true);
     return mem(nav, 'overflow', { refresh: () => layout(true) });
