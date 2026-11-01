@@ -1,7 +1,7 @@
 <meta charset="utf-8">
 <script>/* the saved theme, background and colour are applied before the first paint, so a light or auto visitor never sees the dark page first and the background never starts in other colours (glass-appearance.js keeps them from here).
    The background is set by an observer that fires as soon as #scene is parsed: a script in the middle of the page would hold the parser and the page would appear in pieces. */
-try{var D={"g":[["#00283c","#33a7e1","#9bbbf9","#34b8c9","#74b7f9"],["#e8f6ff","#79bfe8","#d1e0fd","#89cfda","#add5fe"]],"q":[["#00283c","#33a7e1","#9bbbf9","#34b8c9"],["#b2def9","#79bfe8","#d1e0fd","#89cfda"]],"lt":["#fff8f2","#ffffff"]};function colour(sc){var P;try{P=JSON.parse(localStorage.getItem('g-palette'))}catch(e){}if(!P||!P.g)P=D;var i=document.documentElement.getAttribute('data-theme')==='light'?1:0;P.g[i].forEach(function(c,n){sc.style.setProperty('--sc'+n,c)});var q=sc.querySelector('.g-liquid');if(!q)return false;q.setAttribute('data-colors',P.q[i].join());q.setAttribute('data-light',P.lt[i]);q.style.background=P.q[i][0];if(P.day)q.setAttribute('data-day',i?'.55':'0');var b=q.querySelectorAll('i');b.forEach(function(e,n){e.style.setProperty('--c',P.q[i][n])});return b.length>3}
+try{var D={"g":[["#20485e","#70bbe7","#bcd2fd","#76cad6","#a0ccfa"],["#e8f6ff","#79bfe8","#d1e0fd","#89cfda","#add5fe"]],"q":[["#20485e","#70bbe7","#bcd2fd","#76cad6"],["#b2def9","#79bfe8","#d1e0fd","#89cfda"]],"lt":["#fff8f2","#ffffff"]};function colour(sc){var P;try{P=JSON.parse(localStorage.getItem('g-palette'))}catch(e){}if(!P||!P.g)P=D;var i=document.documentElement.getAttribute('data-theme')==='light'?1:0;P.g[i].forEach(function(c,n){sc.style.setProperty('--sc'+n,c)});if(P.d){sc.style.setProperty('--sd0',P.d[0]);sc.style.setProperty('--sd1',P.d[1])}var q=sc.querySelector('.g-liquid');if(!q)return false;q.setAttribute('data-colors',P.q[i].join());q.setAttribute('data-light',P.lt[i]);q.style.background=P.q[i][0];if(P.day)q.setAttribute('data-day',i?'.55':'0');var b=q.querySelectorAll('i');b.forEach(function(e,n){e.style.setProperty('--c',P.q[i][n])});return b.length>3}
 var t=localStorage.getItem('g-theme');if(t==='auto')t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');
 new MutationObserver(function(_,o){var sc=document.getElementById('scene');if(!sc)return;if(!sc.__s){sc.__s=1;try{var k=localStorage.getItem('g-scene')||'gradient',c;if(k.indexOf('custom:')===0){c=(JSON.parse(localStorage.getItem('g-bg-custom')||'[]')||[]).find(function(x){return'custom:'+x.id===k});if(c){sc.setAttribute('data-scene','custom');sc.style.backgroundImage='url("'+c.src+'")'}}else if(/^[a-z-]+$/.test(k))sc.setAttribute('data-scene',k)}catch(e){}}if(colour(sc))o.disconnect()}).observe(document,{childList:true,subtree:true})}catch(e){}</script>
 <title>Glass UI</title>
@@ -17,17 +17,17 @@ new MutationObserver(function(_,o){var sc=document.getElementById('scene');if(!s
 :root{ color-scheme: dark; }
 html,body{ overflow-x:clip; max-width:100%; }
 body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-family:var(--g-font); font-size:var(--g-fs-body); line-height:1.5; }
-.scene{ position:fixed; inset:-80px; z-index:-1; will-change:transform; transform:translateZ(0); contain:strict; background:#00283c center/cover no-repeat; transition:opacity .3s; }
+.scene{ position:fixed; inset:-80px; z-index:-1; will-change:transform; transform:translateZ(0); contain:strict; background:#20485e center/cover no-repeat; transition:opacity .3s; }
 .scene::after{ content:""; position:absolute; inset:0; background:linear-gradient(rgba(8,12,28,.18),rgba(8,12,28,.34)); }
 /* fine noise over the gradient: 8-bit colour steps would show as bands, the grain dithers them. It blends soft-light: its grey is neutral there, so it adds no light of its own. No shade over it, and its blobs stand where the WebGL
    scene (glass-ui-liquid.js) has them at t = 0 (the --gx/--gy defaults): it is the first frame of that scene, which replaces it without a jump. */
 .scene[data-scene="gradient"]::after{ background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 0 0 0 0 .04'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0/200px; mix-blend-mode: soft-light; }
 .scene[data-scene="custom"]{ background-size:cover; background-position:center; } .scene[data-scene="gradient"]{ background:
-  radial-gradient(60% 50% at calc(18% + var(--gx1,0%)) calc(12% + var(--gy1,0%)), var(--sc1,#33a7e1) 0%, color-mix(in srgb, var(--sc1,#33a7e1) 93%, transparent) 10%, color-mix(in srgb, var(--sc1,#33a7e1) 74%, transparent) 20%, color-mix(in srgb, var(--sc1,#33a7e1) 50%, transparent) 30%, color-mix(in srgb, var(--sc1,#33a7e1) 26%, transparent) 40%, color-mix(in srgb, var(--sc1,#33a7e1) 7%, transparent) 50%, transparent 60%),
-  radial-gradient(50% 50% at calc(88% + var(--gx2,-11.97%)) calc(18% + var(--gy2,11.97%)), var(--sc2,#9bbbf9) 0%, color-mix(in srgb, var(--sc2,#9bbbf9) 93%, transparent) 10%, color-mix(in srgb, var(--sc2,#9bbbf9) 74%, transparent) 20%, color-mix(in srgb, var(--sc2,#9bbbf9) 50%, transparent) 30%, color-mix(in srgb, var(--sc2,#9bbbf9) 26%, transparent) 40%, color-mix(in srgb, var(--sc2,#9bbbf9) 7%, transparent) 50%, transparent 60%),
-  radial-gradient(60% 60% at calc(72% + var(--gx3,-34.18%)) calc(92% + var(--gy3,-25.18%)), var(--sc3,#34b8c9) 0%, color-mix(in srgb, var(--sc3,#34b8c9) 93%, transparent) 10%, color-mix(in srgb, var(--sc3,#34b8c9) 74%, transparent) 21%, color-mix(in srgb, var(--sc3,#34b8c9) 50%, transparent) 31%, color-mix(in srgb, var(--sc3,#34b8c9) 26%, transparent) 41%, color-mix(in srgb, var(--sc3,#34b8c9) 7%, transparent) 52%, transparent 62%),
-  radial-gradient(40% 40% at calc(10% + var(--gx4,4.29%)) calc(85% + var(--gy4,-4.29%)), var(--sc4,#74b7f9) 0%, color-mix(in srgb, var(--sc4,#74b7f9) 93%, transparent) 10%, color-mix(in srgb, var(--sc4,#74b7f9) 74%, transparent) 20%, color-mix(in srgb, var(--sc4,#74b7f9) 50%, transparent) 30%, color-mix(in srgb, var(--sc4,#74b7f9) 26%, transparent) 40%, color-mix(in srgb, var(--sc4,#74b7f9) 7%, transparent) 50%, transparent 60%),
-  var(--sc0,#00283c); }
+  radial-gradient(60% 50% at calc(18% + var(--gx1,0%)) calc(12% + var(--gy1,0%)), var(--sc1,#70bbe7) 0%, color-mix(in srgb, var(--sc1,#70bbe7) 93%, transparent) 10%, color-mix(in srgb, var(--sc1,#70bbe7) 74%, transparent) 20%, color-mix(in srgb, var(--sc1,#70bbe7) 50%, transparent) 30%, color-mix(in srgb, var(--sc1,#70bbe7) 26%, transparent) 40%, color-mix(in srgb, var(--sc1,#70bbe7) 7%, transparent) 50%, transparent 60%),
+  radial-gradient(50% 50% at calc(88% + var(--gx2,-11.97%)) calc(18% + var(--gy2,11.97%)), var(--sc2,#bcd2fd) 0%, color-mix(in srgb, var(--sc2,#bcd2fd) 93%, transparent) 10%, color-mix(in srgb, var(--sc2,#bcd2fd) 74%, transparent) 20%, color-mix(in srgb, var(--sc2,#bcd2fd) 50%, transparent) 30%, color-mix(in srgb, var(--sc2,#bcd2fd) 26%, transparent) 40%, color-mix(in srgb, var(--sc2,#bcd2fd) 7%, transparent) 50%, transparent 60%),
+  radial-gradient(60% 60% at calc(72% + var(--gx3,-34.18%)) calc(92% + var(--gy3,-25.18%)), var(--sc3,#76cad6) 0%, color-mix(in srgb, var(--sc3,#76cad6) 93%, transparent) 10%, color-mix(in srgb, var(--sc3,#76cad6) 74%, transparent) 21%, color-mix(in srgb, var(--sc3,#76cad6) 50%, transparent) 31%, color-mix(in srgb, var(--sc3,#76cad6) 26%, transparent) 41%, color-mix(in srgb, var(--sc3,#76cad6) 7%, transparent) 52%, transparent 62%),
+  radial-gradient(40% 40% at calc(10% + var(--gx4,4.29%)) calc(85% + var(--gy4,-4.29%)), var(--sc4,#a0ccfa) 0%, color-mix(in srgb, var(--sc4,#a0ccfa) 93%, transparent) 10%, color-mix(in srgb, var(--sc4,#a0ccfa) 74%, transparent) 20%, color-mix(in srgb, var(--sc4,#a0ccfa) 50%, transparent) 30%, color-mix(in srgb, var(--sc4,#a0ccfa) 26%, transparent) 40%, color-mix(in srgb, var(--sc4,#a0ccfa) 7%, transparent) 50%, transparent 60%),
+  var(--sc0,#20485e); }
 :root[data-theme="light"]{ color-scheme: light; } [data-theme="light"] body{ background:#dfe8f5; color:var(--g-text); }
 [data-theme="light"] .scene{ background-color:#e8f6ff; } [data-theme="light"] .scene::after{ background:linear-gradient(rgba(255,255,255,.05),rgba(255,255,255,.12)); }
 [data-theme="light"] .scene[data-scene="gradient"]::after{ background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 0 0 0 0 .04'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0/200px; mix-blend-mode: soft-light; }
@@ -38,6 +38,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
   radial-gradient(40% 40% at calc(10% + var(--gx4,4.29%)) calc(85% + var(--gy4,-4.29%)), var(--sc4,#add5fe) 0%, color-mix(in srgb, var(--sc4,#add5fe) 93%, transparent) 10%, color-mix(in srgb, var(--sc4,#add5fe) 74%, transparent) 20%, color-mix(in srgb, var(--sc4,#add5fe) 50%, transparent) 30%, color-mix(in srgb, var(--sc4,#add5fe) 26%, transparent) 40%, color-mix(in srgb, var(--sc4,#add5fe) 7%, transparent) 50%, transparent 60%),
   var(--sc0,#e8f6ff); }
 .scene .g-liquid{display:none} .scene[data-scene="liquid"] .g-liquid[data-for="liquid"]{display:block}
+.scene[data-scene="duo"]{ background:linear-gradient(var(--sda,210deg),var(--sd1,#a6cee6),var(--sd0,#3e464b)); }   /* two colours, top to bottom (glass-appearance.js sets --sd0, --sd1) */
 .scene.is-gl[data-scene="gradient"], [data-theme="light"] .scene.is-gl[data-scene="gradient"] { background: none; } .scene.is-gl[data-scene="gradient"]::after, [data-theme="light"] .scene.is-gl[data-scene="gradient"]::after { background: none; }
 .scene[data-scene="peak"]{background-image:url(scenes/peak.webp);}
 .bg-row .sw-btn[data-scene="peak"]{--sw:url(scenes/peak.webp) center/cover;}
@@ -110,7 +111,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
 @media (max-width:860px){ .pair{ grid-template-columns:minmax(0,1fr); } .sec{ padding:24px 20px; border-radius:var(--g-radius-card); } }
 </style>
 
-<div class="scene" id="scene" data-scene="gradient" data-g-gradient aria-hidden="true"><div class="g-liquid" data-g-liquid data-for="liquid" data-colors="#00283c,#33a7e1,#9bbbf9,#34b8c9"><i></i><i></i><i></i><i></i></div></div>
+<div class="scene" id="scene" data-scene="gradient" data-g-gradient aria-hidden="true"><div class="g-liquid" data-g-liquid data-for="liquid" data-colors="#20485e,#70bbe7,#bcd2fd,#76cad6"><i></i><i></i><i></i><i></i></div></div>
 <script>/* the gradient goes on where the last page (or this one before a reload) left it: README, "Gradient background across pages" */
 try{document.getElementById('scene').style.cssText+=(function(g){return g&&/^[\w\s:;.%#-]*$/.test(g.css)?g.css:''})(JSON.parse(sessionStorage.getItem('g-gradient')))}catch(e){}</script>
 
@@ -369,7 +370,7 @@ try{document.getElementById('scene').style.cssText+=(function(g){return g&&/^[\w
     <div class="pair">
       <div data-grid data-code>
         <article>
-          <figure style="background-image:linear-gradient(135deg,#33a7e1,#74b7f9 60%,#9bbbf9)"></figure>
+          <figure style="background-image:linear-gradient(135deg,#70bbe7,#a0ccfa 60%,#bcd2fd)"></figure>
           <data data-variant="accent" style="align-self:flex-start">New</data><h3>Spring release</h3><p>Faster search and a calmer inbox.</p>
           <footer><button data-size="sm" data-variant="primary">Read notes</button></footer>
         </article>
@@ -785,9 +786,10 @@ Glass.morph('#result', html);              // html string or an element; returns
       <div role="tablist" id="themeTabs"><button>Dark</button><button>Light</button><button>Auto</button></div></fieldset>
     <fieldset class="ctl__group"><legend>Background</legend>
       <div class="sw-row bg-row" id="bgChips">
-        <button class="sw-btn" data-scene="gradient" aria-label="Gradient" aria-pressed="true" style="--sw:radial-gradient(60% 50% at 18% 12%,#33a7e1,transparent 60%),radial-gradient(50% 50% at 88% 18%,#9bbbf9,transparent 60%),radial-gradient(60% 60% at 72% 92%,#34b8c9,transparent 62%),#00283c"></button>
+        <button class="sw-btn" data-scene="gradient" aria-label="Gradient" aria-pressed="true" style="--sw:radial-gradient(60% 50% at 18% 12%,#70bbe7,transparent 60%),radial-gradient(50% 50% at 88% 18%,#bcd2fd,transparent 60%),radial-gradient(60% 60% at 72% 92%,#76cad6,transparent 62%),#20485e"></button>
         <button class="sw-btn" data-scene="liquid" aria-label="Liquid" aria-pressed="false" style="--sw:radial-gradient(60% 60% at 28% 30%,#58c4c0,transparent 70%),radial-gradient(60% 60% at 76% 78%,#8a6ee6,transparent 70%),#2a4fa8"></button>
-        <button class="sw-btn" data-scene="peak" aria-label="Mountain peak from above" aria-pressed="false"></button>
+        <button class="sw-btn" data-scene="duo" aria-label="Two-colour gradient" aria-pressed="false" style="--sw:linear-gradient(210deg,#a6cee6,#3e464b)"></button>
+      <button class="sw-btn" data-scene="peak" aria-label="Mountain peak from above" aria-pressed="false"></button>
         <button class="sw-btn" data-scene="ice" aria-label="Ice" aria-pressed="false"></button>
         <button class="sw-btn" data-scene="ripples" aria-label="Ripples" aria-pressed="false"></button>
         <button class="sw-btn" data-scene="forest" aria-label="Forest" aria-pressed="false"></button>
@@ -809,7 +811,7 @@ Glass.morph('#result', html);              // html string or an element; returns
       </div></fieldset>
     <fieldset class="ctl__group"><legend>Background colour</legend>
       <div class="sw-row" id="liquidRow">
-        <button class="sw-btn" data-color="#33a7e1" style="--sw:#33a7e1" aria-label="Sky blue" aria-pressed="true"></button>
+        <button class="sw-btn" data-color="#70bbe7" style="--sw:#70bbe7" aria-label="Sky blue" aria-pressed="true"></button>
         <button class="sw-btn" data-hue="265" style="--sw:hsl(265 68% 55%)" aria-label="Violet" aria-pressed="false"></button>
         <button class="sw-btn" data-hue="175" style="--sw:hsl(175 68% 45%)" aria-label="Teal" aria-pressed="false"></button>
         <button class="sw-btn" data-hue="12" style="--sw:hsl(12 75% 55%)" aria-label="Coral" aria-pressed="false"></button>
@@ -817,8 +819,10 @@ Glass.morph('#result', html);              // html string or an element; returns
         <button class="sw-btn" data-hue="day" style="--sw:linear-gradient(90deg,#e0788f,#1abdcc,#f06143,#33388c)" aria-label="Day cycle" aria-pressed="false"></button>
         <label class="sw-btn sw-custom" aria-label="Custom background colour"><input type="color" id="liquidCustom" value="#3f78e0"></label>
       </div></fieldset>
+    <fieldset class="ctl__group"><legend>Colour tone</legend>
+      <div role="tablist" id="toneTabs"><button>Vivid</button><button>Soft</button><button aria-selected="true">Pastel</button><button>Chalk</button></div></fieldset>
     <fieldset class="ctl__group"><legend>Liquid speed</legend>
-      <div role="tablist" id="speedTabs"><button>Still</button><button aria-selected="true">Calm</button><button>Mid</button><button>Lively</button></div></fieldset>
+      <div role="tablist" id="speedTabs"><button>Still</button><button>Real time</button><button aria-selected="true">Calm</button><button>Mid</button><button>Lively</button></div></fieldset>
     <div class="ctl__group"><div class="ctl__line"><label for="blurRange">Glass blur</label><output id="blurOut">30 px</output></div>
       <input id="blurRange" type="range" min="0" max="80" value="30"></div>
     <div class="ctl__group"><div class="ctl__line"><label for="fillRange">Glass opacity</label><output id="fillOut">10%</output></div>

@@ -48,7 +48,25 @@
     return { gl: gl, cv: cv, pr: pr };
   }
   /* Day cycle: dawn, noon, sunset, night; [dark, mid, light] per keyframe, smoothstep between them */
-  var DAY = [[[.17,.13,.32],[.88,.47,.58],[1,.8,.55]], [[.03,.3,.42],[.1,.74,.8],[.8,.98,.95]], [[.22,.1,.3],[.94,.38,.26],[1,.74,.32]], [[.05,.07,.22],[.2,.22,.55],[.56,.52,.86]]];
+  var DAY0 = [[[.17,.13,.32],[.88,.47,.58],[1,.8,.55]], [[.03,.3,.42],[.1,.74,.8],[.8,.98,.95]], [[.22,.1,.3],[.94,.38,.26],[1,.74,.32]], [[.05,.07,.22],[.2,.22,.55],[.56,.52,.86]]], DAY = DAY0;   /* DAY is DAY0 as the host's Glass.dayKeys filter (the tone of the Appearance panel) changed it */
+  /* Glass.dayKeys(f): every colour [r,g,b] (0..1) of the day keyframes goes through f(colour, role, frame) (role 0 ground, 1 mid, 2 light; frame 0 dawn, 1 noon, 2 sunset, 3 night) so that the day follows the same tone as the picked colours; f = null puts the originals back. Every background is drawn again */
+  function redrawAll() { Array.prototype.forEach.call(document.querySelectorAll('[data-g-gradient],[data-g-liquid]'), function (h) { if (h.__gradient) h.__gradient.redraw(); if (h.__duo) h.__duo(); if (h.__liquid) h.__liquid.redraw(); }); }
+  G.dayKeys = function (f) { DAY = f ? DAY0.map(function (k, i) { return k.map(function (c, j) { return f(c, j, i); }); }) : DAY0; redrawAll(); };
+
+  function dayMix(ph, lift) {   /* [ground, mid, light] of the day cycle at phase 0..1 (dawn, noon, sunset, night), lifted toward white by `lift` */
+    var x = ph * 4, i0 = Math.floor(x) % 4, i1 = (i0 + 1) % 4, f = x - Math.floor(x); f = f * f * (3 - 2 * f);
+    return [0, 1, 2].map(function (j) { return DAY[i0][j].map(function (v, n) { v = v + (DAY[i1][j][n] - v) * f; return v + (1 - v) * (lift || 0); }); });
+  }
+  function avg(a, b) { return a.map(function (v, n) { return (v + b[n]) / 2; }); }
+  /* the five colours of the day at a phase: the one palette of the liquid (the first four), the gradient (all five) and the plain gradient (dayDuo) */
+  function dayPal(ph, lift) { var m = dayMix(ph, lift); return [m[0], m[1], m[2], avg(m[0], m[1]), avg(m[1], m[2])]; }
+  function dayDuo(ph) { var p = dayPal(ph); return [p[0], avg(p[1], p[2])]; }   /* [dark, light] */
+  /* one clock for the day on every background (a full day in 280 s at speed 1) */
+  var dayPh = .3, real = false;
+  function nowPh() { var d = new Date(), h = d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600; return (((h - 6) / 24) % 1 + 1) % 1; }   /* 6:00 dawn, 12:00 noon, 18:00 sunset, 0:00 night */
+  G.scene.add(function (dt) { dayPh = real ? nowPh() : (dayPh + dt / 70) % 1; return false; });
+  /* Glass.realTime(true): the day is the visitor's local time of day instead of the clock above */
+  G.realTime = function (on) { real = !!on; if (real) dayPh = nowPh(); redrawAll(); };
 
   /* Glass.liquid(host, opts) returns its API at once; the canvas comes when the host is first on screen after load */
   function liquid(host, o) {
@@ -56,18 +74,13 @@
     if (host.__liquid) return host.__liquid;
     o = o || {};
     var speed = +(o.speed || host.getAttribute('data-speed') || 0.012);
-    var attr = host.getAttribute('data-colors'), pal = o.colors || (attr ? attr.split(',').map(function (s) { return s.trim(); }) : ['#00283c', '#33a7e1', '#9bbbf9', '#34b8c9']);
+    var attr = host.getAttribute('data-colors'), pal = o.colors || (attr ? attr.split(',').map(function (s) { return s.trim(); }) : ['#20485e', '#70bbe7', '#bcd2fd', '#76cad6']);
     var light = o.light || host.getAttribute('data-light') || '#fff8f2'; /* colour of the highlights */
-    var day = host.hasAttribute('data-day'), lift = +host.getAttribute('data-day') || 0, ph = .3;   /* data-day="0..1": starts in the day cycle (the number lightens it) */
+    var day = host.hasAttribute('data-day'), lift = +host.getAttribute('data-day') || 0;   /* data-day="0..1": starts in the day cycle (the number lightens it) */
     var gl = null, cv, pr, uR, uT, uC, uL, failed = false;
     var acc = 3.7, off = null, running = false, visible = false, W = 0, H = 0;
     function paint(p, l) { gl.useProgram(pr); uC.forEach(function (u, i) { gl.uniform3fv(u, hex3(p[i])); }); gl.uniform3fv(uL, hex3(l)); }
-    function paintDay() {
-      var x = ph * 4, i0 = Math.floor(x) % 4, i1 = (i0 + 1) % 4, f = x - Math.floor(x); f = f * f * (3 - 2 * f);
-      var m = [0, 1, 2].map(function (j) { return DAY[i0][j].map(function (v, n) { v = v + (DAY[i1][j][n] - v) * f; return v + (1 - v) * lift; }); });
-      gl.uniform3fv(uC[0], m[0]); gl.uniform3fv(uC[1], m[1]); gl.uniform3fv(uC[2], m[2]);
-      gl.uniform3fv(uC[3], m[0].map(function (v, n) { return (v + m[1][n]) / 2; }));
-    }
+    function paintDay() { var m = dayPal(dayPh, lift); uC.forEach(function (u, i) { gl.uniform3fv(u, m[i]); }); }
     function colours() { if (day) paintDay(); else paint(pal, light); }
     function build() {   /* false without WebGL: the CSS blobs inside stay as the fallback */
       var q = quad(LQ_FRAG); if (!q) return false;
@@ -95,7 +108,7 @@
     function still() { size(); frame(); }
     /* the shared timer of Glass.scene (one for every animated background, with one speed) calls this */
     function step(dt) {
-      acc += dt * speed; if (day) { ph = (ph + dt / 70) % 1; paintDay(); }
+      acc += dt * speed; if (day) paintDay();
       frame(); return true;
     }
     function stop() { running = false; if (off) off(); off = null; }
@@ -114,8 +127,9 @@
     });
     var api = {
       start: start, stop: stop,
+      redraw: function () { if (gl) { colours(); if (!running) still(); } },
       setColors: function (p, l) { day = false; pal = p; light = l || light; if (gl) { paint(pal, light); if (!running) still(); } },
-      setDay: function (on) { day = !!on; if (day) ph = .3; if (gl) { colours(); if (!running) still(); } },
+      setDay: function (on) { day = !!on; if (gl) { colours(); if (!running) still(); } },
       /* the colour at (u, v) of the canvas, 0..1 from its top left, or null before the canvas: a frame is drawn and read back in the same task (the buffer is not kept) */
       pixel: function (u, v) {
         if (!gl || !W) return null;
@@ -131,7 +145,7 @@
   G.mount('[data-g-liquid]', function (h) { liquid(h); });
 
   /* Gradient background (WebGL) ---------------------------------------
-   * <div class="scene" data-scene="gradient" data-g-gradient style="--sc0:#00283c; --sc1:#33a7e1; --sc2:#9bbbf9; --sc3:#34b8c9; --sc4:#74b7f9">
+   * <div class="scene" data-scene="gradient" data-g-gradient style="--sc0:#20485e; --sc1:#70bbe7; --sc2:#bcd2fd; --sc3:#76cad6; --sc4:#a0ccfa">
    * The same four soft blobs as the CSS gradient, drawn by the GPU so the page can scroll and blur over it cheaply. The blobs drift slowly (the shared timer
    * of Glass.scene, one speed with the liquid). Colours come from --sc0 (ground) and --sc1..--sc4 (blobs); change them any time. It draws only while
    * data-scene="gradient" (or the attribute is absent), and is built after load the first time that is so: the CSS gradient is the first frame.
@@ -147,10 +161,11 @@
     ' col+=(hash(gl_FragCoord.xy)-.5)*2./255.; gl_FragColor=vec4(col,1.); }';
   var GR_BLOBS = [[18, 12, 60, 50, .6], [88, 18, 50, 50, .6], [72, 92, 60, 60, .62], [10, 85, 40, 40, .6]],   /* centre x y %, radii %, where the fade ends: as in the CSS gradient */
     GR_T = [40, 50, 56, 45], GR_A = [[38, 30], [-34, 34], [-38, -28], [34, -34]], GR_OFF = [0, 20, 45, 10],   /* drift: half-period s, reach %, phase s */
-    GR_DARK = ['#00283c', '#33a7e1', '#9bbbf9', '#34b8c9', '#74b7f9'];
+    GR_DARK = ['#20485e', '#70bbe7', '#bcd2fd', '#76cad6', '#a0ccfa'];
   function gradient(host) {
     if (!host) return null;
     if (host.__gradient) return host.__gradient;
+    duoLive(host);   /* the plain gradient of the same scene host, below */
     var gl = null, cv, uR, uC, uB, ready = false, failed = false;
     var t = 0, W = 0, H = 0, off = null, visible = true, drift = GR_BLOBS.map(function () { return [0, 0]; });
     try { var kept = JSON.parse(sessionStorage.getItem('g-gradient')); if (kept && isFinite(kept.t)) t = +kept.t; } catch (e) {}
@@ -164,6 +179,7 @@
       return true;
     }
     function pal() {
+      if (host.hasAttribute('data-day')) return dayPal(dayPh);   /* the day cycle */
       return GR_DARK.map(function (c, i) { var v = host.style.getPropertyValue('--sc' + i).trim(); return hex3(/^#[0-9a-f]{6}$/i.test(v) ? v : c); });
     }
     function colours() { var p = pal(); uC.forEach(function (u, i) { gl.uniform3fv(u, p[i]); }); }
@@ -193,7 +209,7 @@
       if (!gl && !(ready && on() && !failed && build())) return;
       cv.style.display = on() ? '' : 'none'; if (!on()) return; size(); colours(); pose(); frame();
     }
-    function step(dt) { if (!on() || !visible) return false; t += dt; size(); pose(); frame(); return true; }
+    function step(dt) { if (!on() || !visible) return false; t += dt; size(); if (host.hasAttribute('data-day')) colours(); pose(); frame(); return true; }
     function keep() {   /* the pose this page leaves with: the next one starts from it */
       if (!on()) return;
       pose();
@@ -202,7 +218,7 @@
       try { sessionStorage.setItem('g-gradient', JSON.stringify({ t: t, css: css })); } catch (e) {}
     }
     window.addEventListener('pageswap', keep); window.addEventListener('pagehide', keep);
-    new MutationObserver(still).observe(host, { attributes: true, attributeFilter: ['style', 'data-scene'] });
+    new MutationObserver(still).observe(host, { attributes: true, attributeFilter: ['style', 'data-scene', 'data-day'] });
     if (window.IntersectionObserver) new IntersectionObserver(function (e) { visible = e[0].isIntersecting; }).observe(host);
     var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(still, 200); });
     document.addEventListener('visibilitychange', function () { if (!document.hidden && visible) still(); });   /* see the liquid above */
@@ -212,6 +228,24 @@
   }
   G.gradient = gradient;
   G.mount('[data-g-gradient]', function (h) { gradient(h); });
+
+  /* The plain gradient (data-scene="duo") lives too: its angle swings a little (--sda, the shared timer, 90 s a round), and with [data-day] on the scene its
+   * two colours follow the day cycle (--sd0 dark, --sd1 light). The CSS reads var(--sda, 210deg) and falls back to the still gradient. */
+  function duoLive(host) {
+    var t = 0, visible = true;
+    function put() {
+      host.style.setProperty('--sda', (210 + 16 * Math.sin(t * Math.PI / 45)).toFixed(2) + 'deg');
+      if (host.hasAttribute('data-day')) {
+        var d = dayDuo(dayPh), c = function (a) { return 'rgb(' + a.map(function (v) { return Math.round(v * 255); }).join(',') + ')'; };
+        host.style.setProperty('--sd0', c(d[0])); host.style.setProperty('--sd1', c(d[1]));
+      }
+    }
+    function on() { return host.getAttribute('data-scene') === 'duo'; }
+    G.scene.add(function (dt) { if (!on() || !visible) return false; t += dt; put(); return true; });
+    host.__duo = function () { if (on()) put(); };
+    new MutationObserver(function () { if (on()) put(); }).observe(host, { attributes: true, attributeFilter: ['data-scene', 'data-day'] });
+    if (window.IntersectionObserver) new IntersectionObserver(function (e) { visible = e[0].isIntersecting; }).observe(host);
+  }
 
   /* Colour of the bars (Safari 26 on iOS) -------------------------------
    * <div class="scene" data-g-gradient data-g-tint>
@@ -246,6 +280,14 @@
     } catch (err) { c.col = null; }   /* an image of another origin taints the canvas */
     c.at = at; return c.col;
   }
+  function duo(host, r, y) {   /* the colour of a linear-gradient(<angle>deg, a, b) background at the screen's left edge, y px from its top */
+    var m = /^linear-gradient\((-?[\d.]+)deg, (rgba?\([^)]*\)), (rgba?\([^)]*\))\)$/.exec(getComputedStyle(host).backgroundImage), a, b, t, q;
+    if (!m) return null;
+    a = rgba(m[2]); b = rgba(m[3]); q = m[1] * Math.PI / 180;
+    t = ((-r.left - r.width / 2) * Math.sin(q) - (y - r.top - r.height / 2) * Math.cos(q)) / (Math.abs(r.width * Math.sin(q)) + Math.abs(r.height * Math.cos(q))) + .5;
+    t = Math.min(1, Math.max(0, t));
+    return a.map(function (v, n) { return v + (b[n] - v) * t; });
+  }
   function tint(host) {
     var last = '', lastB = '', meta = document.querySelector('meta[name="theme-color"]'), qt = 0,
       edge = document.querySelector('body > .g-tint-edge') || document.body.appendChild(Object.assign(document.createElement('div'), { className: 'g-tint-edge' }));
@@ -253,6 +295,7 @@
     function corner(y) {   /* [r, g, b] 0..1 of the scene at the left edge of the screen, y px from its top */
       var r = host.getBoundingClientRect(), g = host.__gradient, col = null, lq, c;
       if (g && g.on()) { c = (g.canvas() || host).getBoundingClientRect(); return g.colorAt(-c.left / c.width, (y - c.top) / c.height); }   /* no shade over it */
+      if (host.getAttribute('data-scene') === 'duo') return duo(host, r, y);   /* a plain two-colour linear gradient */
       lq = host.querySelector('[data-g-liquid]');
       if (lq && lq.getClientRects().length) {
         c = lq.__liquid && lq.__liquid.canvas();

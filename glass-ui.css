@@ -127,7 +127,7 @@
 .g-scene { position: relative; background: #1b2a3f center/cover no-repeat; color-scheme: dark; }
 /* The page colour. Safari 26 tints its top and bottom bars from the background-COLOR of <body>; a transparent body is tinted black (and an open dialog / popover swaps it for its own colour).
  * It is also the canvas: leave <html> without a background, or the body would paint over a fixed scene (z-index: -1). */
-:root { --g-page-bg: #00283c; }
+:root { --g-page-bg: #20485e; }
 :where(body.g-root) { background-color: var(--g-page-bg); }
 /* the page never scrolls sideways: what is wider (a sliding ghost, a long word) is cut at the edge of the screen; clip is not a scroll box, sticky keeps working.
  * Wide content scrolls in a box of its own (a table, a tablist) */
@@ -137,10 +137,10 @@
 .g-scene--gradient {
   background:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 0 0 0 0 .04'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0/200px,   /* fine noise: dithers the colour steps so no bands show */
-    radial-gradient(60% 50% at calc(20% + var(--gx1,0%)) calc(15% + var(--gy1,0%)), #33a7e1 0%, color-mix(in srgb, #33a7e1 93%, transparent) 10%, color-mix(in srgb, #33a7e1 74%, transparent) 20%, color-mix(in srgb, #33a7e1 50%, transparent) 30%, color-mix(in srgb, #33a7e1 26%, transparent) 40%, color-mix(in srgb, #33a7e1 7%, transparent) 50%, transparent 60%),
-    radial-gradient(50% 50% at calc(85% + var(--gx2,0%)) calc(20% + var(--gy2,0%)), #9bbbf9 0%, color-mix(in srgb, #9bbbf9 93%, transparent) 10%, color-mix(in srgb, #9bbbf9 74%, transparent) 20%, color-mix(in srgb, #9bbbf9 50%, transparent) 30%, color-mix(in srgb, #9bbbf9 26%, transparent) 40%, color-mix(in srgb, #9bbbf9 7%, transparent) 50%, transparent 60%),
-    radial-gradient(60% 60% at calc(70% + var(--gx3,0%)) calc(90% + var(--gy3,0%)), #34b8c9 0%, color-mix(in srgb, #34b8c9 93%, transparent) 10%, color-mix(in srgb, #34b8c9 74%, transparent) 20%, color-mix(in srgb, #34b8c9 50%, transparent) 30%, color-mix(in srgb, #34b8c9 26%, transparent) 40%, color-mix(in srgb, #34b8c9 7%, transparent) 50%, transparent 60%),
-    #00283c;   /* the blobs fade out smoothly (eased stops), so no ring shows where one ends */
+    radial-gradient(60% 50% at calc(20% + var(--gx1,0%)) calc(15% + var(--gy1,0%)), #70bbe7 0%, color-mix(in srgb, #70bbe7 93%, transparent) 10%, color-mix(in srgb, #70bbe7 74%, transparent) 20%, color-mix(in srgb, #70bbe7 50%, transparent) 30%, color-mix(in srgb, #70bbe7 26%, transparent) 40%, color-mix(in srgb, #70bbe7 7%, transparent) 50%, transparent 60%),
+    radial-gradient(50% 50% at calc(85% + var(--gx2,0%)) calc(20% + var(--gy2,0%)), #bcd2fd 0%, color-mix(in srgb, #bcd2fd 93%, transparent) 10%, color-mix(in srgb, #bcd2fd 74%, transparent) 20%, color-mix(in srgb, #bcd2fd 50%, transparent) 30%, color-mix(in srgb, #bcd2fd 26%, transparent) 40%, color-mix(in srgb, #bcd2fd 7%, transparent) 50%, transparent 60%),
+    radial-gradient(60% 60% at calc(70% + var(--gx3,0%)) calc(90% + var(--gy3,0%)), #76cad6 0%, color-mix(in srgb, #76cad6 93%, transparent) 10%, color-mix(in srgb, #76cad6 74%, transparent) 20%, color-mix(in srgb, #76cad6 50%, transparent) 30%, color-mix(in srgb, #76cad6 26%, transparent) 40%, color-mix(in srgb, #76cad6 7%, transparent) 50%, transparent 60%),
+    #20485e;   /* the blobs fade out smoothly (eased stops), so no ring shows where one ends */
 }
 /* No grey tap flash or accidental text selection on controls */
 .g-root, .g-scene, dialog, .g-toasts { -webkit-tap-highlight-color: transparent; }
@@ -253,13 +253,13 @@
 }
 
 /* ---------- Liquid background (CSS blobs as fallback; glass-ui.js upgrades it to a slow WebGL liquid) ---------- */
-.g-liquid { position: absolute; inset: 0; overflow: hidden; background: #00283c; }
+.g-liquid { position: absolute; inset: 0; overflow: hidden; background: #20485e; }
 .g-liquid > i { position: absolute; width: 80vmax; height: 80vmax; border-radius: 50%; will-change: transform; opacity: .9;
   background: radial-gradient(circle at center, var(--c) 0%, transparent 64%); animation: g-drift var(--d) ease-in-out infinite alternate; }
-.g-liquid > i:nth-child(1) { --c: #33a7e1; --d: 70s; left: -25vmax; top: -30vmax; }
-.g-liquid > i:nth-child(2) { --c: #9bbbf9; --d: 85s; right: -30vmax; top: -10vmax; animation-delay: -20s; }
-.g-liquid > i:nth-child(3) { --c: #34b8c9; --d: 95s; left: 0; bottom: -45vmax; animation-delay: -45s; }
-.g-liquid > i:nth-child(4) { --c: #74b7f9; --d: 78s; right: -20vmax; bottom: -35vmax; animation-delay: -10s; }
+.g-liquid > i:nth-child(1) { --c: #70bbe7; --d: 70s; left: -25vmax; top: -30vmax; }
+.g-liquid > i:nth-child(2) { --c: #bcd2fd; --d: 85s; right: -30vmax; top: -10vmax; animation-delay: -20s; }
+.g-liquid > i:nth-child(3) { --c: #76cad6; --d: 95s; left: 0; bottom: -45vmax; animation-delay: -45s; }
+.g-liquid > i:nth-child(4) { --c: #a0ccfa; --d: 78s; right: -20vmax; bottom: -35vmax; animation-delay: -10s; }
 /* WebGL canvas replaces the blobs when available */
 .g-liquid__canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .g-liquid.is-gl > i { display: none; }
