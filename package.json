@@ -26,6 +26,8 @@
   "files": [
     "glass-ui.css",
     "glass-ui.min.css",
+    "glass-ui-light.css",
+    "glass-ui-light.min.css",
     "glass-ui.js",
     "glass-ui.min.js",
     "glass-morph.css",
