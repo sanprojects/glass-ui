@@ -60,7 +60,7 @@
   /* background colour: the palette is worked out when a colour is picked and saved (g-palette), and the host page's first script puts it on the page,
      so the very first frame already has it. Its lists stay lists of one ([0]): a palette saved while the kit had a light theme ([1]) still reads */
   /* the tone of every picked-colour background (liquid, gradient, duo): c scales the chroma, l lifts the colours, g lifts the dark ground; Glass.tone({...}) changes and saves it */
-  var TONE={c:.75,l:.07,g:.12}; try{ var tn=JSON.parse(load('g-tone')); if (tn) ['c','l','g'].forEach(function(n){ if (typeof tn[n]==='number') TONE[n]=tn[n]; }); }catch(_){}
+  var TONE={c:.85,l:.04,g:.06}; try{ var tn=JSON.parse(load('g-tone')); if (tn) ['c','l','g'].forEach(function(n){ if (typeof tn[n]==='number') TONE[n]=tn[n]; }); }catch(_){}
   var DEFAULT='#33a7e1', liqHost=document.querySelector('.g-liquid[data-for="liquid"]'), liqApi=function(){ return Glass.liquid && Glass.liquid(liqHost); };
   var STOCK=[['#1d2b52','#5ea0ff','#ff9ec2','#46d1c1','#a78bfa']], GOLD=[['#2a1a0d','#b7721e','#f2c66d','#7b3d1b']];
   var GRAD=['--sc0','--sc1','--sc2','--sc3','--sc4'];
@@ -93,11 +93,11 @@
   Array.prototype.forEach.call(liqRow.querySelectorAll('button.sw-btn'), function(b){ b.addEventListener('click', function(){ pick(liqRow,b); setColour(presetPalette(presetOf(b)),'b:'+presetOf(b)); }); });
   $('liquidCustom').addEventListener('input', function(e){ pick(liqRow, e.target.parentNode); setColour(paletteOf(e.target.value),'c:'+e.target.value); });
   applyColours();   /* the default colour until a saved one is restored below (the theme switch used to apply it) */
-  /* tone of the colour backgrounds: the tabs of the optional #toneTabs set Glass.tone (Vivid is the saturated original, Pastel the default) */
+  /* tone of the colour backgrounds: the tabs of the optional #toneTabs set Glass.tone (Vivid is the saturated original, Soft the default) */
   var TONES=[{c:1,l:0,g:0},{c:.85,l:.04,g:.06},{c:.75,l:.07,g:.12},{c:.5,l:.12,g:.22}], toneTabs=$('toneTabs');
   if (toneTabs){ toneTabs.addEventListener('g:tabchange', function(e){ Glass.tone(TONES[e.detail.index]); });
     (function(){ var t=Glass.tone(), i=-1; TONES.forEach(function(x,n){ if (Math.abs(x.c-t.c)<.005&&Math.abs(x.l-t.l)<.005&&Math.abs(x.g-t.g)<.005) i=n; });
-      if (i!==2) { var b=toneTabs.children; if (i>=0) b[i].click(); else b[2].removeAttribute('aria-selected'); } })(); }
+      if (i!==1) { var b=toneTabs.children; if (i>=0) b[i].click(); else b[1].removeAttribute('aria-selected'); } })(); }
   /* liquid speed */
   var SPEEDS=[0,1,1,2.5,5.8], REAL=1, CALM=2, restoring=false;   /* one speed for the liquid and the gradient: 1 = calm; Real time (after Still, the slowest) is calm too, with the day of the day-cycle colours set by the local clock */
   $('speedTabs').addEventListener('g:tabchange', function(e){ var i=e.detail.index; Glass.scene.speed(SPEEDS[i]); store('g-speed2',i);
@@ -116,7 +116,7 @@
     bgIn.value=''; bgIn.dispatchEvent(new Event('change')); bgIn.removeAttribute('aria-invalid'); customs=[]; Array.prototype.forEach.call(chips.querySelectorAll('[data-id]'), function(b){ b.remove(); }); store('g-bg-custom','[]'); setScene(DEF_SCENE); setAccent('#0071E3'); pick(accRow, accRow.querySelector('button')); pick(liqRow, liqRow.querySelector('button'));
     ['--g-accent','--g-accent-hover','--g-accent-fg','--g-blur','--g-fill','--g-fill-strong','--g-fill-hover','--g-fill-selected'].forEach(function(p){ root.removeProperty(p); });
     br.value=30; fr.value=10; br.dispatchEvent(new Event('input')); fr.dispatchEvent(new Event('input')); root.removeProperty('--g-blur'); root.removeProperty('--g-fill');
-    TONE.c=.75; TONE.l=.07; TONE.g=.12; if (toneTabs) toneTabs.children[2].click(); curPal=paletteOf(DEFAULT); curId=null; applyColours(); try{ ['g-palette','g-colour','g-accent','g-blur','g-fill','g-tone'].forEach(function(k){ localStorage.removeItem(k); }); }catch(_){}
+    TONE.c=.85; TONE.l=.04; TONE.g=.06; if (toneTabs) toneTabs.children[1].click(); curPal=paletteOf(DEFAULT); curId=null; applyColours(); try{ ['g-palette','g-colour','g-accent','g-blur','g-fill','g-tone'].forEach(function(k){ localStorage.removeItem(k); }); }catch(_){}
     var tabs=document.querySelectorAll('#speedTabs > *'); tabs[CALM].click();
   });
   /* restore the saved background */
