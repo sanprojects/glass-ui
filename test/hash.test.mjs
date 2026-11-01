@@ -184,4 +184,35 @@ test('hovering a time shows the moment by the visitor\'s own clock', async () =>
   await page.close();
 });
 
+test('the pill follows the scroll of the panels and lets go at the end', async () => {
+  const page = await open('#visitors');
+  const r = await page.evaluate(async () => {
+    const tr = document.querySelector('.g-tabtrack'), list = document.getElementById('visitors').parentNode, a = document.getElementById('visitors'), b = document.getElementById('messages');
+    const pill = () => { const s = getComputedStyle(list, '::after'); return { l: parseFloat(s.left), w: parseFloat(s.width) }; };
+    tr.style.scrollSnapType = 'none'; let mid, following, col;   // (snap would pull it back to a panel) read in the scroll event itself: scrollend lets the pill go right after
+    tr.addEventListener('scroll', () => { col = [a, b].map(t => getComputedStyle(t).color); mid = pill(); following = list.hasAttribute('data-g-follow'); }, { once: true });
+    tr.scrollTo({ left: tr.clientWidth / 2, behavior: 'instant' }); await new Promise(r => setTimeout(r, 100));
+    return { mid, following, col, expL: (a.offsetLeft + b.offsetLeft) / 2, expW: (a.offsetWidth + b.offsetWidth) / 2 };
+  });
+  assert.ok(r.following, 'the pill is driven while scrolling');
+  assert.ok(Math.abs(r.mid.l - r.expL) < 1.5 && Math.abs(r.mid.w - r.expW) < 1.5, 'half way: ' + JSON.stringify(r));
+  assert.equal(r.col[0], r.col[1], 'half way the two tabs are the same mix of the colours: ' + r.col);
+  await page.waitForTimeout(400);
+  assert.equal(await page.evaluate(() => !!document.querySelector('[data-g-follow]')), false, 'let go after the scroll ends');
+  await page.close();
+});
+
+test('the panels are one box as high as the highest: no script sets a height, a tab changes none', async () => {
+  const page = await open('#visitors');
+  const r = await page.evaluate(async () => {
+    const tr = document.querySelector('.g-tabtrack'), h = () => tr.getBoundingClientRect().height;
+    const before = h(); document.getElementById('messages').click(); await new Promise(r => setTimeout(r, 600));
+    return { inline: tr.style.height, before, after: h(), tallest: Math.max(...[...tr.children].map(c => c.getBoundingClientRect().height)) };
+  });
+  assert.equal(r.inline, '', 'no inline height');
+  assert.equal(r.before, r.after, 'a tab does not change the height');
+  assert.ok(Math.abs(r.after - r.tallest) < 1, 'as high as the highest panel: ' + JSON.stringify(r));
+  await page.close();
+});
+
 test('the page runs without script errors', () => { assert.deepEqual(errors, []); });

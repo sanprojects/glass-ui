@@ -14,7 +14,7 @@ EXTRA = ['info', 'check', 'triangle-alert', 'x', 'chevron-down', 'chevron-left',
          # a small core of common UI icons, so the pack is useful beyond what the demo happens to use
          'arrow-left', 'arrow-right', 'arrow-up', 'arrow-down', 'chevron-up', 'menu', 'ellipsis', 'star', 'bookmark', 'external-link', 'filter', 'folder', 'image',
          'log-out', 'refresh-cw', 'send', 'sun', 'moon', 'circle-alert', 'circle-x', 'save', 'send', 'globe', 'camera', 'message-circle', 'copyright',
-         'asterisk', 'ban', 'book-open', 'hash',
+         'asterisk', 'ban', 'bold', 'italic', 'book-open', 'hash',
          # the pages of a site: voice, microphone, fullscreen, flag, pause, print, map, terminal, tools
          'flag', 'flask-conical', 'gamepad-2', 'languages', 'map', 'maximize', 'mic', 'pause', 'printer', 'terminal', 'utensils', 'volume', 'wrench', 'book-a',
          # the site: tool page in the breadcrumb, privacy policy, users online, profiling, hardware

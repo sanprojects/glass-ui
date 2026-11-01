@@ -335,7 +335,7 @@
   function initTabs(list) {   // idempotent wiring of roles / ids / panels; run at idle, on first touch, or by Glass.init
     const tabs = tabsOf(list), n = mem(list, 'n') || mem(list, 'n', ++uid);
     /* panels: role="tabpanel" siblings of the tablist, matched to the tabs by order (or by aria-controls when given) */
-    const panels = [...list.parentNode.children].filter(c => c.getAttribute('role') === 'tabpanel');
+    const panels = [...list.parentNode.children, ...((mem(list, 'track') || { children: [] }).children)].filter(c => c.getAttribute('role') === 'tabpanel');
     owns(list, 'data-g-ready');
     tabs.forEach((t, i) => {
       if (t.getAttribute('role') !== 'tab') owns(t, 'role').setAttribute('role', 'tab');
@@ -345,15 +345,59 @@
       mem(t, 'panel', p);
       if (p) { if (!p.id) owns(p, 'id').id = 'g-panel-' + n + '-' + i; owns(t, 'aria-controls').setAttribute('aria-controls', p.id); owns(p, 'aria-labelledby').setAttribute('aria-labelledby', t.id); }
     });
+    if (!list.hasAttribute('data-no-scroll') && !mem(list, 'track') && panels.length === tabs.length && tabs.every(t => mem(t, 'panel') && panels.includes(mem(t, 'panel')))) trackOf(list, tabs.map(t => mem(t, 'panel')));
     selectTab(list, tabOfHash(list, curHash()) || tabs.find(t => t.getAttribute('aria-selected') === 'true') || tabs[0], false, true);
     list.setAttribute('data-g-ready', '');   // from here on JS owns the panels (before: CSS shows the first one)
   }
-  function selectTab(list, t, focus, silent) {
-    const tabs = tabsOf(list);
+  /* The panels of a tablist are one horizontal scroll box (a hidden scrollbar, scroll-snap): a tab scrolls to its panel, and a swipe or a drag scrolls to the tab. Native,
+     so nothing is animated by script. The other panels are inert (no focus, out of the accessibility tree); the box is as high as its highest panel (a flex row stretches its items), so nothing under it moves when a tab is chosen.
+     Not for reduced motion (the jump is instant then) and not with data-no-scroll on the tablist (then the others are hidden). */
+  function trackOf(list, panels) {
+    let track = mem(list, 'track'); if (track || !panels.length) return track;
+    track = wrapper(document.createElement('div')); track.className = 'g-tabtrack';
+    panels[0].parentNode.insertBefore(track, panels[0]); panels.forEach(p => { p.hidden = false; track.appendChild(p); });
+    /* the pill of the tablist is the scroll's thumb: it sits between the tab before and the tab after in step with the scroll (data-g-follow: CSS takes --g-pl / --g-pw), and lets go when the scroll ends */
+    let t0 = 0, follow = () => {
+      const w = track.clientWidth, tabs = tabsOf(list); if (!w || !tabs.length) return;
+      const x = Math.min(Math.max(track.scrollLeft / w, 0), tabs.length - 1), i = Math.floor(x), f = x - i, a = tabs[i], b = tabs[Math.min(i + 1, tabs.length - 1)];
+      list.style.setProperty('--g-pl', a.offsetLeft + (b.offsetLeft - a.offsetLeft) * f + 'px');
+      list.style.setProperty('--g-pw', a.offsetWidth + (b.offsetWidth - a.offsetWidth) * f + 'px');
+      tabs.forEach((t, k) => t.style.setProperty('--g-t', Math.max(0, 1 - Math.abs(x - k)).toFixed(3)));   // how much of the chosen tab each one is: its letters take that share of the chosen colour
+      list.setAttribute('data-g-follow', '');
+    }, settle = end => {
+      if (mem(track, 'auto')) return;
+      const w = track.clientWidth, i = w ? Math.round(track.scrollLeft / w) : 0, tabs = tabsOf(list), t = tabs[i];
+      if (t && t.getAttribute('aria-selected') !== 'true') { selectTab(list, t, false, false, true); writeHash(t); }
+      if (end || Math.abs(track.scrollLeft - i * w) < 1) { list.removeAttribute('data-g-follow'); list.style.removeProperty('--g-pl'); list.style.removeProperty('--g-pw'); tabs.forEach(x => x.style.removeProperty('--g-t')); }
+    };
+    mem(track, 'follow', follow);
+    track.addEventListener('scroll', () => { follow(); clearTimeout(t0); t0 = setTimeout(settle, 140); }, { passive: true });   // scrollend where there is one, else the pause of the scroll
+    track.addEventListener('scrollend', () => { clearTimeout(t0); mem(track, 'auto', false); settle(true); });
+    if (window.ResizeObserver) new ResizeObserver(() => alignTrack(list)).observe(track);
+    mem(list, 'track', track); return track;
+  }
+  function alignTrack(list) {   // the box got another width (a resize): it stays on the chosen panel
+    const track = mem(list, 'track'), t = tabsOf(list).find(x => x.getAttribute('aria-selected') === 'true'), p = t && mem(t, 'panel'); if (!track || !p) return;
+    if (!mem(track, 'auto') && Math.abs(track.scrollLeft - p.offsetLeft) > 1) track.scrollTo({ left: p.offsetLeft, behavior: 'instant' });
+  }
+  function goTo(list, t, smooth) {
+    const track = mem(list, 'track'), p = mem(t, 'panel'); if (!track || !p) return;
+    const far = Math.abs(track.scrollLeft - p.offsetLeft) > 1;
+    smooth = smooth && far && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    mem(track, 'auto', smooth); clearTimeout(mem(track, 'autoT'));
+    if (smooth) mem(track, 'autoT', setTimeout(() => mem(track, 'auto', false), 900));   // no scrollend: the flag does not stay
+    if (smooth) mem(track, 'follow')();   // the pill is the scroll's from this very moment, not from its first frame
+    track.scrollTo({ left: p.offsetLeft, behavior: smooth ? 'smooth' : 'instant' });
+  }
+  function selectTab(list, t, focus, silent, fromScroll) {
+    const tabs = tabsOf(list), track = mem(list, 'track');
     tabs.forEach(x => {
       const on = x === t; aria(x, 'selected', on); x.tabIndex = on ? 0 : -1;
-      if (mem(x, 'panel')) mem(x, 'panel').hidden = !on;
+      const p = mem(x, 'panel'); if (!p) return;
+      if (track) p.inert = !on; else p.hidden = !on;
     });
+    if (track && !fromScroll) goTo(list, t, !silent);
+    if (track && mem(t, 'panel')) ageAll.forEach(n => { if (mem(t, 'panel').contains(n)) ageDraw(n, false); });   // the times of the panel coming in are brought up to date at once, not when the scroll reaches them
     if (focus) t.focus();
     if (!silent) fire(list, 'g:tabchange', { tab: t, index: tabs.indexOf(t) });
   }
@@ -667,7 +711,7 @@
   function navAuto(ul) {
     if (mem(ul, 'nav')) return mem(ul, 'nav');
     const nav = ul.closest('nav'), sel = ul.getAttribute('data-sections') || '[data-g-section]';
-    let items = [], sig = null, more, btn, label, menu, fp, shown = 0, activeId = '', byHover = false;
+    let items = [], sig = null, more, btn, menu, fp, shown = 0, activeId = '', byHover = false;
     const titleOf = s => (s.getAttribute('data-title') || s.getAttribute('data-g-section') || (s.querySelector('h1,h2,h3') || {}).textContent || s.id).trim();
     const isOpen = () => fp && fp.isOpen();
     const closeMenu = focus => { if (isOpen()) fp.close(focus); };
@@ -681,8 +725,8 @@
       });
     }
     function buildMore() {   // the "More" item: a button and its menu
-      more = el('li', 'g-nav__more'); btn = el('button', 'g-nav__morebtn'); label = el('span', null, 'More'); menu = el('div'); byHover = false;
-      attrs(btn, { type: 'button', 'aria-haspopup': 'true', 'data-icon-end': 'chevron-down' }); aria(btn, 'expanded', false); btn.appendChild(label);
+      more = el('li', 'g-nav__more'); btn = el('button', 'g-nav__morebtn'); menu = el('div'); byHover = false;
+      attrs(btn, { type: 'button', 'aria-haspopup': 'true', 'aria-label': 'More', 'data-icon': 'chevron-down', 'data-g-menu-btn': '' }); aria(btn, 'expanded', false);   // a round button with the icon only, as the menu button of every bar
       menu.setAttribute('role', 'menu'); more.appendChild(btn); ul.appendChild(more);
       fp = floatPanel(btn, menu, { anchor: nav, align: 'end', menu: true, items: true, onClose: () => { byHover = false; more.classList.remove('is-open'); } });
       mem(btn, 'toggle', () => {   /* a click on a hover-opened menu pins it open; the click itself is delegated (.g-nav__morebtn) */
@@ -717,7 +761,6 @@
       $$('a', menu).forEach(a => aria(a, 'current', a.getAttribute('data-id') === activeId));
       const idx = items.findIndex(i => i.id === activeId);
       aria(btn, 'current', idx >= shown && idx > -1);
-      label.textContent = shown === 0 && idx > -1 ? items[idx].title : 'More';
     }
     function spy() {   // the section in view
       if (!items.length) return;
@@ -756,8 +799,8 @@
     let box = $$(':scope > div', nav).filter(d => d !== menu).pop(); if (!box) box = nav.appendChild(part(el('div')));
     // the button of the menu: the page's own (<button data-g-overflow-btn> in the bar's <div>, there from the first paint, so the bar does not change when the kit comes), or made here
     const given = box.querySelector(':scope > [data-g-overflow-btn]'), btn = given || part(el('button'));
-    attrs(btn, { type: 'button', 'data-icon': data(nav, 'overflow-icon', btn.getAttribute('data-icon') || 'chevron-down'), 'aria-label': data(nav, 'overflow-label', btn.getAttribute('aria-label') || 'More'), 'data-g-menu': '#' + id, 'data-g-menu-hover': '', 'data-g-align': 'end' });
-    if (given) owns(btn, 'data-g-menu', 'data-g-menu-hover', 'data-g-align');
+    attrs(btn, { type: 'button', 'data-icon': data(nav, 'overflow-icon', btn.getAttribute('data-icon') || 'chevron-down'), 'aria-label': data(nav, 'overflow-label', btn.getAttribute('aria-label') || 'More'), 'data-g-menu': '#' + id, 'data-g-menu-hover': '', 'data-g-align': 'end', 'data-g-menu-btn': '' });
+    if (given) owns(btn, 'data-g-menu', 'data-g-menu-hover', 'data-g-align', 'data-g-menu-btn');
     const sib = box.querySelector(':scope > [data-size]'); if (sib && sib !== btn) btn.setAttribute('data-size', sib.getAttribute('data-size'));
     if (!given) box.appendChild(btn); mount1(btn, MOUNTS.find(m => m[0] === '[data-g-menu]'));
     const fp = mem(btn, 'fp'); let busy = false;
@@ -780,7 +823,7 @@
     function measure() {   // one read of the laid out bar: does something stick out at the right end, and how wide the bar has to be for it not to
       const box = nav.getBoundingClientRect(), pad = parseFloat(getComputedStyle(nav).paddingRight) || 0;
       let right = 0; for (const c of nav.children) if (c.getClientRects().length) right = Math.max(right, c.getBoundingClientRect().right);
-      return { over: right > box.right - pad + 1, need: right - box.left + pad };
+      return { over: right > box.right - pad + 1, need: right - box.left + pad - 1 };   // the 1px of slack is the one of `over`: a bar that was kept with it comes back by the same count
     }
     function row(it) {
       const t = it.t, lab = it.node.getAttribute('data-g-label') || t.getAttribute('data-g-label'), href = t.localName === 'a' && !t.hasAttribute('onclick') ? t.getAttribute('href') : null;
@@ -1233,7 +1276,7 @@
     root.setAttribute('data-g-part', '');   // the kit's own part: a morph of the box (a refresh) leaves it where it stands, not in the content it compares
     if (page) { root.classList.add('g-ruler--page'); document.body.appendChild(root); } else box.insertBefore(root, box.firstChild);
     function anchors() {   // the sections written in the markup
-      const top = page ? -scrollY : box.getBoundingClientRect().top - box.scrollTop, all = $$('[data-ruler]', page ? document : box).filter(a => a.getClientRects().length);   // a section that is not shown (a hidden tab) has no mark
+      const top = page ? -scrollY : box.getBoundingClientRect().top - box.scrollTop, all = $$('[data-ruler]', page ? document : box).filter(a => a.getClientRects().length && !a.closest('[inert]'));   // a section that is not shown (a hidden tab, an inert panel of the tab scroll) has no mark
       return all.map((a, i) => {
         const y = a.getBoundingClientRect().top - top, next = all[i + 1];
         return { label: a.getAttribute('data-ruler') || (a.hasAttribute('data-ruler-auto') ? '' : a.id) || a.textContent.trim() || a.id, id: a.id, el: a, from: y, to: next ? next.getBoundingClientRect().top - top : sHeight() };
@@ -1347,7 +1390,7 @@
       const host = page ? document.body : box;
       if (!root.isConnected) host.insertBefore(root, page ? null : box.firstChild);   // a refresh replaces the box's content: the ruler goes back in at once, before a frame is painted without it
       if (!manual && recs.some(r => !root.contains(r.target) && !(r.target === host && [...r.addedNodes, ...r.removedNodes].every(n => n === root)))) later();
-    }).observe(page ? document.body : box, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['hidden', 'data-ruler'] });
+    }).observe(page ? document.body : box, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['hidden', 'inert', 'data-ruler'] });
     (page ? window : box).addEventListener('scroll', mark, { passive: true });
     addEventListener('resize', later); addEventListener('load', later);
     addEventListener('hashchange', () => {   // the marks may be behind the tab that the address has just opened: they are read again before the address is given up
@@ -1381,7 +1424,7 @@
   let ageSkew = 0, ageTimer = 0;
   const ageSamples = [], ageShown = new Set(), ageAll = new Set();
   const ageIO = typeof IntersectionObserver === 'undefined' ? null : new IntersectionObserver(entries => {
-    for (const e of entries) { if (e.isIntersecting) { ageShown.add(e.target); ageDraw(e.target, false); } else ageShown.delete(e.target); }
+    for (const e of entries) { if (e.isIntersecting && !e.target.closest('[inert]')) { ageShown.add(e.target); ageDraw(e.target, false); } else ageShown.delete(e.target); }
     ageSchedule();
   });
   function ageNow() { return Date.now() - ageSkew; }

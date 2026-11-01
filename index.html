@@ -287,20 +287,20 @@ try{document.getElementById('scene').style.cssText+=(function(g){return g&&/^[\w
           </ul>
           <div><button aria-label="Search" data-icon="search" data-size="sm"></button><button aria-label="Notifications" data-icon="bell" data-size="sm"></button><a href="#navigation" role="button" data-size="sm" data-variant="primary" data-icon="plus">New</a></div>
         </nav>
-        <div class="resizable" title="Drag the corner">
+        <div class="resizable">
           <nav data-g-overflow aria-label="Bar with a field">
             <a href="#navigation" role="button" data-icon="house" aria-label="Home" data-g-collapse></a>
             <a href="#navigation" data-g-title><span class="nav-brand-dot"></span>Brand</a>
             <form class="g-input-wrap" onsubmit="return false"><span data-icon="search"></span><input type="search" placeholder="Search" aria-label="Search"></form>
             <div>
-              <button type="button" data-icon="bell" aria-label="Notifications" data-size="sm"></button>
-              <button type="button" data-icon="star" aria-label="Favourites" data-size="sm"></button>
-              <a href="#navigation" role="button" data-icon="settings" aria-label="Settings" data-size="sm"></a>
-              <a href="#navigation" role="button" data-size="sm" data-variant="primary" data-icon="plus" data-g-priority="9">New</a>
+              <button type="button" data-icon="bell" aria-label="Notifications"></button>
+              <button type="button" data-icon="star" aria-label="Favourites"></button>
+              <a href="#navigation" role="button" data-icon="settings" aria-label="Settings"></a>
+              <a href="#navigation" role="button" data-variant="primary" data-icon="plus" data-g-priority="9">New</a>
             </div>
           </nav>
         </div>
-        <div class="resizable" title="Drag the corner">
+        <div class="resizable">
           <nav aria-label="Toolbar">
             <a href="#navigation"><span class="nav-brand-dot"></span>Editor</a>
             <button type="button" data-icon="bold" aria-label="Bold" data-size="sm"></button>
@@ -488,7 +488,7 @@ try{document.getElementById('scene').style.cssText+=(function(g){return g&&/^[\w
         <button title="Updated hourly" data-no-hint>Revenue 1 200</button>
         <button title="Share" aria-label="Share" data-icon="share" data-tip-position="bottom"></button>
         <button data-g-menu="#actions" data-icon-end="chevron-down">Actions</button>
-        <button data-g-menu="#actions" data-g-menu-hover data-g-align="end" aria-label="More" data-icon="chevron-down"></button>
+        <button data-g-menu="#actions" data-g-menu-hover data-g-align="end" aria-label="More" data-icon="chevron-down" data-g-menu-btn></button>
         <div id="actions" role="menu">
           <button data-icon="pencil">Rename<kbd>F2</kbd></button>
           <button data-icon="copy">Duplicate<kbd>⌘D</kbd></button>
@@ -786,10 +786,10 @@ Glass.morph('#result', html);              // html string or an element; returns
       <div role="tablist" id="themeTabs"><button>Dark</button><button>Light</button><button>Auto</button></div></fieldset>
     <fieldset class="ctl__group"><legend>Background</legend>
       <div class="sw-row bg-row" id="bgChips">
-        <button class="sw-btn" data-scene="gradient" aria-label="Gradient" aria-pressed="true" style="--sw:radial-gradient(60% 50% at 18% 12%,#70bbe7,transparent 60%),radial-gradient(50% 50% at 88% 18%,#bcd2fd,transparent 60%),radial-gradient(60% 60% at 72% 92%,#76cad6,transparent 62%),#20485e"></button>
+        <button class="sw-btn" data-scene="gradient" aria-label="Aurora" aria-pressed="true" style="--sw:radial-gradient(60% 50% at 18% 12%,#70bbe7,transparent 60%),radial-gradient(50% 50% at 88% 18%,#bcd2fd,transparent 60%),radial-gradient(60% 60% at 72% 92%,#76cad6,transparent 62%),#20485e"></button>
         <button class="sw-btn" data-scene="liquid" aria-label="Liquid" aria-pressed="false" style="--sw:radial-gradient(60% 60% at 28% 30%,#58c4c0,transparent 70%),radial-gradient(60% 60% at 76% 78%,#8a6ee6,transparent 70%),#2a4fa8"></button>
-        <button class="sw-btn" data-scene="duo" aria-label="Two-colour gradient" aria-pressed="false" style="--sw:linear-gradient(210deg,#a6cee6,#3e464b)"></button>
-      <button class="sw-btn" data-scene="peak" aria-label="Mountain peak from above" aria-pressed="false"></button>
+        <button class="sw-btn" data-scene="duo" aria-label="Gradient" aria-pressed="false" style="--sw:linear-gradient(210deg,#a6cee6,#3e464b)"></button>
+      <button class="sw-btn" data-scene="peak" aria-label="Peak" aria-pressed="false"></button>
         <button class="sw-btn" data-scene="ice" aria-label="Ice" aria-pressed="false"></button>
         <button class="sw-btn" data-scene="ripples" aria-label="Ripples" aria-pressed="false"></button>
         <button class="sw-btn" data-scene="forest" aria-label="Forest" aria-pressed="false"></button>

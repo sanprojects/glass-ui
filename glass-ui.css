@@ -691,6 +691,10 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 /* a panel rises in when its tab is chosen: @starting-style (the one that is hidden again leaves at once, so the layout never holds two) */
 [role="tabpanel"] { transition: transform var(--g-dur-md) var(--g-ease); }
 @starting-style { [role="tabpanel"] { transform: translateY(6px); } }
+/* the panels of a tablist are one scroll box without a scrollbar (glass-ui.js trackOf): a tab scrolls to its panel, a swipe to its tab; as high as the highest panel */
+.g-tabtrack { position: relative; display: flex; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.g-tabtrack::-webkit-scrollbar { display: none; }
+.g-tabtrack > [role="tabpanel"] { flex: 0 0 100%; min-width: 0; box-sizing: border-box; scroll-snap-align: start; scroll-snap-stop: always; transition: none; }
 
 /* ---------- Navigation bar: <nav> ----------
  * <nav><a href="/">Brand</a> <ul><li><a href="/" aria-current="page">Home</a></li></ul> <div>…buttons…</div></nav>
@@ -719,6 +723,8 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > ul > li) { flex: none; color: inherit; }
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > ul > li[hidden]) { display: none; }
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > div) { display: flex; align-items: center; gap: var(--g-gap); flex: none; }
+:where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager])) > *, :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > div) > * { align-self: center; }   /* whatever the heights, every item of the bar sits on its centre line: also in the grid of a bar with a field, and for an item a page gave a margin or a size of its own */
+:where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > ul) { align-items: center; }
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > ul > li > a), .g-nav__morebtn { white-space: nowrap; display: inline-flex; align-items: center; gap: var(--g-gap-inner); height: var(--g-h-md); padding: 0 var(--g-inset); border-radius: var(--g-radius-pill); color: var(--g-text-2); font-weight: 500; font-size: var(--g-fs-subhead); text-decoration: none; transition: background var(--g-dur), color var(--g-dur); }
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > ul > li > a:hover) { background: var(--g-fill-strong); color: var(--g-text); } }
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > ul > li > a[data-g-hover]) { background: var(--g-fill-strong); color: var(--g-text); }
@@ -727,8 +733,11 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 .g-nav__morebtn { border: 0; background: none; font: inherit; font-weight: 600; font-size: var(--g-fs-subhead); cursor: pointer; gap: var(--g-gap-inner); }
 @media (hover: hover) { .g-nav__morebtn:hover { background: var(--g-fill-strong); color: var(--g-text); } }
 .g-nav__morebtn[data-g-hover] { background: var(--g-fill-strong); color: var(--g-text); }
-.g-nav__morebtn { --g-icon-size: var(--g-icon-sm); }
-.g-nav__morebtn[data-compact] { padding-inline: var(--g-inset); } .g-nav__morebtn[data-compact] > span { display: none; }
+/* The "More" button of a bar (data-g-menu-btn: the menu button of an overflow bar, the one of the page's links, or a page's own) has no disc at rest, only the icon; the disc comes with the pointer and stays while the menu is open. */
+:where(:is(.g-root,[role="listbox"])) [data-g-menu-btn]:not(:hover, [data-g-hover], [aria-expanded="true"]) { background: none; box-shadow: none; }
+@media (hover: hover) { .g-nav__morebtn:hover { box-shadow: var(--g-rim); } }
+.g-nav__morebtn[data-g-hover], .g-nav__morebtn[aria-expanded="true"] { box-shadow: var(--g-rim); }
+.g-nav__morebtn { --g-icon-size: var(--g-icon-md); width: var(--g-h-md); padding: 0; justify-content: center; }   /* round, icon only: the same button as the menu of an overflow bar */
 .g-nav__morebtn[aria-current="true"] { background: var(--g-fill-selected); color: var(--g-text); }
 @media (max-width: 720px) { :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager])) { padding-left: 18px; } }
 /* Bar with a search field: <nav><a>Home</a><a>Title</a><form class="g-input-wrap">…</form><ul>…</ul><div>…</div></nav>
@@ -736,7 +745,7 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
  * home and buttons keep their size. Each cell has its own column, so a cell that is hidden does not shift the others. */
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]):has(> .g-input-wrap)) { display: grid; grid-template-columns: auto minmax(0, max-content) minmax(80px, var(--g-nav-field-max, 300px)) minmax(max-content, 1fr); }
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]):has(> .g-input-wrap):has(> ul)) { grid-template-columns: auto minmax(0, max-content) minmax(80px, var(--g-nav-field-max, 300px)) minmax(0, 1fr) auto; }   /* the links column exists only when there are links: an empty track would still cost a gap */
-:where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > .g-input-wrap) { grid-column: 3; min-width: 0; width: auto; }
+:where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]) > .g-input-wrap) { grid-column: 3; min-width: 0; width: auto; margin: 0; }
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]):has(> .g-input-wrap) > a:first-of-type) { grid-column: 1; margin-right: 0; }
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]):has(> .g-input-wrap) > a:nth-of-type(2)) { grid-column: 2; margin-right: 0; text-overflow: ellipsis; }
 :where(:is(.g-root,[role="listbox"]) nav:not([data-g-pager]):has(> .g-input-wrap) > ul) { grid-column: 4; flex: none; }
@@ -753,6 +762,11 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 :where(:is(.g-root,[role="listbox"]) nav[data-g-overflow] > ul) { flex: 1 0 auto; }
 :where(:is(.g-root,[role="listbox"]) nav[data-g-overflow] > div) { margin-left: auto; }
 :where(:is(.g-root,[role="listbox"]) nav[data-g-overflow] > ul:not([data-g-off]) ~ div) { margin-left: 0; }
+:where(:is(.g-root,[role="listbox"]) nav[data-g-overflow] > .g-input-wrap) { margin: 0; }   /* a <form> in a page without a doctype has a bottom margin of 1em: it would lift the field above the bar's centre and make the bar taller */
+/* Until the script has laid the bar out (data-g-ready) the items are not drawn: they are all there, past the end of the bar, and would show for a moment before the ones that do not fit go into the menu.
+ * Without the script the bar shows after 1.5s. */
+@keyframes g-nav-show { to { visibility: visible; } }
+:where(:is(.g-root,[role="listbox"]) nav[data-g-overflow]:not([data-g-overflow="off"], [data-g-ready])) > * { visibility: hidden; animation: g-nav-show 0s 1.5s forwards; }
 
 /* ---------- Card: <article> ----------
  * <article><figure style="background-image:…"></figure><h3>Title</h3><p>Text</p><footer><button>Open</button></footer></article>
@@ -1085,6 +1099,9 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
   [role="tablist"]::after { content: ""; position: absolute; z-index: -1; pointer-events: none; position-anchor: --g-tab; left: anchor(left); right: anchor(right); top: anchor(top); bottom: anchor(bottom);
     border-radius: var(--g-radius-pill); background: rgba(255,255,255,.92); box-shadow: 0 1px 3px rgba(0,0,0,.14); transition: left var(--g-dur-md) var(--g-ease), right var(--g-dur-md) var(--g-ease); }
   [role="tablist"][data-variant="underline"]::after { top: calc(anchor(bottom) - 2px); bottom: auto; height: 2px; border-radius: 0; background: var(--g-ink); box-shadow: none; }
+  [role="tablist"][data-g-follow]::after { left: var(--g-pl); right: auto; width: var(--g-pw); transition: none; }   /* a scroll drives the pill (glass-ui.js trackOf) */
+  [role="tablist"][data-g-follow][data-g-follow] > * { color: color-mix(in srgb, var(--g-text-inverse) calc(var(--g-t, 0) * 100%), var(--g-text-2)); transition: none; }   /* the letters go from the resting colour to the chosen one by the share of the scroll */
+  [role="tablist"][data-g-follow][data-g-follow][data-variant="underline"] > * { color: color-mix(in srgb, var(--g-text) calc(var(--g-t, 0) * 100%), var(--g-text-2)); }
 }
 @media (prefers-reduced-motion: reduce) { [role="tablist"]::after { transition-duration: .001ms; } }
 .g-pager__btn:disabled { opacity: .35; pointer-events: none; }
