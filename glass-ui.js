@@ -374,6 +374,19 @@
     track.addEventListener('scroll', () => { follow(); clearTimeout(t0); t0 = setTimeout(settle, 140); }, { passive: true });   // scrollend where there is one, else the pause of the scroll
     track.addEventListener('scrollend', () => { clearTimeout(t0); mem(track, 'auto', false); settle(true); });
     if (window.ResizeObserver) new ResizeObserver(() => alignTrack(list)).observe(track);
+    /* the tabs are a handle of the same scroll: the wheel (either axis) and a horizontal swipe on the tablist move the box, the snap does the rest */
+    list.style.touchAction = 'pan-y';
+    list.addEventListener('wheel', e => {
+      const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY; if (!d || e.ctrlKey) return;
+      const tabs = tabsOf(list), i = tabs.findIndex(x => x.getAttribute('aria-selected') === 'true'), n = tabs[i + (d > 0 ? 1 : -1)]; if (!n) return;   // at the end the page keeps the wheel
+      e.preventDefault(); if (Date.now() < wl) return;
+      wl = Date.now() + 350; selectTab(list, n, false); writeHash(n);   // one tab per turn of the wheel
+    }, { passive: false });
+    let wl = 0;
+    let sx = null, s0 = 0;
+    list.addEventListener('touchstart', e => { sx = e.touches.length === 1 ? e.touches[0].clientX : null; if (sx !== null) { track.style.scrollSnapType = 'none'; s0 = track.scrollLeft; } }, { passive: true });
+    list.addEventListener('touchmove', e => { if (sx === null) return; const x = e.touches[0].clientX; track.scrollBy({ left: sx - x, behavior: 'instant' }); sx = x; }, { passive: true });
+    list.addEventListener('touchend', () => { if (sx === null) return; sx = null; const w = track.clientWidth, d = track.scrollLeft - s0; if (w) track.scrollTo({ left: Math.min(Math.max(Math.round(s0 / w) + (d > 40 ? 1 : d < -40 ? -1 : 0), 0), tabsOf(list).length - 1) * w, behavior: 'smooth' }); setTimeout(() => track.style.removeProperty('scroll-snap-type'), 600); }, { passive: true });   // the snap is back when the turn is done; a short swipe is enough to turn the page
     mem(list, 'track', track); return track;
   }
   function alignTrack(list) {   // the box got another width (a resize): it stays on the chosen panel
