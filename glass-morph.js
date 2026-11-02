@@ -844,6 +844,7 @@
        few thousand elements in it) */
     function snapshot(W) {
       if (!W.box.isConnected) return;
+      W.dirty = false;
       skips();
       PX = scrollX; PY = scrollY;
       const sx = PX, sy = PY, cache = new Map(), lazy = new Map(), b = W.box.getBoundingClientRect(), stuck = new Set(), floated = new Set(), page = W.page, sh = shifts(W.box);
@@ -920,6 +921,7 @@
       WATCHED.forEach(W => {
         if (W.box !== target && !W.box.contains(target) && !target.contains(W.box)) return;
         W.mo.takeRecords();
+        W.dirty = true;   /* what it kept is from before this write: a change before it is read again is not animated from there (see changed()) */
         W.busy = Math.max(W.busy, performance.now() + ms + 100);
         settle(W, 0);
       });
@@ -954,7 +956,10 @@
          that stops reads all anyway). The same write at another time animates as ever */
       if (performance.now() - SCROLL_AT < 200) { fits(); stale(W); return; }
       const m = motion();
-      if (quiet() || m >= 3) { fits(); settle(W, 0); return; }   /* a hidden page draws nothing (nor one that does not keep up): only where things stand is read again */
+      if (quiet() || m >= 3) { fits(); settle(W, 0); return; }
+      /* Glass.morph wrote into this box and where things stand is not read again yet: the places kept are from before that write, a glide from them
+         would take the rows back to where they were and bring them again (sanstv.ru/find-words: an ad slot that a script put in 1 s after the switch) */
+      if (W.dirty) { fits(); stale(W); return; }   /* a hidden page draws nothing (nor one that does not keep up): only where things stand is read again */
       /* thousands of elements put in or taken out at once that are most of the box (a long table written anew) are a new picture, not a move:
          not animated, only read again - every frame of it would lay out and paint the thousands of rows (sanstv.ru/admin/online, 4000 rows
          refreshed every 5 s: frames of 0.4-0.7 s in a row, 2.3 s for the refresh). A page that puts in only what changed is animated */
