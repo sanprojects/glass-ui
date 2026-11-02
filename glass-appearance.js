@@ -120,7 +120,7 @@
     bgIn.value=''; bgIn.dispatchEvent(new Event('change')); bgIn.removeAttribute('aria-invalid'); customs=[]; Array.prototype.forEach.call(chips.querySelectorAll('[data-id]'), function(b){ b.remove(); }); store('g-bg-custom','[]'); setScene(DEF_SCENE); setAccent('#0071E3'); pick(accRow, accRow.querySelector('button')); pick(liqRow, liqRow.querySelector('button'));
     ['--g-accent','--g-accent-hover','--g-accent-fg','--g-blur','--g-fill','--g-fill-strong','--g-fill-hover','--g-fill-selected'].forEach(function(p){ root.removeProperty(p); });
     br.value=30; fr.value=10; br.dispatchEvent(new Event('input')); fr.dispatchEvent(new Event('input')); root.removeProperty('--g-blur'); root.removeProperty('--g-fill');
-    TONE.c=1; TONE.l=0; TONE.g=0; toneImage(); if (toneTabs) toneTabs.children[0].click(); curPal=paletteOf(DEFAULT); curId=null; applyColours(); try{ ['g-palette','g-colour','g-accent','g-blur','g-fill','g-tone'].forEach(function(k){ localStorage.removeItem(k); }); }catch(_){}
+    TONE.c=1; TONE.l=0; TONE.g=0; toneImage(); if (toneTabs) toneTabs.children[0].click(); curPal=paletteOf(DEFAULT); curId=null; pick(liqRow,liqRow.firstElementChild); applyColours(); try{ ['g-palette','g-colour','g-accent','g-blur','g-fill','g-tone'].forEach(function(k){ localStorage.removeItem(k); }); }catch(_){}
     var tabs=document.querySelectorAll('#speedTabs > *'); tabs[CALM].click();
   });
   /* restore the saved background */
