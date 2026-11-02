@@ -72,7 +72,7 @@
     if (v==='gold'){ P=paletteOf(hslToHex(38,75,55)); P.q=GOLD; P.lt=['#ffe3a3']; return P; }
     return paletteOf(/^#/.test(v)?v:hslToHex(+v,70,55)); }
   /* a colour [r,g,b] 0..1 of the day cycle in the tone of the panel: as liquidPalette does it (role 0 is the dark ground) */
-  function dayTone(c,role,frame){ var o=hexToOk(rgbToHex(c[0]*255,c[1]*255,c[2]*255)), w=[.7,1,.7,0][frame], L=role?Math.min(.95,o[0]+TONE.l*w):Math.min(.6,o[0]+TONE.g*w);   /* the lift fades with the light of the hour: noon takes all of it, night none, so the night stays dark in every tone */
+  function dayTone(c,role,frame){ var o=hexToOk(rgbToHex(c[0]*255,c[1]*255,c[2]*255)), w=[.7,1,1,.7,0][frame], L=role?Math.min(.95,o[0]+TONE.l*w):Math.min(.6,o[0]+TONE.g*w);   /* the lift fades with the light of the hour: noon takes all of it, night none, so the night stays dark in every tone */
     return hexToRgb(okToHex(L,Math.min(o[1],.2)*TONE.c,o[2])).map(function(v){ return v/255; }); }
   /* a picture (a scene photo or your own image) takes the same tone as a muting filter on the scene: the chroma scales its colours, the lifts soften its contrast and lighten it.
      Vivid is no filter at all (css: .scene[data-scene] other than the colour ones read --g-scene-tone) */

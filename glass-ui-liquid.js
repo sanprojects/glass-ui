@@ -47,14 +47,20 @@
     var loc = gl.getAttribLocation(pr, 'a'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
     return { gl: gl, cv: cv, pr: pr };
   }
-  /* Day cycle: dawn, noon, sunset, night; [dark, mid, light] per keyframe, smoothstep between them */
-  var DAY0 = [[[.17,.13,.32],[.88,.47,.58],[1,.8,.55]], [[.03,.3,.42],[.1,.74,.8],[.8,.98,.95]], [[.22,.1,.3],[.94,.38,.26],[1,.74,.32]], [[.05,.07,.22],[.2,.22,.55],[.56,.52,.86]]], DAY = DAY0;   /* DAY is DAY0 as the host's Glass.dayKeys filter (the tone of the Appearance panel) changed it */
-  /* Glass.dayKeys(f): every colour [r,g,b] (0..1) of the day keyframes goes through f(colour, role, frame) (role 0 ground, 1 mid, 2 light; frame 0 dawn, 1 noon, 2 sunset, 3 night) so that the day follows the same tone as the picked colours; f = null puts the originals back. Every background is drawn again */
+  /* Day cycle after the macOS dynamic wallpaper: dawn, noon, afternoon, dusk, night; [dark, mid, light] per keyframe at the hour DAYT (phase 0..1, 0 = 6:00), smoothstep between them */
+  var DAY0 = [[[.04,.1,.2],[.3,.34,.5],[.88,.56,.56]], [[.03,.22,.4],[.04,.5,.78],[.7,.9,.97]], [[.12,.24,.3],[.2,.42,.58],[.96,.78,.5]], [[.1,.14,.25],[.52,.28,.3],[.95,.5,.4]], [[.01,.04,.1],[.08,.2,.34],[.2,.38,.55]]], DAYT = [0, .25, .42, .56, .8], DAY = DAY0;   /* DAY is DAY0 as the host's Glass.dayKeys filter (the tone of the Appearance panel) changed it */
+  /* Glass.dayKeys(f): every colour [r,g,b] (0..1) of the day keyframes goes through f(colour, role, frame) (role 0 ground, 1 mid, 2 light; frame 0 dawn, 1 noon, 2 afternoon, 3 dusk, 4 night) so that the day follows the same tone as the picked colours; f = null puts the originals back. Every background is drawn again */
   function redrawAll() { Array.prototype.forEach.call(document.querySelectorAll('[data-g-gradient],[data-g-liquid]'), function (h) { if (h.__gradient) h.__gradient.redraw(); if (h.__duo) h.__duo(); if (h.__liquid) h.__liquid.redraw(); }); }
   G.dayKeys = function (f) { DAY = f ? DAY0.map(function (k, i) { return k.map(function (c, j) { return f(c, j, i); }); }) : DAY0; redrawAll(); };
 
-  function dayMix(ph, lift) {   /* [ground, mid, light] of the day cycle at phase 0..1 (dawn, noon, sunset, night), lifted toward white by `lift` */
-    var x = ph * 4, i0 = Math.floor(x) % 4, i1 = (i0 + 1) % 4, f = x - Math.floor(x); f = f * f * (3 - 2 * f);
+  function dayAt(ph) {   /* keyframes around a phase and the eased blend between them */
+    var n = DAYT.length, i0 = n - 1;
+    for (var k = 0; k < n; k++) if (ph >= DAYT[k]) i0 = k;
+    var i1 = (i0 + 1) % n, a = DAYT[i0], b = DAYT[i1] + (i1 ? 0 : 1), x = ph < a ? ph + 1 : ph, f = (x - a) / (b - a);
+    return [i0, i1, f * f * (3 - 2 * f)];
+  }
+  function dayMix(ph, lift) {   /* [ground, mid, light] of the day cycle at phase 0..1, lifted toward white by `lift` */
+    var d = dayAt(ph), i0 = d[0], i1 = d[1], f = d[2];
     return [0, 1, 2].map(function (j) { return DAY[i0][j].map(function (v, n) { v = v + (DAY[i1][j][n] - v) * f; return v + (1 - v) * (lift || 0); }); });
   }
   function avg(a, b) { return a.map(function (v, n) { return (v + b[n]) / 2; }); }
@@ -63,10 +69,17 @@
   function dayDuo(ph) { var p = dayPal(ph); return [p[0], avg(p[1], p[2])]; }   /* [dark, light] */
   /* one clock for the day on every background (a full day in 280 s at speed 1) */
   var dayPh = .3, real = false;
-  function nowPh() { var d = new Date(), h = d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600; return (((h - 6) / 24) % 1 + 1) % 1; }   /* 6:00 dawn, 12:00 noon, 18:00 sunset, 0:00 night */
-  G.scene.add(function (dt) { dayPh = real ? nowPh() : (dayPh + dt / 70) % 1; return false; });
+  function nowPh() { var d = new Date(), h = d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600; return (((h - 6) / 24) % 1 + 1) % 1; }   /* 6:00 dawn, 12:00 noon, 16:00 afternoon, 19:30 dusk, 1:00 night */
+  /* a photo (or any other scene without its own colours) in the day cycle: --g-day-tint is the colour the scene's ::before multiplies over it (glass-appearance.css), white at noon */
+  var DAYTINT = [[1, .84, .86], [1, 1, 1], [1, .94, .82], [1, .7, .62], [.34, .42, .7]], lastTint = '';
+  function dayTint() {
+    var d = dayAt(dayPh), a = DAYTINT[d[0]], b = DAYTINT[d[1]], v = 'rgb(' + a.map(function (q, n) { return Math.round((q + (b[n] - q) * d[2]) * 255); }).join(',') + ')';
+    if (v === lastTint) return; lastTint = v;
+    Array.prototype.forEach.call(document.querySelectorAll('[data-day][data-scene]'), function (h) { h.style.setProperty('--g-day-tint', v); });
+  }
+  G.scene.add(function (dt) { dayPh = real ? nowPh() : (dayPh + dt / 70) % 1; dayTint(); return false; });
   /* Glass.realTime(true): the day is the visitor's local time of day instead of the clock above */
-  G.realTime = function (on) { real = !!on; if (real) dayPh = nowPh(); redrawAll(); };
+  G.realTime = function (on) { real = !!on; if (real) dayPh = nowPh(); lastTint = ''; dayTint(); redrawAll(); };
 
   /* Glass.liquid(host, opts) returns its API at once; the canvas comes when the host is first on screen after load */
   function liquid(host, o) {
