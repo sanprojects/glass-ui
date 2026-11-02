@@ -59,8 +59,8 @@
   $('accentCustom').addEventListener('input', function(e){ pick(accRow, e.target.parentNode); setAccent(e.target.value); });
   /* background colour: the palette is worked out when a colour is picked and saved (g-palette), and the host page's first script puts it on the page,
      so the very first frame already has it. Its lists stay lists of one ([0]): a palette saved while the kit had a light theme ([1]) still reads */
-  /* the tone of every picked-colour background (liquid, gradient, duo): c scales the chroma, l lifts the colours, g lifts the dark ground; Glass.tone({...}) changes and saves it */
-  var TONE={c:.85,l:.04,g:.06}; try{ var tn=JSON.parse(load('g-tone')); if (tn) ['c','l','g'].forEach(function(n){ if (typeof tn[n]==='number') TONE[n]=tn[n]; }); }catch(_){}
+  /* the tone of every background (liquid, gradient, duo, day cycle and the pictures): c scales the chroma, l lifts the colours, g lifts the dark ground; Glass.tone({...}) changes and saves it. Vivid (no change) is the default */
+  var TONE={c:1,l:0,g:0}; try{ var tn=JSON.parse(load('g-tone')); if (tn) ['c','l','g'].forEach(function(n){ if (typeof tn[n]==='number') TONE[n]=tn[n]; }); }catch(_){}
   var DEFAULT='#33a7e1', liqHost=document.querySelector('.g-liquid[data-for="liquid"]'), liqApi=function(){ return Glass.liquid && Glass.liquid(liqHost); };
   var STOCK=[['#1d2b52','#5ea0ff','#ff9ec2','#46d1c1','#a78bfa']], GOLD=[['#2a1a0d','#b7721e','#f2c66d','#7b3d1b']];
   var GRAD=['--sc0','--sc1','--sc2','--sc3','--sc4'];
@@ -74,6 +74,10 @@
   /* a colour [r,g,b] 0..1 of the day cycle in the tone of the panel: as liquidPalette does it (role 0 is the dark ground) */
   function dayTone(c,role,frame){ var o=hexToOk(rgbToHex(c[0]*255,c[1]*255,c[2]*255)), w=[.7,1,.7,0][frame], L=role?Math.min(.95,o[0]+TONE.l*w):Math.min(.6,o[0]+TONE.g*w);   /* the lift fades with the light of the hour: noon takes all of it, night none, so the night stays dark in every tone */
     return hexToRgb(okToHex(L,Math.min(o[1],.2)*TONE.c,o[2])).map(function(v){ return v/255; }); }
+  /* a picture (a scene photo or your own image) takes the same tone as a muting filter on the scene: the chroma scales its colours, the lifts soften its contrast and lighten it.
+     Vivid is no filter at all (css: .scene[data-scene] other than the colour ones read --g-scene-tone) */
+  function toneImage(){ var c=TONE.c, l=TONE.l, g=TONE.g; scene.style.setProperty('--g-scene-tone', c>=.999&&!l&&!g ? 'none' : 'saturate('+c.toFixed(3)+') contrast('+(1-g*.5).toFixed(3)+') brightness('+(1+l*.4).toFixed(3)+')'); }
+  toneImage();
   var curPal=paletteOf(DEFAULT);
   function applyColours(){ var P=curPal, api=liqApi();
     P.g[0].forEach(function(c,i){ scene.style.setProperty(GRAD[i],c); });
@@ -88,16 +92,16 @@
     var s=scene.getAttribute('data-scene'); if (s!=='liquid' && s!=='gradient' && s!=='duo') setScene('liquid'); }
   function paletteFor(id){ var v=id&&id.slice(2); return id&&id.indexOf('b:')===0?presetPalette(v):id&&id.indexOf('c:')===0?paletteOf(v):paletteOf(DEFAULT); }
   (window.Glass=window.Glass||{}).tone=function(t){ if (t){ ['c','l','g'].forEach(function(n){ if (typeof t[n]==='number') TONE[n]=t[n]; }); store('g-tone',JSON.stringify(TONE));
-      curPal=paletteFor(curId); if (curId) store('g-palette',JSON.stringify(curPal)); applyColours(); } return {c:TONE.c,l:TONE.l,g:TONE.g}; };
+      curPal=paletteFor(curId); if (curId) store('g-palette',JSON.stringify(curPal)); applyColours(); toneImage(); } return {c:TONE.c,l:TONE.l,g:TONE.g}; };
   var liqRow=$('liquidRow'), presetOf=function(b){ return b.getAttribute('data-color')||b.getAttribute('data-hue'); };
   Array.prototype.forEach.call(liqRow.querySelectorAll('button.sw-btn'), function(b){ b.addEventListener('click', function(){ pick(liqRow,b); setColour(presetPalette(presetOf(b)),'b:'+presetOf(b)); }); });
   $('liquidCustom').addEventListener('input', function(e){ pick(liqRow, e.target.parentNode); setColour(paletteOf(e.target.value),'c:'+e.target.value); });
   applyColours();   /* the default colour until a saved one is restored below (the theme switch used to apply it) */
-  /* tone of the colour backgrounds: the tabs of the optional #toneTabs set Glass.tone (Vivid is the saturated original, Soft the default) */
+  /* tone of the colour backgrounds: the tabs of the optional #toneTabs set Glass.tone (Vivid is the saturated original and the default) */
   var TONES=[{c:1,l:0,g:0},{c:.85,l:.04,g:.06},{c:.75,l:.07,g:.12},{c:.5,l:.12,g:.22}], toneTabs=$('toneTabs');
   if (toneTabs){ toneTabs.addEventListener('g:tabchange', function(e){ Glass.tone(TONES[e.detail.index]); });
     (function(){ var t=Glass.tone(), i=-1; TONES.forEach(function(x,n){ if (Math.abs(x.c-t.c)<.005&&Math.abs(x.l-t.l)<.005&&Math.abs(x.g-t.g)<.005) i=n; });
-      if (i!==1) { var b=toneTabs.children; if (i>=0) b[i].click(); else b[1].removeAttribute('aria-selected'); } })(); }
+      if (i!==0) { var b=toneTabs.children; if (i>=0) b[i].click(); else b[0].removeAttribute('aria-selected'); } })(); }
   /* liquid speed */
   var SPEEDS=[0,1,1,2.5,5.8], REAL=1, CALM=2, restoring=false;   /* one speed for the liquid and the gradient: 1 = calm; Real time (after Still, the slowest) is calm too, with the day of the day-cycle colours set by the local clock */
   $('speedTabs').addEventListener('g:tabchange', function(e){ var i=e.detail.index; Glass.scene.speed(SPEEDS[i]); store('g-speed2',i);
@@ -116,7 +120,7 @@
     bgIn.value=''; bgIn.dispatchEvent(new Event('change')); bgIn.removeAttribute('aria-invalid'); customs=[]; Array.prototype.forEach.call(chips.querySelectorAll('[data-id]'), function(b){ b.remove(); }); store('g-bg-custom','[]'); setScene(DEF_SCENE); setAccent('#0071E3'); pick(accRow, accRow.querySelector('button')); pick(liqRow, liqRow.querySelector('button'));
     ['--g-accent','--g-accent-hover','--g-accent-fg','--g-blur','--g-fill','--g-fill-strong','--g-fill-hover','--g-fill-selected'].forEach(function(p){ root.removeProperty(p); });
     br.value=30; fr.value=10; br.dispatchEvent(new Event('input')); fr.dispatchEvent(new Event('input')); root.removeProperty('--g-blur'); root.removeProperty('--g-fill');
-    TONE.c=.85; TONE.l=.04; TONE.g=.06; if (toneTabs) toneTabs.children[1].click(); curPal=paletteOf(DEFAULT); curId=null; applyColours(); try{ ['g-palette','g-colour','g-accent','g-blur','g-fill','g-tone'].forEach(function(k){ localStorage.removeItem(k); }); }catch(_){}
+    TONE.c=1; TONE.l=0; TONE.g=0; toneImage(); if (toneTabs) toneTabs.children[0].click(); curPal=paletteOf(DEFAULT); curId=null; applyColours(); try{ ['g-palette','g-colour','g-accent','g-blur','g-fill','g-tone'].forEach(function(k){ localStorage.removeItem(k); }); }catch(_){}
     var tabs=document.querySelectorAll('#speedTabs > *'); tabs[CALM].click();
   });
   /* restore the saved background */
