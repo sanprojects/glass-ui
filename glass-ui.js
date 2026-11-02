@@ -407,7 +407,13 @@
     tabs.forEach(x => {
       const on = x === t; aria(x, 'selected', on); x.tabIndex = on ? 0 : -1;
       const p = mem(x, 'panel'); if (!p) return;
-      if (track) p.inert = !on; else p.hidden = !on;
+      if (track) {
+        p.inert = !on;
+        // a panel that is out of sight is not rendered (content-visibility, data-g-off): every restyle of a tab click or of a refresh skips it. It goes off when the slide has run, not at once: it is on the screen until then
+        clearTimeout(mem(p, 'offT'));
+        if (on) { p.removeAttribute('data-g-off'); p.style.removeProperty('contain-intrinsic-block-size'); }
+        else mem(p, 'offT', setTimeout(() => { if (p.inert) { const cs = getComputedStyle(p); p.style.setProperty('contain-intrinsic-block-size', (p.getBoundingClientRect().height - ['paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth'].reduce((a, k) => a + parseFloat(cs[k] || 0), 0)) + 'px'); p.setAttribute('data-g-off', ''); } }, 500));   // its height stays: the box is as high as the highest panel
+      } else p.hidden = !on;
     });
     if (track && !fromScroll) goTo(list, t, !silent);
     if (track && mem(t, 'panel')) ageAll.forEach(n => { if (mem(t, 'panel').contains(n)) ageDraw(n, false); });   // the times of the panel coming in are brought up to date at once, not when the scroll reaches them

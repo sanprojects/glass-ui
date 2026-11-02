@@ -694,6 +694,7 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 /* the panels of a tablist are one scroll box without a scrollbar (glass-ui.js trackOf): a tab scrolls to its panel, a swipe to its tab; as high as the highest panel */
 .g-tabtrack { position: relative; display: flex; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; }
 .g-tabtrack::-webkit-scrollbar { display: none; }
+.g-tabtrack > [data-g-off] { content-visibility: hidden; }   /* the script sets it on a panel that has slid out of sight: not styled, not laid out, not painted (the script keeps its height in contain-intrinsic-block-size) */
 .g-tabtrack > [role="tabpanel"] { flex: 0 0 100%; min-width: 0; box-sizing: border-box; scroll-snap-align: start; scroll-snap-stop: always; transition: none; }
 
 /* ---------- Navigation bar: <nav> ----------
