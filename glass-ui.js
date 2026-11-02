@@ -1436,7 +1436,7 @@
     return ruler(document.scrollingElement || document.documentElement);   // nothing in between scrolls: the page does
   }
   /* The distance from now to a moment, on the standard <time>: <time datetime="2026-10-19T09:00:00.000Z"> or <time datetime="1760864400.123">
-     (Unix seconds). The kit writes the distance (45 s, 3 min, 2 h). The number is its own span (.g-age__n) and drums only when a tick changes it;
+     (Unix seconds). The kit writes the distance (45 s, 3 min, 2 h, 11 d). The number is its own span (.g-age__n) and drums only when a tick changes it;
      a re-sync or a fresh render moves it silently. One timer for the page, and it counts only the times on screen (one IntersectionObserver for all of
      them): a hidden tab or a scrolled-away row costs nothing. The distance is on the server's clock (Glass.syncClock). Hovering a time shows the moment by the
      visitor's own clock and zone in the glass tooltip. */
@@ -1456,7 +1456,7 @@
   }
   function ageParts(ms) {
     const a = Math.max(0, Math.abs(ms));
-    return a < 60000 ? [Math.round(a / 1000), 's'] : a < 3600000 ? [Math.round(a / 60000), 'min'] : [Math.round(a / 3600000), 'h'];
+    return a < 60000 ? [Math.round(a / 1000), 's'] : a < 3600000 ? [Math.round(a / 60000), 'min'] : a < 86400000 ? [Math.round(a / 3600000), 'h'] : [Math.round(a / 86400000), 'd'];
   }
   function ageAt(s) { return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) * 1000 : Date.parse(s); }
   function ageDraw(node, tick) {

@@ -15,8 +15,8 @@
   --g-accent-hover: #0A66D6;
   --g-accent-fg: #fff;                 /* text on the accent: contrast-color() below picks black or white for any accent */
   --g-danger: #D93A32;
-  --g-success: #34D27B;
-  --g-success-text: #8ce6b2;
+  --g-success: #5FCE48;
+  --g-success-text: #5FCE48;
   --g-danger-text: #ff9d96;
   --g-warning: #FFB340;
 
@@ -811,7 +811,7 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 /* ---------- Badge / chip ---------- */
 :where(:is(.g-root,[role="listbox"]) data) { position: relative; display: inline-flex; white-space: nowrap; flex: none; align-items: center; gap: var(--g-gap-inner); height: 28px; padding: 0 var(--g-inset); border-radius: var(--g-radius-pill); font-size: var(--g-fs-footnote); font-weight: 400; font-variant-numeric: tabular-nums; color: var(--g-text); background: var(--g-fill-strong); }
 :where(:is(.g-root,[role="listbox"]) data[data-variant="accent"]) { background: var(--g-accent); color: var(--g-accent-fg); --edge: rgba(255,255,255,.35); }
-:where(:is(.g-root,[role="listbox"]) data[data-variant="success"]) { background: rgba(52,210,123,.22); color: var(--g-success-text); --edge: rgba(52,210,123,.4); }
+:where(:is(.g-root,[role="listbox"]) data[data-variant="success"]) { background: rgba(95,206,72,.22); color: var(--g-success-text); --edge: rgba(95,206,72,.4); }
 :where(:is(.g-root,[role="listbox"]) data[data-variant="warning"]) { background: rgba(255,179,64,.22); color: #ffd699; --edge: rgba(255,179,64,.4); }
 :where(:is(.g-root,[role="listbox"]) data[data-variant="danger"]) { background: rgba(255,90,82,.24); color: #ffb9b4; --edge: rgba(255,90,82,.4); }
 :where(:is(.g-root,[role="listbox"]) data)::after, .g-file__item::after, .g-clamp__btn::after { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: var(--g-edge-w); pointer-events: none;
