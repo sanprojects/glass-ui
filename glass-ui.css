@@ -250,6 +250,7 @@
 
 @supports not (backdrop-filter: blur(1px)) {
   .g-glass, :where(:is(.g-root,[role="listbox"]) :is(article, nav, dialog, figure:has(> table), [popover])), .g-toast, [role="menu"], [role="listbox"] { background: rgba(40,48,70,.82); }
+  :where(:is(.g-root,[role="listbox"]) figure:has(> table):not(.g-shell--tools > main figure))::after { background: rgba(40,48,70,.82); }
 }
 
 /* ---------- Liquid background (CSS blobs as fallback; glass-ui.js upgrades it to a slow WebGL liquid) ---------- */
@@ -838,14 +839,26 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 
 /* ---------- Table: <figure><table><thead/><tbody/><tfoot/></table></figure> ----------
  * Right-aligned cell: align="right". Muted cell: data-muted. Two-line rows: <table data-rows="two-line">. Sortable header: <th aria-sort="none"><button>Name</button></th>. */
-:where(:is(.g-root,[role="listbox"]) figure:has(> table)) { overflow: auto; min-height: 0; border-radius: var(--g-radius-card); }   /* what does not fit scrolls in the figure, both ways (in a column with a set height it shrinks to it) */
+:where(:is(.g-root,[role="listbox"]) figure:has(> table)) { overflow: clip; min-height: 0; border-radius: var(--g-radius-card); }   /* a figure on the page does not scroll (a cell is cut with an ellipsis, nothing runs out sideways): it is no scroll box, so the sticky head below pins to the page; one with a height of its own scrolls (the workspace of a tools panel, next line, or overflow: auto on the figure) */
+:where(:is(.g-root,[role="listbox"]) .g-shell--tools > main figure:has(> table)) { overflow: auto; }
+/* The surface of a table (its blur and fill) is a layer under the rows (::after), not the figure itself: a blur on the figure is a backdrop root, and the blur of the pinned head (below) would see nothing of the rows under it */
+:where(:is(.g-root,[role="listbox"]) figure:has(> table):not(.g-shell--tools > main figure)) { position: relative; isolation: isolate; background: none; backdrop-filter: none; box-shadow: var(--g-shadow); }
+:where(:is(.g-root,[role="listbox"]) figure:has(> table):not(.g-shell--tools > main figure))::after { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--g-fill); backdrop-filter: var(--g-blur); box-shadow: var(--g-rim); pointer-events: none; }
+:is(.g-glass, .g-shell) figure:has(> table)::after { backdrop-filter: none; }
 :where(:is(.g-root,[role="listbox"]) table) { width: 100%; min-width: 0; border-collapse: collapse; font-size: var(--g-fs-subhead); font-variant-numeric: tabular-nums; }
 :where(:is(.g-root,[role="listbox"]) th) { height: var(--g-h-md); padding: 0 var(--g-gap); text-align: left; font-size: var(--g-fs-caption); line-height: 1.33; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--g-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }   /* a head cell ends with an ellipsis too; it has no max-width: 0 (as td has): the columns share the width by what the heads and the cells hold, not equally */
-/* Sticky header and footer: in the workspace of a tools panel (where a table scrolls inside its figure) and on any table marked data-sticky; data-no-sticky turns it off.
- * They are plain glass, a little stronger than a panel (--g-fill-sticky), with a blur: the rows that scroll under them show through, blurred. The blur sits on the thead / tfoot itself: it does not work on cells. */
-:where(:is(.g-root,[role="listbox"]) :is(.g-shell--tools > main table, table[data-sticky]):not([data-no-sticky], [data-scroll-body]) > :is(thead, tfoot)) { position: sticky; z-index: 2; backdrop-filter: blur(24px); }
-:where(:is(.g-root,[role="listbox"]) :is(.g-shell--tools > main table, table[data-sticky]):not([data-no-sticky], [data-scroll-body]) > thead) { top: 0; }
-:where(:is(.g-root,[role="listbox"]) :is(.g-shell--tools > main table, table[data-sticky]):not([data-no-sticky], [data-scroll-body]) > :is(thead, tfoot) > tr > :is(th, td)) { background: var(--g-fill-sticky); }
+/* Sticky header: every table has it, it pins to the top of the page (or of the box the table scrolls in) while the rows go under it, and leaves with the end of the table; data-no-sticky turns it off.
+ * Sticky footer: in the workspace of a tools panel (where a table scrolls inside its figure) and on any table marked data-sticky.
+ * The footer is plain glass, a little stronger than a panel (--g-fill-sticky), with a blur. The head is the table's own glass: nothing added to it, only the blur of the surface while it is pinned, so the rows that scroll under it are blurred away. The blur sits on the thead / tfoot itself: it does not work on cells. */
+:where(:is(.g-root,[role="listbox"]) table:not([data-no-sticky], [data-scroll-body]) > thead, :is(.g-root,[role="listbox"]) :is(.g-shell--tools > main table, table[data-sticky]):not([data-no-sticky], [data-scroll-body]) > tfoot) { position: sticky; z-index: 2; }
+:where(:is(.g-root,[role="listbox"]) :is(.g-shell--tools > main table, table[data-sticky]):not([data-no-sticky], [data-scroll-body]) > tfoot) { backdrop-filter: blur(24px); }
+/* The head looks as it always did while it rests; the blur of the table's surface comes only while it is pinned, from a strip of the figure that sticks with it, the glass of the kit (fill, blur, saturation): a plate that the rows go under and are blurred away (the blur does not work on a thead; --g-head-h is its height, set by the kit) (the kit sets data-g-stuck on the table then) */
+:where(:is(.g-root,[role="listbox"]) figure:has(> table[data-g-stuck]:not([data-no-sticky], [data-scroll-body])))::before { content: ""; display: block; position: sticky; top: var(--g-sticky-top, 0px); z-index: 1; height: var(--g-head-h, var(--g-h-md)); margin-bottom: calc(-1 * var(--g-head-h, var(--g-h-md))); background: var(--g-fill); backdrop-filter: var(--g-blur); border-radius: var(--g-radius-card) var(--g-radius-card) 0 0; box-shadow: var(--g-rim); pointer-events: none; }
+/* Inside a glass panel (.g-glass, .g-shell) the head does not pin: the panel's own backdrop-filter is a backdrop root, a blur nested in it does not work, the rows would show through the head crisp. The workspace of a tools panel scrolls inside its figure and keeps its head. */
+:is(.g-glass, .g-shell) :where(figure:has(> table)):not(.g-shell--tools > main figure) > table > thead { position: static; }
+:where(:is(.g-root,[role="listbox"]) table:not([data-no-sticky], [data-scroll-body]) > thead) { top: var(--g-sticky-top, 0px); }   /* under a pinned bar of the page, if it has one (next line); a page with its own bar sets --g-sticky-top itself */
+:where(.g-root:has(> nav:is([data-position="fixed"], [data-position="sticky"]))) { --g-sticky-top: calc(12px + var(--g-nav-h) + var(--g-gap-inner)); }
+:where(:is(.g-root,[role="listbox"]) :is(.g-shell--tools > main table, table[data-sticky]):not([data-no-sticky], [data-scroll-body]) > tfoot > tr > :is(th, td)) { background: var(--g-fill-sticky); }
 :where(:is(.g-root,[role="listbox"]) :is(.g-shell--tools > main table, table[data-sticky]):not([data-no-sticky], [data-scroll-body]) > tfoot) { bottom: 0; }
 /* Scrolling body: <table data-scroll-body> fills the height of its figure; the header and the footer stay where they are, only the rows scroll between them.
  * The rows are grids, so the columns of the header, the body and the footer line up without a table layout: they are of equal width, or as --g-cols says

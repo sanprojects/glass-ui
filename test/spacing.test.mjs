@@ -64,9 +64,9 @@ test('the stylesheet keeps its spacing rules', () => {
   assert.deepEqual(literalGaps, []);
   // margins are not used for spacing between elements: what is left is optical alignment inside a control (icons, range thumb, underline tabs, chip cross, the last closed fold),
   // the card media bleed, the hairlines of a plain list, the menu separator, the listbox search, the legend (outside the fieldset's flow), the offset of a menu / listbox / tooltip
-  // from its anchor, the ruler's distance from the edge (Glass.ruler reads it) and .g-prose
+  // from its anchor, the ruler's distance from the edge (Glass.ruler reads it), the strip of a pinned table head (it draws over the table and takes no room) and .g-prose
   const margins = [...css.matchAll(/(?<![-\w])margin(?:-[a-z]+)?:\s*([^;}]+)/g)].map(m => m[1].trim()).filter(v => !/^(0|auto|0 auto)$/.test(v));
-  assert.ok(margins.length <= 21, 'non-zero margins: ' + margins.length + ' (expected the known exceptions, at most 21)');
+  assert.ok(margins.length <= 22, 'non-zero margins: ' + margins.length + ' (expected the known exceptions, at most 22)');
 });
 
 // Flow: kit blocks dropped into a bare container are one gap apart, and a container with a layout of its own is left alone.

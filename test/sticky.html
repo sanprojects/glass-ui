@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Sticky head</title>
+<link rel="stylesheet" href="../glass-ui.css">
+<script defer src="../glass-ui.js"></script>
+<style>body { margin: 0; }</style>
+</head>
+<body class="g-root">
+<p style="height: 300px">above</p>
+<figure id="t"><table><thead><tr><th>#</th><th>Name</th></tr></thead><tbody></tbody></table></figure>
+<figure id="off"><table data-no-sticky><thead><tr><th>#</th><th>Name</th></tr></thead><tbody></tbody></table></figure>
+<p style="height: 1500px">below</p>
+<script>for (const b of document.querySelectorAll('tbody')) b.innerHTML = Array.from({ length: 40 }, (_, i) => `<tr><td>${i}</td><td>row</td></tr>`).join('');</script>
+</body></html>

@@ -640,6 +640,23 @@
     $$('tbody tr', t).forEach(r => { owns(r, 'tabindex').tabIndex = 0; if (!r.hasAttribute('aria-selected')) aria(r, 'selected', false); });
     tableSync(t);
   }
+  /* Sticky head: data-g-stuck is on the table while its head is pinned (it sits lower than the table's own top); the CSS gives the head its glass only then, so at rest it looks as it always did */
+  const stuckTables = new Set(); let stuckQueued = false;
+  function stuckSync() {
+    stuckQueued = false;
+    stuckTables.forEach(t => {
+      if (!t.isConnected) { stuckTables.delete(t); return; }
+      const h = t.tHead, on = !!h && h.getBoundingClientRect().top - t.getBoundingClientRect().top > 0.5;
+      if (on && t.parentElement) t.parentElement.style.setProperty('--g-head-h', h.offsetHeight + 'px');
+      if (on !== t.hasAttribute('data-g-stuck')) t.toggleAttribute('data-g-stuck', on);
+    });
+  }
+  function stuckQueue() { if (!stuckQueued) { stuckQueued = true; requestAnimationFrame(stuckSync); } }
+  function initStuck(t) {
+    if (!t.tHead) return;
+    if (!stuckTables.size) { addEventListener('scroll', stuckQueue, { passive: true, capture: true }); addEventListener('resize', stuckQueue); }
+    stuckTables.add(t); stuckQueue();
+  }
   function tableToggle(r) {
     const t = r.closest('table'), on = r.getAttribute('aria-selected') !== 'true';
     if (t.getAttribute('data-g-selectable') !== 'multiple') $$('tbody tr', t).forEach(x => { aria(x, 'selected', false); });
@@ -1056,7 +1073,7 @@
     ['[data-g-color]', initColor], ['[data-g-password]', initPassword], ['[data-g-clear-input]', initClearInput],
     ['.g-root input:not([type]), .g-root input:is([type="text"], [type="search"], [type="email"], [type="url"], [type="tel"])', initAutoClear], ['select[data-g-select]', initSelect],
     ['[data-g-menu]', initMenu], ['nav[data-g-overflow]:not([data-g-overflow="off"]), .g-root nav:not([data-g-pager], [data-g-overflow], :has(> ul[data-g-nav-auto]))', navOverflow], ['[role="tablist"]', initTabs], ['input[type="range"]', initSlider],
-    ['table[data-g-selectable]', initTable], ['table', initSort], ['[data-g-more]', initMore], ['[data-g-pager]', pagerRender],
+    ['table[data-g-selectable]', initTable], ['table', initSort], ['table:has(> thead)', initStuck], ['[data-g-more]', initMore], ['[data-g-pager]', pagerRender],
     ['[data-g-anim-loop]', initAnimLoop], ['[data-g-anim-random]', initAnimRandom], ['[data-g-clamp]', initClamp], ['[data-g-ruler]', n => ruler(n)], ['[data-ruler]', rulerOf], ['time', initAge]
   ];
   if (!(window.CSS && CSS.supports && CSS.supports('width', 'attr(x type(<length>))'))) MOUNTS.push(['[role="progressbar"][aria-valuenow]', initRing]);
