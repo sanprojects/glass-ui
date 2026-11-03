@@ -61,7 +61,7 @@
      so the very first frame already has it. Its lists stay lists of one ([0]): a palette saved while the kit had a light theme ([1]) still reads */
   /* the tone of every background (liquid, gradient, duo, day cycle and the pictures): c scales the chroma, l lifts the colours, g lifts the dark ground; Glass.tone({...}) changes and saves it. Vivid (no change) is the default */
   var TONE={c:1,l:0,g:0}; try{ var tn=JSON.parse(load('g-tone')); if (tn) ['c','l','g'].forEach(function(n){ if (typeof tn[n]==='number') TONE[n]=tn[n]; }); }catch(_){}
-  var DEFAULT='#3c82e9', liqHost=document.querySelector('.g-liquid[data-for="liquid"]'), liqApi=function(){ return Glass.liquid && Glass.liquid(liqHost); };
+  var DEFAULT='#33a7e1', liqHost=document.querySelector('.g-liquid[data-for="liquid"]'), liqApi=function(){ return Glass.liquid && Glass.liquid(liqHost); };
   var STOCK=[['#1d2b52','#5ea0ff','#ff9ec2','#46d1c1','#a78bfa']], GOLD=[['#2a1a0d','#b7721e','#f2c66d','#7b3d1b']];
   var GRAD=['--sc0','--sc1','--sc2','--sc3','--sc4'];
   /* the plain gradient (data-scene="duo"): light at the top right, where the glass catches the light, running down to a dark corner; both of the picked colour's hue (--sd1 light, --sd0 dark) */
