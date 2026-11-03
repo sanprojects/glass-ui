@@ -183,10 +183,10 @@
 :where(:is(.g-root,[role="listbox"]) :is(s, del)) { text-decoration-thickness: 1px; opacity: .78; }
 :where(:is(.g-root,[role="listbox"]) mark) { padding: 0 .25em; border-radius: var(--g-radius-sm); background: rgba(255,214,102,.28); color: var(--g-text); }
 :where(:is(.g-root,[role="listbox"]) abbr[title]) { text-decoration: underline dotted; text-decoration-thickness: 1px; text-underline-offset: 3px; cursor: help; }
-:where(:is(.g-root,[role="listbox"]) :is(code, kbd, samp)) { font: .86em ui-monospace, monospace; padding: .12em .45em; border-radius: var(--g-radius-sm); background: var(--g-fill-recessed); box-shadow: var(--g-recess); color: var(--g-text); }
+:where(:is(.g-root,[role="listbox"]) :is(code, kbd, samp)) { font: .86em ui-monospace, monospace; padding: .12em .45em; white-space: nowrap; border-radius: var(--g-radius-sm); background: var(--g-fill-recessed); box-shadow: var(--g-recess); color: var(--g-text); }
 :where(:is(.g-root,[role="listbox"]) kbd) { box-shadow: var(--g-rim); background: var(--g-fill); }
 :where(:is(.g-root,[role="listbox"]) pre) { font: var(--g-fs-footnote)/1.5 ui-monospace, monospace; }
-:where(:is(.g-root,[role="listbox"]) pre code) { font: inherit; padding: 0; background: none; box-shadow: none; }
+:where(:is(.g-root,[role="listbox"]) pre code) { font: inherit; padding: 0; white-space: inherit; background: none; box-shadow: none; }
 :where(:is(.g-root,[role="listbox"]) :is(sub, sup)) { font-size: .72em; line-height: 0; }
 :where(:is(.g-root,[role="listbox"]) :is(ul, ol)) { padding-left: 1.4em; }
 :where(:is(.g-root,[role="listbox"]) li::marker) { color: var(--g-text-3); font-variant-numeric: tabular-nums; }
@@ -583,9 +583,9 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 [role="menu"] > [hidden] { display: none; }   /* the display: flex of an item above must not beat hidden: a page switches a row of its own menu off with the attribute */
 [role="option"][hidden] { display: none; }   /* filtered out by the search field */
 [role="option"] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }   /* an option never wraps: what does not fit ends with an ellipsis (its text shows as a tooltip) */
-/* a side note after the text of an option, such as a count: <option value="bots">Bots <small>12</small></option>. The same size, dimmed, at the right end:
+/* a side note after the text of an option, such as a count: <option value="bots">Bots <small>12</small></option>. The same size, dimmed like a placeholder (--g-text-4), at the right end:
    the kit puts the text in .g-select__text, which gives way with an ellipsis; in the list the notes make a column before the check mark (its place is kept in every row) */
-:is([role="option"], .g-select__value) small { font-size: inherit; line-height: inherit; font-weight: 400; color: var(--g-text-3); }
+:is([role="option"], .g-select__value) small { font-size: inherit; line-height: inherit; font-weight: 400; color: var(--g-text-4); }
 .g-select__value:has(> .g-select__text) { display: flex; gap: var(--g-gap-inner); }
 :is([role="option"], .g-select__value) > .g-select__text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 :is([role="option"], .g-select__value) > small { flex: none; }
