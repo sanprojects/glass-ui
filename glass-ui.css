@@ -11,8 +11,8 @@
 
 /* ---------- Tokens ---------- */
 :root {
-  --g-accent: #0071E3;
-  --g-accent-hover: #0A66D6;
+  --g-accent: #3C82E9;
+  --g-accent-hover: #2F72D8;
   --g-accent-fg: #fff;                 /* text on the accent: contrast-color() below picks black or white for any accent */
   --g-danger: #D93A32;
   --g-success: #5FCE48;
