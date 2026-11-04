@@ -9,7 +9,7 @@
  *   <select data-g-select>            -> glass dropdown (add data-searchable for a combobox filter)
  *   <option value="bots">Bots <small>12</small></option> -> the markup of an option goes into the list and the trigger, as <selectedcontent> does; a <small> in it is a dimmed side note at the right end, such as a count
  *     (give it a value: without one the value is the whole text, the count too). Options changed by a script are followed
- *   <select data-g-select data-searchable data-load-list="/url">  -> the options come from the server: GET /url?value=<typed text> returns [[text, value?], ...] (opens with value=""; the empty <option> is the "any" row, labelled data-clear-label)
+ *   <select data-g-select data-searchable data-load-list="/url" [data-load-with="id1,id2": values of those fields are sent along as name=value, and changing one of them empties this one]>  -> the options come from the server: GET /url?value=<typed text> returns [[text, value?], ...] (opens with value=""; the empty <option> is the "any" row, labelled data-clear-label)
  *   (automatic) every text <input> in a .g-field gets this cross; data-g-no-clear on the input or a container turns it off. Written by hand:
  *   <input pattern="…" data-error="Message" required>  -> checks in a .g-field: pattern as you type; empty required after leaving / on submit (data-error-required); red control + message under it
  *   <button class="g-input-end" data-icon="x" data-g-clear-input aria-label="Clear">  -> clear cross inside .g-input-wrap: shown while the <input> has a value, click empties it (fires `input`) and focuses it
@@ -199,6 +199,10 @@
       const t = el('span', 'g-select__text'); t.append(...c); return [t, ...t.querySelectorAll(':scope > small')];
     };
 
+    /* a field other lists depend on (data-load-with names its id): choosing another value empties them - a region of the old country is not one of the new */
+    if (sel.id) sel.addEventListener('change', () => $$('select[data-load-with]').forEach(d => {
+      if (d !== sel && d.value !== '' && d.getAttribute('data-load-with').split(',').map(i => i.trim()).includes(sel.id)) { d.value = ''; commit(d); }
+    }));
     const url = sel.getAttribute('data-load-list'); let seq = 0, timer = 0;   /* remote options: the server filters, the kit only draws */
     function build() {   // the options are read from the <select> each time it opens
       holder.innerHTML = ''; opts = [];
@@ -241,7 +245,9 @@
     function load(q) {   // replace the options by the server's list, keeping the empty one and the chosen one
       const n = ++seq, done = () => { if (n === seq) busy(list, false); };   /* the busy line along the list while the server answers (it shows when that is slow); a newer request keeps it */
       busy(list, true);
-      fetch(url + (url.includes('?') ? '&' : '?') + 'value=' + encodeURIComponent(q)).then(r => r.json()).then(rows => {
+      /* data-load-with="id1,id2": the other fields whose values narrow this list (regions of the chosen country) go with the request, each under its name */
+      const with_ = (sel.getAttribute('data-load-with') || '').split(',').map(i => document.getElementById(i.trim())).filter(f => f && f.value !== '' && f.value != null).map(f => '&' + encodeURIComponent(f.name || f.id) + '=' + encodeURIComponent(f.value)).join('');
+      fetch(url + (url.includes('?') ? '&' : '?') + 'value=' + encodeURIComponent(q) + with_).then(r => r.json()).then(rows => {
         done();
         if (n !== seq || !isOpen()) return;
         const empty = sel.querySelector('option[value=""]'), cur = sel.value;
