@@ -122,6 +122,8 @@
     br.value=30; fr.value=10; br.dispatchEvent(new Event('input')); fr.dispatchEvent(new Event('input')); root.removeProperty('--g-blur'); root.removeProperty('--g-fill');
     TONE.c=1; TONE.l=0; TONE.g=0; toneImage(); if (toneTabs) toneTabs.children[0].click(); curPal=paletteOf(DEFAULT); curId=null; pick(liqRow,liqRow.firstElementChild); applyColours(); try{ ['g-palette','g-colour','g-accent','g-blur','g-fill','g-tone'].forEach(function(k){ localStorage.removeItem(k); }); }catch(_){}
     var tabs=document.querySelectorAll('#speedTabs > *'); tabs[CALM].click();
+    /* as on a first visit: nothing of the panel stays saved (the default scene and speed are what a visitor with no storage gets), the old g-scene key and the gradient carried across pages included */
+    try{ ['g-bg-scene','g-bg-custom','g-scene','g-speed','g-speed2'].forEach(function(k){ localStorage.removeItem(k); }); sessionStorage.removeItem('g-gradient'); }catch(_){}
   });
   /* restore the saved background */
   customs.forEach(addBtn);
