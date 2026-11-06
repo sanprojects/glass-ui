@@ -3,7 +3,7 @@
    The background is set by an observer that fires as soon as #scene is parsed: a script in the middle of the page would hold the parser and the page would appear in pieces. */
 try{var D={"g":[["#20485e","#70bbe7","#bcd2fd","#76cad6","#a0ccfa"],["#e8f6ff","#79bfe8","#d1e0fd","#89cfda","#add5fe"]],"q":[["#20485e","#70bbe7","#bcd2fd","#76cad6"],["#b2def9","#79bfe8","#d1e0fd","#89cfda"]],"lt":["#fff8f2","#ffffff"]};function colour(sc){var P;try{P=JSON.parse(localStorage.getItem('g-palette'))}catch(e){}if(!P||!P.g)P=D;var i=document.documentElement.getAttribute('data-theme')==='light'?1:0;P.g[i].forEach(function(c,n){sc.style.setProperty('--sc'+n,c)});if(P.d){sc.style.setProperty('--sd0',P.d[0]);sc.style.setProperty('--sd1',P.d[1])}var q=sc.querySelector('.g-liquid');if(!q)return false;q.setAttribute('data-colors',P.q[i].join());q.setAttribute('data-light',P.lt[i]);q.style.background=P.q[i][0];if(P.day)q.setAttribute('data-day',i?'.55':'0');var b=q.querySelectorAll('i');b.forEach(function(e,n){e.style.setProperty('--c',P.q[i][n])});return b.length>3}
 var t=localStorage.getItem('g-theme');if(t==='auto')t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');
-new MutationObserver(function(_,o){var sc=document.getElementById('scene');if(!sc)return;if(!sc.__s){sc.__s=1;try{var k=localStorage.getItem('g-bg-scene')||'gradient',c;if(k.indexOf('custom:')===0){c=(JSON.parse(localStorage.getItem('g-bg-custom')||'[]')||[]).find(function(x){return'custom:'+x.id===k});if(c){sc.setAttribute('data-scene','custom');sc.style.backgroundImage='url("'+c.src+'")'}}else if(/^[a-z-]+$/.test(k))sc.setAttribute('data-scene',k)}catch(e){}}if(colour(sc))o.disconnect()}).observe(document,{childList:true,subtree:true})}catch(e){}</script>
+new MutationObserver(function(_,o){var sc=document.getElementById('scene');if(!sc)return;if(!sc.__s){sc.__s=1;try{var k=localStorage.getItem('g-bg-scene')||'waves',c;if(k.indexOf('custom:')===0){c=(JSON.parse(localStorage.getItem('g-bg-custom')||'[]')||[]).find(function(x){return'custom:'+x.id===k});if(c){sc.setAttribute('data-scene','custom');sc.style.backgroundImage='url("'+c.src+'")'}}else if(/^[a-z-]+$/.test(k))sc.setAttribute('data-scene',k)}catch(e){}}if(colour(sc))o.disconnect()}).observe(document,{childList:true,subtree:true})}catch(e){}</script>
 <title>Glass UI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Onest:wght@400;500;600;700&family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap">
@@ -110,9 +110,79 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
 .resizable{ resize:horizontal; overflow:hidden; min-width:300px; max-width:100%; width:100%; border-radius:var(--g-radius-pill); padding-bottom:2px; }
 @media (max-width:520px){ .hide-sm{display:none} nav{padding-left:16px;gap:8px} nav > a{font-size:15px} }
 @media (max-width:860px){ .pair{ grid-template-columns:minmax(0,1fr); } .sec{ padding:24px 20px; border-radius:var(--g-radius-card); } }
+/* ---- Timeline prototypes (demo only, promoted to glass-ui.css once a variant is picked) ---- */
+.tl{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; min-width:0; }
+.tl > li{ position:relative; min-width:0; }
+.tl :is(h4,p){ margin:0; }
+.tl time{ display:block; font-size:12px; line-height:1.4; color:var(--g-text-3); letter-spacing:.02em; }
+.tl h4{ font-size:15px; line-height:1.35; font-weight:600; color:var(--g-text); }
+.tl p{ font-size:14px; line-height:1.5; color:var(--g-text-2); }
+.tl-wrap{ container-type:inline-size; padding:8px 4px; }
+.tl-cap{ display:flex; align-items:baseline; gap:10px; margin:0; font-size:13px; color:var(--g-text-3); }
+.tl-cap b{ font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--g-text); }
+/* A · Hairline: a 1px rule, small dots, nothing else */
+.tl-a > li{ padding:0 0 22px 28px; } .tl-a > li:last-child{ padding-bottom:0; }
+.tl-a > li::before{ content:""; position:absolute; left:4px; top:16px; bottom:-6px; width:1px; background:rgba(var(--g-ov),.26); }
+.tl-a > li:last-child::before{ display:none; }
+.tl-a > li::after{ content:""; position:absolute; left:0; top:6px; width:9px; height:9px; border-radius:50%; background:rgba(var(--g-ov),.55); box-shadow:0 0 0 4px rgba(var(--g-ov),.10); }
+.tl-a > li[aria-current]::after{ background:var(--g-ink); box-shadow:0 0 0 4px rgba(var(--g-ov),.22); }
+/* B · Cards: every event is a soft glass tile on the rule */
+.tl-b{ gap:12px; }
+.tl-b > li{ padding-left:34px; }
+.tl-b > li::before{ content:""; position:absolute; left:5px; top:0; bottom:-12px; width:1px; background:rgba(var(--g-ov),.22); }
+.tl-b > li:first-child::before{ top:22px; } .tl-b > li:last-child::before{ bottom:calc(100% - 22px); }
+.tl-b > li::after{ content:""; position:absolute; left:0; top:17px; width:11px; height:11px; border-radius:50%; background:var(--g-ink); box-shadow:0 0 0 4px rgba(var(--g-ov),.16); }
+.tl-b > li > div{ display:flex; flex-direction:column; gap:3px; padding:14px 18px; border-radius:22px; background:var(--g-fill); box-shadow:var(--g-rim); }
+.tl-b > li > div > header{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+.tl-b > li[aria-current] > div{ background:var(--g-fill-strong); }
+/* C · Alternating: a centre rule, cards swing left and right, one column when narrow */
+.tl-c{ position:relative; gap:18px; }
+.tl-c::before{ content:""; position:absolute; left:50%; top:6px; bottom:6px; width:1px; background:rgba(var(--g-ov),.22); }
+.tl-c > li{ width:50%; padding:0 28px 0 0; text-align:right; }
+.tl-c > li:nth-child(even){ margin-left:auto; padding:0 0 0 28px; text-align:left; }
+.tl-c > li::after{ content:""; position:absolute; top:7px; right:-5px; width:9px; height:9px; border-radius:50%; background:var(--g-ink); box-shadow:0 0 0 4px rgba(var(--g-ov),.16); }
+.tl-c > li:nth-child(even)::after{ right:auto; left:-4px; }
+.tl-c > li > div{ display:inline-flex; flex-direction:column; gap:3px; max-width:100%; padding:12px 16px; border-radius:20px; background:var(--g-fill); box-shadow:var(--g-rim); }
+@container (max-width:460px){
+  .tl-c::before{ left:4px; } .tl-c > li, .tl-c > li:nth-child(even){ width:auto; margin:0; padding:0 0 0 28px; text-align:left; }
+  .tl-c > li::after, .tl-c > li:nth-child(even)::after{ left:0; right:auto; }
+}
+/* D · Progress: icons in glass discs, the rule fills with the accent up to the current step */
+.tl-d > li{ display:grid; grid-template-columns:30px minmax(0,1fr); gap:0 14px; padding-bottom:24px; }
+.tl-d > li:last-child{ padding-bottom:0; }
+.tl-d > li > i{ position:relative; z-index:1; display:grid; place-items:center; width:30px; height:30px; border-radius:50%; background:var(--g-fill-strong); box-shadow:var(--g-rim); color:var(--g-text-2); font-size:var(--g-icon-sm); }
+.tl-d > li::before{ content:""; position:absolute; left:14.5px; top:30px; bottom:0; width:1px; background:rgba(var(--g-ov),.22); }
+.tl-d > li:last-child::before{ display:none; }
+.tl-d > li[data-state="done"]::before{ background:var(--g-accent); }
+.tl-d > li[data-state="done"] > i{ background:var(--g-accent); color:var(--g-accent-fg); box-shadow:inset 0 .5px 0 rgba(255,255,255,.5); }
+.tl-d > li[aria-current] > i{ background:var(--g-fill); color:var(--g-text); box-shadow:inset 0 0 0 1.5px var(--g-accent), 0 0 0 5px rgba(var(--g-ov),.10); }
+.tl-d > li[aria-current] > i::after{ content:""; position:absolute; inset:-1.5px; border-radius:50%; box-shadow:0 0 0 0 var(--g-accent); animation:tl-pulse 2.4s ease-out infinite; }
+@keyframes tl-pulse{ 0%{ box-shadow:0 0 0 0 rgba(var(--g-ov),.45); } 70%,100%{ box-shadow:0 0 0 12px transparent; } }
+@media (prefers-reduced-motion:reduce){ .tl-d > li[aria-current] > i::after{ animation:none; } }
+.tl-d > li[data-state="todo"]{ opacity:.55; } .tl-d > li[data-state="todo"] > i{ background:transparent; box-shadow:inset 0 0 0 1px rgba(var(--g-ov),.35); }
+.tl-d > li > div{ padding-top:4px; }
+/* E · Feed: one line per event, grouped by day, time at the end */
+.tl-e{ gap:0; }
+.tl-e > li.tl-day{ padding:14px 0 8px; font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--g-text-3); } .tl-e > li.tl-day:first-child{ padding-top:0; }
+.tl-e > li:not(.tl-day){ display:grid; grid-template-columns:28px minmax(0,1fr) auto; gap:0 12px; align-items:center; padding:7px 0; }
+.tl-e > li:not(.tl-day)::before{ content:""; position:absolute; left:13.5px; top:-50%; bottom:50%; width:1px; background:rgba(var(--g-ov),.18); }
+.tl-e > li.tl-day + li::before, .tl-e > li:nth-child(2)::before{ display:none; }
+.tl-e > li > i{ position:relative; z-index:1; display:grid; place-items:center; width:28px; height:28px; border-radius:50%; background:var(--g-fill-strong); box-shadow:var(--g-rim); font:600 11px/1 var(--g-font); font-style:normal; color:var(--g-text); }
+.tl-e > li > span{ font-size:14px; line-height:1.4; color:var(--g-text-2); min-width:0; overflow-wrap:anywhere; } .tl-e > li > span b{ font-weight:600; color:var(--g-text); }
+.tl-e > li > time{ font-size:12px; color:var(--g-text-4); }
+/* F · Date rail: the date is the left column, the rule sits right of it */
+.tl-f > li{ display:grid; grid-template-columns:52px minmax(0,1fr); gap:0 30px; padding-bottom:22px; }
+.tl-f > li:last-child{ padding-bottom:0; }
+.tl-f > li::before{ content:""; position:absolute; left:calc(52px + 14.5px); top:10px; bottom:-10px; width:1px; background:rgba(var(--g-ov),.22); }
+.tl-f > li:last-child::before{ display:none; }
+.tl-f > li::after{ content:""; position:absolute; left:calc(52px + 10px); top:8px; width:9px; height:9px; border-radius:50%; background:rgba(var(--g-ov),.55); }
+.tl-f > li[aria-current]::after{ background:var(--g-accent); box-shadow:0 0 0 4px color-mix(in srgb, var(--g-accent) 30%, transparent); }
+.tl-f > li > time{ text-align:right; display:flex; flex-direction:column; align-items:flex-end; line-height:1; padding-top:2px; }
+.tl-f > li > time b{ font-size:24px; font-weight:600; letter-spacing:-.02em; color:var(--g-text); } .tl-f > li > time span{ margin-top:4px; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--g-text-3); }
+.tl-f > li > div{ display:flex; flex-direction:column; gap:6px; align-items:flex-start; padding-top:2px; }
 </style>
 
-<div class="scene" id="scene" data-scene="gradient" data-g-gradient aria-hidden="true"><div class="g-liquid" data-g-liquid data-for="liquid" data-colors="#20485e,#70bbe7,#bcd2fd,#76cad6"><i></i><i></i><i></i><i></i></div></div>
+<div class="scene" id="scene" data-scene="waves" data-g-gradient aria-hidden="true"><div class="g-liquid" data-g-liquid data-for="liquid" data-colors="#20485e,#70bbe7,#bcd2fd,#76cad6"><i></i><i></i><i></i><i></i></div></div>
 <script>/* the gradient goes on where the last page (or this one before a reload) left it: README, "Gradient background across pages" */
 try{document.getElementById('scene').style.cssText+=(function(g){return g&&/^[\w\s:;.%#-]*$/.test(g.css)?g.css:''})(JSON.parse(sessionStorage.getItem('g-gradient')))}catch(e){}</script>
 
@@ -764,6 +834,82 @@ Glass.morph('#result', html);              // html string or an element; returns
     </div>
   </section>
 
+  <section class="sec g-glass g-anim-scroll" id="timeline" data-title="Timeline">
+    <div class="sec__head"><h2>Timeline</h2><p class="g-desc">Prototypes of a vertical timeline: an <span class="inline-code">&lt;ol&gt;</span> of events with a rule and markers drawn in CSS. Six variants to choose from, from the quietest to the busiest. <span class="inline-code">aria-current="step"</span> marks the present event.</p></div>
+    <div class="tl-cap"><b>A · Hairline</b>the lightest: a 1px rule and small dots</div>
+    <div class="pair">
+      <div class="tl-wrap" data-code>
+        <ol class="tl tl-a">
+          <li><time>9:41</time><h4>Order placed</h4><p>Payment confirmed, the warehouse is notified.</p></li>
+          <li><time>11:20</time><h4>Packed</h4><p>Two items, one box.</p></li>
+          <li aria-current="step"><time>Today, 14:05</time><h4>Out for delivery</h4><p>The courier is 12 minutes away.</p></li>
+          <li><time>Expected 15:00</time><h4>Delivered</h4></li>
+        </ol>
+      </div>
+      <div class="code" data-for-prev><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+    </div>
+    <div class="tl-cap"><b>B · Cards</b>each event is a soft glass tile</div>
+    <div class="pair">
+      <div class="tl-wrap" data-code>
+        <ol class="tl tl-b">
+          <li><div><header><h4>Design review</h4><time>Mon</time></header><p>Three comments left on the new empty states.</p></div></li>
+          <li aria-current="step"><div><header><h4>Beta rollout</h4><time>Wed</time></header><p>10% of users, crash-free so far.</p></div></li>
+          <li><div><header><h4>Public release</h4><time>Fri</time></header><p>Release notes are drafted.</p></div></li>
+        </ol>
+      </div>
+      <div class="code" data-for-prev><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+    </div>
+    <div class="tl-cap"><b>C · Alternating</b>centre rule, cards left and right, one column when narrow</div>
+    <div class="pair" style="grid-template-columns:minmax(0,1fr)">
+      <div class="tl-wrap" data-code>
+        <ol class="tl tl-c">
+          <li><div><time>2024</time><h4>Prototype</h4><p>First glass panel on a gradient.</p></div></li>
+          <li><div><time>2025</time><h4>Open source</h4><p>One stylesheet, one script.</p></div></li>
+          <li><div><time>2026</time><h4>Light theme</h4><p>Every token has a day twin.</p></div></li>
+          <li><div><time>Next</time><h4>Timeline</h4><p>You are choosing it now.</p></div></li>
+        </ol>
+      </div>
+      <div class="code" data-for-prev><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+    </div>
+    <div class="tl-cap"><b>D · Progress</b>icons in discs, the rule fills up to the current step</div>
+    <div class="pair">
+      <div class="tl-wrap" data-code>
+        <ol class="tl tl-d">
+          <li data-state="done"><i data-icon="check"></i><div><h4>Account created</h4><time>Mon, 10:02</time></div></li>
+          <li data-state="done"><i data-icon="check"></i><div><h4>Identity verified</h4><time>Mon, 10:14</time></div></li>
+          <li aria-current="step"><i data-icon="clock"></i><div><h4>Under review</h4><p>Usually takes under a day.</p></div></li>
+          <li data-state="todo"><i data-icon="flag"></i><div><h4>Approved</h4></div></li>
+        </ol>
+      </div>
+      <div class="code" data-for-prev><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+    </div>
+    <div class="tl-cap"><b>E · Feed</b>one line per event, grouped by day</div>
+    <div class="pair">
+      <div class="tl-wrap" data-code>
+        <ol class="tl tl-e">
+          <li class="tl-day">Today</li>
+          <li><i>AK</i><span><b>Anna</b> merged <b>feat/search</b></span><time>14:02</time></li>
+          <li><i>MB</i><span><b>Mark</b> commented on the design</span><time>11:40</time></li>
+          <li class="tl-day">Yesterday</li>
+          <li><i>JD</i><span><b>Jo</b> closed 3 issues</span><time>18:15</time></li>
+          <li><i>AK</i><span><b>Anna</b> opened <b>feat/search</b></span><time>09:30</time></li>
+        </ol>
+      </div>
+      <div class="code" data-for-prev><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+    </div>
+    <div class="tl-cap"><b>F · Date rail</b>the date leads, the rule follows</div>
+    <div class="pair">
+      <div class="tl-wrap" data-code>
+        <ol class="tl tl-f">
+          <li><time><b>03</b><span>Nov</span></time><div><h4>Kick-off</h4><p>Scope agreed with the team.</p></div></li>
+          <li aria-current="step"><time><b>07</b><span>Nov</span></time><div><data data-variant="accent" data-dot>Today</data><h4>Prototype review</h4><p>Pick one of the six timelines.</p></div></li>
+          <li><time><b>14</b><span>Nov</span></time><div><h4>Ship to the kit</h4><p>CSS, docs and the light theme.</p></div></li>
+        </ol>
+      </div>
+      <div class="code" data-for-prev><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
+    </div>
+  </section>
+
   <section class="sec g-glass g-anim-scroll" id="tokens" data-title="Tokens">
     <div class="sec__head"><h2>Tokens</h2><p class="g-desc">Override any of these on <span class="inline-code">:root</span> or on a container to retheme a region.</p></div>
     <div class="tokens">
@@ -787,8 +933,8 @@ Glass.morph('#result', html);              // html string or an element; returns
       <div role="tablist" id="themeTabs"><button>Dark</button><button>Light</button><button>Auto</button></div></fieldset>
     <fieldset class="ctl__group"><legend>Background</legend>
       <div class="sw-row bg-row" id="bgChips">
-        <button class="sw-btn" data-tinted data-scene="waves" aria-label="Waves" aria-pressed="false"></button>
-        <button class="sw-btn" data-scene="gradient" aria-label="Aurora" aria-pressed="true" style="--sw:radial-gradient(60% 50% at 18% 12%,#70bbe7,transparent 60%),radial-gradient(50% 50% at 88% 18%,#bcd2fd,transparent 60%),radial-gradient(60% 60% at 72% 92%,#76cad6,transparent 62%),#20485e"></button>
+        <button class="sw-btn" data-tinted data-scene="waves" aria-label="Waves" aria-pressed="true"></button>
+        <button class="sw-btn" data-scene="gradient" aria-label="Aurora" aria-pressed="false" style="--sw:radial-gradient(60% 50% at 18% 12%,#70bbe7,transparent 60%),radial-gradient(50% 50% at 88% 18%,#bcd2fd,transparent 60%),radial-gradient(60% 60% at 72% 92%,#76cad6,transparent 62%),#20485e"></button>
         <button class="sw-btn" data-scene="liquid" aria-label="Liquid" aria-pressed="false" style="--sw:radial-gradient(60% 60% at 28% 30%,#58c4c0,transparent 70%),radial-gradient(60% 60% at 76% 78%,#8a6ee6,transparent 70%),#2a4fa8"></button>
         <button class="sw-btn" data-scene="duo" aria-label="Gradient" aria-pressed="false" style="--sw:linear-gradient(210deg,#a6cee6,#3e464b)"></button>
       <button class="sw-btn" data-scene="peak" aria-label="Peak" aria-pressed="false"></button>
@@ -904,6 +1050,9 @@ function fmt(h){
     var s='data-icon="'+b.getAttribute('data-icon')+'"';
     if(navigator.clipboard) navigator.clipboard.writeText(s).catch(function(){});
     Glass.toast({title:'Copied', text:s, variant:'success', duration:1800});
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.code[data-for-prev]'), function(box){
+    box.querySelector('pre').textContent = snippets[demos.indexOf(box.previousElementSibling)];
   });
   Array.prototype.forEach.call(document.querySelectorAll('.code[data-for]'), function(box){
     box.querySelector('pre').textContent = box.getAttribute('data-for').split(',').map(function(i){ return snippets[+i]; }).join('\n\n');
