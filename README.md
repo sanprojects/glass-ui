@@ -135,6 +135,7 @@ Also in the demo, without screenshots here:
 | `glass-morph.css` / `.js` | Morph: `Glass.morph`, `Glass.watch`, `data-g-morph` (works on its own too; `node bench/vs-auto-animate.mjs` compares it with auto-animate) |
 | `glass-icons.css` | icon pack, used as `data-icon="name"` |
 | `glass-ui-liquid.js` | optional animated background |
+| `glass-waves.css` / `.js` | optional "Waves" background (`data-scene="waves"` on the scene, coloured by `--sc0..--sc4`; a panel chip with `data-tinted` keeps it when a colour is picked) |
 | `glass-appearance.css` / `.js` | optional settings panel used by the demo |
 
 Each file also ships as `.min.css` / `.min.js`.

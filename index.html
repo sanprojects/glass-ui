@@ -12,6 +12,7 @@ new MutationObserver(function(_,o){var sc=document.getElementById('scene');if(!s
 <link rel="stylesheet" href="glass-ui-light.css">
 <link rel="stylesheet" href="glass-icons.css">
 <link rel="stylesheet" href="glass-appearance.css">
+<link rel="stylesheet" href="glass-waves.css">
 <style>
 /* ---- demo page only ---- */
 :root{ color-scheme: dark; }
@@ -786,6 +787,7 @@ Glass.morph('#result', html);              // html string or an element; returns
       <div role="tablist" id="themeTabs"><button>Dark</button><button>Light</button><button>Auto</button></div></fieldset>
     <fieldset class="ctl__group"><legend>Background</legend>
       <div class="sw-row bg-row" id="bgChips">
+        <button class="sw-btn" data-tinted data-scene="waves" aria-label="Waves" aria-pressed="false"></button>
         <button class="sw-btn" data-scene="gradient" aria-label="Aurora" aria-pressed="true" style="--sw:radial-gradient(60% 50% at 18% 12%,#70bbe7,transparent 60%),radial-gradient(50% 50% at 88% 18%,#bcd2fd,transparent 60%),radial-gradient(60% 60% at 72% 92%,#76cad6,transparent 62%),#20485e"></button>
         <button class="sw-btn" data-scene="liquid" aria-label="Liquid" aria-pressed="false" style="--sw:radial-gradient(60% 60% at 28% 30%,#58c4c0,transparent 70%),radial-gradient(60% 60% at 76% 78%,#8a6ee6,transparent 70%),#2a4fa8"></button>
         <button class="sw-btn" data-scene="duo" aria-label="Gradient" aria-pressed="false" style="--sw:linear-gradient(210deg,#a6cee6,#3e464b)"></button>
@@ -835,6 +837,7 @@ window.Prism={manual:true};var _self="undefined"!=typeof window?window:"undefine
 <script src="glass-ui.js"></script>
 <script src="glass-morph.js"></script>
 <script src="glass-ui-liquid.js"></script>
+<script src="glass-waves.js"></script>
 <script src="glass-appearance.js"></script>
 <script>
 /* Motion > Wave: the text of the tile is swapped for another every 2.8 s; Glass.morph runs the wave over the words that are new */
