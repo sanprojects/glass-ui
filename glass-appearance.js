@@ -89,7 +89,7 @@
   function setColour(P,id,keep){ curPal=P; curId=id; applyColours();
     if (keep) return;   /* restoring the saved colour: neither saved again nor does it switch the background */
     store('g-palette',JSON.stringify(P)); store('g-colour',id);
-    var s=scene.getAttribute('data-scene'); if (s!=='liquid' && s!=='gradient' && s!=='duo') setScene('liquid'); }
+    var s=scene.getAttribute('data-scene'), chip=chips.querySelector('[data-scene="'+s+'"]'); if (s!=='liquid' && s!=='gradient' && s!=='duo' && !(chip && chip.hasAttribute('data-tinted'))) setScene('liquid'); }   /* a chip with data-tinted is a background that draws itself from --sc0..--sc4: a picked colour keeps it */
   function paletteFor(id){ var v=id&&id.slice(2); return id&&id.indexOf('b:')===0?presetPalette(v):id&&id.indexOf('c:')===0?paletteOf(v):paletteOf(DEFAULT); }
   (window.Glass=window.Glass||{}).tone=function(t){ if (t){ ['c','l','g'].forEach(function(n){ if (typeof t[n]==='number') TONE[n]=t[n]; }); store('g-tone',JSON.stringify(TONE));
       curPal=paletteFor(curId); if (curId) store('g-palette',JSON.stringify(curPal)); applyColours(); toneImage(); } return {c:TONE.c,l:TONE.l,g:TONE.g}; };
