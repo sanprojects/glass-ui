@@ -2292,7 +2292,7 @@
   });
   /* Animated backgrounds (the gradient and the liquid, both in glass-ui-liquid.js) share ONE timer and one speed. 20 fps; it does not run while the tab is hidden, reduced motion is on or nothing wants frames
      Glass.scene.add(fn): fn(dt) gets the seconds since the last frame, already times the speed; return true when it drew something. Returns a function that unsubscribes
-     Glass.scene.speed(k): 1 = calm, 0 = still */
+     Glass.scene.speed(k): 1 = calm, 0 = still; speed() with no argument returns it */
   const scene = (() => {
     const subs = new Set(), mq = matchMedia('(prefers-reduced-motion: reduce)');
     let k = 1, last = 0, timer = 0;
@@ -2308,7 +2308,7 @@
     function run() { if (!timer && subs.size && !document.hidden && !mq.matches) { last = performance.now(); timer = setTimeout(tick, 50); } }
     document.addEventListener('visibilitychange', () => document.hidden ? stop() : run());
     mq.addEventListener('change', () => mq.matches ? stop() : run());
-    return { add(f) { subs.add(f); run(); return () => subs.delete(f); }, speed(v) { k = Math.max(0, +v || 0); } };
+    return { add(f) { subs.add(f); run(); return () => subs.delete(f); }, speed(v) { if (v === undefined) return k; k = Math.max(0, +v || 0); } };
   })();
   global.Glass.scene = scene;
 
