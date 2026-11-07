@@ -134,6 +134,9 @@
     var tabs=document.querySelectorAll('#speedTabs > *'); tabs[CALM].click();
     /* as on a first visit: nothing of the panel stays saved (the default scene and speed are what a visitor with no storage gets), the old g-scene key and the gradient carried across pages included */
     try{ ['g-bg-scene','g-bg-custom','g-scene','g-speed','g-speed2'].forEach(function(k){ localStorage.removeItem(k); }); sessionStorage.removeItem('g-gradient'); }catch(_){}
+    /* and everything else the kit keeps under g-* (the Waves time and poster included), then the animated backgrounds start over as for a first visit */
+    try{ [localStorage,sessionStorage].forEach(function(st){ Object.keys(st).filter(function(k){ return k.indexOf('g-')===0; }).forEach(function(k){ st.removeItem(k); }); }); }catch(_){}
+    window.dispatchEvent(new Event('g:reset'));
   });
   /* restore the saved background */
   customs.forEach(addBtn);

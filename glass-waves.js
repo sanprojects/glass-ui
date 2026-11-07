@@ -132,5 +132,7 @@
 	document.addEventListener('visibilitychange', function () {   /* the frame and the time of this very moment; on return the time of the others */
 		if (document.visibilityState === 'hidden') leave(true); else if (adopt() && cv) draw();
 	});
+	/* Reset in Appearance: the stored time and frame are gone, so this page starts over from the Unix clock with no frame of the old colours */
+	window.addEventListener('g:reset', function () { clearTimeout(saveTimer); saveTimer = 0; try { localStorage.removeItem(KEY); } catch (e) {} acc = epoch(); scene.style.removeProperty('--g-waves-poster'); scene.style.removeProperty('--g-waves-poster-size'); cols = null; if (cv) draw(); });
 	window.addEventListener('storage', function (e) { if (e.key === KEY && !document.hidden && adopt() && cv) draw(); });
 })();
