@@ -982,6 +982,48 @@
     commit(inp); numSync(w);
   });
   ['input', 'change'].forEach(t => { on(t, '[data-g-number]', (e, w) => { if (e.target.matches('input')) numSync(w); }); });
+  /* scrub: drag a number up or down to change it, one notch per 16px. Works on <input type="number">, on a number field's input ([data-g-number]), on any [data-g-scrub] input and on
+     numeric [data-g-edit] text. The notch follows the size of the number (0-99: 1, 100-999: 10, 1000-9999: 100 ...; a number with decimals steps by its last digit), so a small
+     value moves gently and a big one quickly; data-step sets a fixed notch, min / max (or data-min / data-max on text) clamp. A tap still focuses; a focused field is not scrubbed. */
+  const SCRUB_SEL = 'input[type=number], [data-g-number] input, input[data-g-scrub], [data-g-edit][data-g-scrub]', SCRUB_PX = 16, SCRUB_NUM = /^-?\d+(?:[.,]\d+)?$/;
+  const scrubRead = n => (n.matches('input') ? n.value : n.textContent).trim();
+  const scrubAttr = (n, k) => { const v = parseFloat(n.getAttribute(n.matches('input') ? k : 'data-' + k)); return isNaN(v) ? null : v; };
+  function scrubStep(n, v, dec) {
+    const fixed = parseFloat(n.getAttribute('data-step')) || 0; if (fixed > 0) return fixed;
+    const base = dec ? Math.pow(10, -dec) : 1, mag = Math.abs(v) >= 100 ? Math.pow(10, Math.floor(Math.log10(Math.abs(v))) - 1) : 1;
+    return Math.max(base, mag);
+  }
+  let scrub = null, scrubbedAt = 0;
+  document.addEventListener('click', e => { if (Date.now() - scrubbedAt < 400 && e.target.closest(SCRUB_SEL)) { scrubbedAt = 0; e.stopImmediatePropagation(); e.preventDefault(); } }, true);   /* the click after a drag is not a tap */
+  on('pointerdown', SCRUB_SEL, (e, n) => {
+    if ((e.pointerType === 'mouse' && e.button !== 0) || n.disabled || n.readOnly || document.activeElement === n) return;
+    const t = scrubRead(n); if (!SCRUB_NUM.test(t)) return;
+    scrub = { n, id: e.pointerId, y: e.clientY, t, v: parseFloat(t.replace(',', '.')), dec: (t.split(/[.,]/)[1] || '').length, comma: t.includes(','), on: false };
+  });
+  window.addEventListener('pointermove', e => {
+    const s = scrub; if (!s || e.pointerId !== s.id) return;
+    let dy = s.y - e.clientY;
+    if (!s.on) { if (Math.abs(dy) < 7) return; s.on = true; s.n.setAttribute('data-scrubbing', ''); getSelection().removeAllRanges(); try { s.n.setPointerCapture(e.pointerId); } catch {} }
+    e.preventDefault();
+    const k = Math.trunc(dy / SCRUB_PX); if (!k) return;
+    s.y -= k * SCRUB_PX;   /* the notches are spent: the next ones count from here, with the step of the new value */
+    let v = s.v;
+    for (let i = Math.abs(k); i > 0; i--) { const st = scrubStep(s.n, v, s.dec); v = Math.round((v + Math.sign(k) * st) / st * 1e6) / 1e6 * st; }
+    const mn = scrubAttr(s.n, 'min'), mx = scrubAttr(s.n, 'max');
+    if (mn !== null) v = Math.max(mn, v); if (mx !== null) v = Math.min(mx, v);
+    s.v = v; let t = v.toFixed(s.dec); if (s.comma) t = t.replace('.', ',');
+    if (t === scrubRead(s.n)) return;
+    if (s.n.matches('input')) { s.n.value = t; s.n.dispatchEvent(new Event('input', { bubbles: true })); } else s.n.textContent = t;
+    try { navigator.vibrate && navigator.vibrate(7); } catch {}
+  }, { passive: false });
+  function scrubEnd(e) {
+    const s = scrub; if (!s || e.pointerId !== s.id) return; scrub = null;
+    if (!s.on) return;
+    s.n.removeAttribute('data-scrubbing');
+    scrubbedAt = Date.now();
+    if (s.n.matches('input')) { s.n.dispatchEvent(new Event('change', { bubbles: true })); const w = s.n.closest('[data-g-number]'); if (w) numSync(w); } else editCommit(s.n);
+  }
+  window.addEventListener('pointerup', scrubEnd); window.addEventListener('pointercancel', scrubEnd);
 
   /* date / time inputs open their picker on a click anywhere in the field */
   document.addEventListener('click', e => {
@@ -1000,6 +1042,39 @@
   document.addEventListener('focusout', e => {
     const p = colorParts(e.target); if (!p || !p.c || e.target !== p.t) return;
     const v = colorNorm(p.t.value); p.t.value = (v || p.c.value).toUpperCase(); p.t.removeAttribute('aria-invalid'); p.sw.style.setProperty('--c', p.c.value);
+  });
+  /* in-place text: <span data-g-edit data-placeholder="Add a name"> inside any text. Enter or leaving saves, Esc brings back what it was, paste is plain text on one line,
+     data-max limits the length, data-required refuses an empty text. A save fires "change" ({ value }) on the element; the native "input" fires as you type. */
+  function initEdit(n) {
+    owns(n, 'contenteditable', 'role', 'tabindex', 'spellcheck');
+    n.setAttribute('contenteditable', 'plaintext-only' in document.createElement('i') || CSS.supports('-webkit-user-modify', 'read-write-plaintext-only') ? 'plaintext-only' : 'true');
+    if (!n.hasAttribute('role')) n.setAttribute('role', 'textbox');
+    if (!n.hasAttribute('tabindex')) n.tabIndex = 0;
+    n.spellcheck = false; mem(n, 'v', n.textContent);
+  }
+  const editText = n => n.textContent.replace(/\s*\n\s*/g, ' ');
+  function editCommit(n) {
+    let v = editText(n).trim(); const was = mem(n, 'v');
+    if (!v && n.hasAttribute('data-required')) v = was;
+    if (n.textContent !== v) n.textContent = v;
+    if (v === was) return;
+    mem(n, 'v', v); fire(n, 'change', { value: v });
+    n.setAttribute('data-saved', ''); setTimeout(() => n.removeAttribute('data-saved'), 650);
+  }
+  on('focusin', '[data-g-edit]', (e, n) => { mem(n, 'v', n.textContent); });
+  on('focusout', '[data-g-edit]', (e, n) => editCommit(n));
+  on('keydown', '[data-g-edit]', (e, n) => {
+    if (e.key === 'Enter') { e.preventDefault(); n.blur(); }
+    else if (e.key === 'Escape') { n.textContent = mem(n, 'v'); n.blur(); }
+  });
+  on('paste', '[data-g-edit]', (e, n) => {
+    e.preventDefault();
+    const t = (e.clipboardData.getData('text/plain') || '').replace(/\s*\n\s*/g, ' '), max = +n.getAttribute('data-max') || 0;
+    document.execCommand('insertText', false, max ? t.slice(0, Math.max(0, max - (n.textContent.length - (getSelection().toString().length)))) : t);
+  });
+  on('input', '[data-g-edit]', (e, n) => {
+    const max = +n.getAttribute('data-max') || 0;
+    if (max && n.textContent.length > max) { n.textContent = n.textContent.slice(0, max); const r = document.createRange(); r.selectNodeContents(n); r.collapse(false); const g = getSelection(); g.removeAllRanges(); g.addRange(r); }
   });
   function initPassword(b) { owns(b, 'aria-pressed', 'aria-label'); aria(b, 'pressed', false); b.setAttribute('aria-label', b.getAttribute('aria-label') || 'Show password'); }
   on('click', '[data-g-password]', (e, b) => {
@@ -1055,7 +1130,7 @@
     ['[data-g-fit]', initFit], ['input:not([type="number"]) ~ .g-input-note', initNote],
     ['dialog', initDialog],
     ['[data-g-file]', initFile], ['[data-g-number]', numSync],
-    ['[data-g-color]', initColor], ['[data-g-password]', initPassword], ['[data-g-clear-input]', initClearInput],
+    ['[data-g-edit]', initEdit], ['[data-g-color]', initColor], ['[data-g-password]', initPassword], ['[data-g-clear-input]', initClearInput],
     ['.g-root input:not([type]), .g-root input:is([type="text"], [type="search"], [type="email"], [type="url"], [type="tel"])', initAutoClear], ['select[data-g-select]', initSelect],
     ['[data-g-menu]', initMenu], ['nav[data-g-overflow]:not([data-g-overflow="off"]), .g-root nav:not([data-g-pager], [data-g-overflow], :has(> ul[data-g-nav-auto]))', navOverflow], ['[role="tablist"]', initTabs], ['input[type="range"]', initSlider],
     ['table[data-g-selectable]', initTable], ['table', initSort], ['[data-g-more]', initMore], ['[data-g-pager]', pagerRender],

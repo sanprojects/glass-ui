@@ -451,6 +451,23 @@
    of the fields above. The font, the size and the padding it brings stay the page's to change; the class is plain (not :where), a page's own rule is by id or deeper. */
 .g-textbox { box-sizing: border-box; width: 100%; min-height: var(--g-h-md); padding: var(--g-inset); border: 0; border-radius: var(--g-radius-field); color: var(--g-text); background: var(--g-fill-recessed); box-shadow: var(--g-recess); transition: box-shadow var(--g-dur), background var(--g-dur); }
 .g-textbox:focus, .g-textbox:focus-within { outline: none; background: var(--g-field-focus-bg); box-shadow: var(--g-field-focus); }
+/* [data-g-edit]: text edited in place, inside a sentence, a heading or a table cell. It stays inline and inherits the font, so nothing moves when it is entered;
+   the only mark is a dotted underline (it wraps with the text). Hover darkens it, focus lights it in the accent. Empty: data-placeholder shows and keeps it clickable.
+   Touch has no hover, so there the dotted line stays visible. aria-invalid="true" turns the line to the danger colour; data-saved (set for a moment after a change) pulses it. */
+[data-g-edit] { display: inline; font: inherit; color: inherit; cursor: text; outline: none; border-radius: .25em; -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  text-decoration: underline dotted transparent 1px; text-underline-offset: .22em; transition: text-decoration-color var(--g-dur), background var(--g-dur), box-shadow var(--g-dur); }
+/* scrub: a vertical drag on a number changes it; the page still pans sideways */
+input[type=number], [data-g-number] input, input[data-g-scrub], [data-g-edit][data-g-scrub] { touch-action: pan-x; }
+[data-g-scrubbing] { cursor: ns-resize; user-select: none; -webkit-user-select: none; }
+[data-g-edit][data-g-scrubbing] { text-decoration-line: underline; text-decoration-style: solid; text-decoration-color: var(--g-accent); background: color-mix(in srgb, var(--g-accent) 16%, transparent); }
+@media (hover: hover) { [data-g-edit]:hover { text-decoration-color: var(--g-text-3); } }
+@media (hover: none) { [data-g-edit]:not(:focus) { text-decoration-color: var(--g-text-4); } }
+[data-g-edit]:focus { text-decoration: underline solid var(--g-accent) 2px; text-underline-offset: .22em; background: color-mix(in srgb, var(--g-accent) 16%, transparent); box-shadow: 0 0 0 .14em color-mix(in srgb, var(--g-accent) 16%, transparent); }
+[data-g-edit]:empty::before { content: attr(data-placeholder) "\200b"; color: var(--g-text-4); }
+[data-g-edit][aria-invalid="true"] { text-decoration: underline solid var(--g-danger-text, #ff9d96) 2px; text-underline-offset: .22em; }
+[data-g-edit][data-saved] { animation: g-edit-saved .6s var(--g-ease, ease-out); }
+@keyframes g-edit-saved { from { background: color-mix(in srgb, var(--g-accent) 45%, transparent); } }
+@media (forced-colors: active) { [data-g-edit] { text-decoration-color: LinkText; } [data-g-edit]:focus { outline: 2px solid Highlight; } }
 /* Native select (also the fallback without JS; glass-ui.js replaces it with the glass dropdown when it has data-g-select) */
 :where(:is(.g-root,[role="listbox"]) select) { appearance: none; padding-right: 40px; background-repeat: no-repeat; background-position: right 14px center; background-size: 18px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-opacity='.77' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); }

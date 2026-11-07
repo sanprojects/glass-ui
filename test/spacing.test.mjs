@@ -12,6 +12,7 @@ import path from 'node:path';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MEASURE = `(() => {
   const ok = e => { const cs = getComputedStyle(e); if (cs.display==='none'||cs.visibility==='hidden'||cs.position==='absolute'||cs.position==='fixed') return false;
+    if (e.hasAttribute('data-g-edit')) return false;   // an in-place field is a word inside running text, not a box on the rhythm
     if (!e.checkVisibility()) return false;   // the body of a closed <details> keeps its box but is not rendered
     if (/^(SCRIPT|STYLE|TEMPLATE|OPTION|LINK|META|BR|COL|COLGROUP)$/.test(e.tagName)) return false; const r=e.getBoundingClientRect(); return r.width>0&&r.height>0; };
   const path = e => { const p=[]; while(e&&e!==document.body&&p.length<4){ p.unshift(e.tagName.toLowerCase()+(e.className&&typeof e.className==='string'?'.'+e.className.trim().split(/\\s+/)[0]:'')); e=e.parentElement;} return p.join(' > '); };
