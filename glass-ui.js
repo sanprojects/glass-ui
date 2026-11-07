@@ -994,10 +994,13 @@
     const base = dec ? Math.pow(10, -dec) : 1, mag = Math.abs(v) >= 100 ? Math.pow(10, Math.floor(Math.log10(Math.abs(v))) - 1) : 1;
     return Math.max(base, mag);
   }
+  function scrubMove(n, v, dec, k) {
+    for (let i = Math.abs(k); i > 0; i--) { const d = scrubStep(n, v, dec); v = Math.round((v + Math.sign(k) * d) / d * 1e6) / 1e6 * d; }
+    return v;
+  }
   /* the one way a number moves, by a drag or by the arrow keys: k notches from state st ({ v, dec, comma }), clamped, written back, "input" fired on a real input */
   function scrubSet(n, st, k) {
-    let v = st.v;
-    for (let i = Math.abs(k); i > 0; i--) { const d = scrubStep(n, v, st.dec); v = Math.round((v + Math.sign(k) * d) / d * 1e6) / 1e6 * d; }
+    const v0 = scrubMove(n, st.v, st.dec, k); let v = v0;
     const mn = scrubAttr(n, 'min'), mx = scrubAttr(n, 'max');
     if (mn !== null) v = Math.max(mn, v); if (mx !== null) v = Math.min(mx, v);
     let t = v.toFixed(st.dec); if (st.comma) t = t.replace('.', ',');
@@ -1019,6 +1022,30 @@
   on('keyup', SCRUB_SEL, (e, n) => {
     if ((e.key !== 'ArrowUp' && e.key !== 'ArrowDown') || n.matches('[data-g-edit]')) return;
     if (n.matches('input')) { n.dispatchEvent(new Event('change', { bubbles: true })); const w = n.closest('[data-g-number]'); if (w) numSync(w); } else fire(n, 'change', { value: scrubRead(n) });
+  });
+  /* a number inside a text: the caret on (or right after) a digit of a text field, a textarea or an editable text, and ArrowUp / ArrowDown step that number in place
+     by the same notch (Shift: ten); anywhere else the arrows keep moving the caret. data-g-no-step on the field leaves it alone. */
+  const NUMTOK = /-?\d+(?:[.,]\d+)?/g;
+  function tokenAt(text, pos) {
+    NUMTOK.lastIndex = 0; let m;
+    while ((m = NUMTOK.exec(text))) { const a = m.index, b = a + m[0].length; if (pos >= a && pos <= b && (/\d/.test(text[pos] || '') || /\d/.test(text[pos - 1] || ''))) return { a, b, s: m[0] }; if (a > pos) break; }
+    return null;
+  }
+  on('keydown', 'input:not([type=number], [type=range], [type=password], [type=email], [type=date], [type=time], [type=color], [type=file], [type=checkbox], [type=radio]), textarea, [contenteditable]:not([contenteditable=false])', (e, n) => {
+    if ((e.key !== 'ArrowUp' && e.key !== 'ArrowDown') || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || n.disabled || n.readOnly || n.closest('[data-g-no-step]')) return;
+    const field = n.matches('input, textarea'); let node, pos, text;
+    if (field) { if (n.selectionStart !== n.selectionEnd) return; node = n; pos = n.selectionStart; text = n.value; }
+    else { const g = getSelection(); if (!g.rangeCount || !g.isCollapsed || g.anchorNode.nodeType !== 3 || !n.contains(g.anchorNode)) return; node = g.anchorNode; pos = g.anchorOffset; text = node.data; }
+    const tk = tokenAt(text, pos); if (!tk) return;
+    e.preventDefault();
+    const dec = (tk.s.split(/[.,]/)[1] || '').length, k = (e.key === 'ArrowUp' ? 1 : -1) * (e.shiftKey ? 10 : 1);
+    let v = scrubMove(n, parseFloat(tk.s.replace(',', '.')), dec, k), t = v.toFixed(dec); if (tk.s.includes(',')) t = t.replace('.', ',');
+    const lead = /^-?(0+)\d/.exec(tk.s); if (lead && v >= 0 && !dec) t = t.padStart(tk.s.replace('-', '').length, '0');   /* 007 stays three digits wide */
+    if (t === tk.s) return;
+    const next = text.slice(0, tk.a) + t + text.slice(tk.b), at = Math.min(pos + t.length - tk.s.length, tk.a + t.length);
+    if (field) { n.value = next; n.setSelectionRange(at, at); n.dispatchEvent(new Event('input', { bubbles: true })); }
+    else { node.data = next; const r = document.createRange(); r.setStart(node, at); r.collapse(true); const g = getSelection(); g.removeAllRanges(); g.addRange(r); n.dispatchEvent(new Event('input', { bubbles: true })); }
+    try { navigator.vibrate && navigator.vibrate(7); } catch {}
   });
   let scrub = null, scrubbedAt = 0;
   document.addEventListener('click', e => { if (Date.now() - scrubbedAt < 400 && e.target.closest(SCRUB_SEL)) { scrubbedAt = 0; e.stopImmediatePropagation(); e.preventDefault(); } }, true);   /* the click after a drag is not a tap */
