@@ -1000,7 +1000,7 @@
   ['input', 'change'].forEach(t => { on(t, '[data-g-number]', (e, w) => { if (e.target.matches('input')) numSync(w); }); });
   /* scrub: drag a number up or down to change it, one notch per 16px. Works on <input type="number">, on a number field's input ([data-g-number]), on
      any [data-g-scrub] element with numeric text (a [data-g-edit] one saves itself; others get a "change" with { value, was }). The notch follows the size of the number (0-99: 1, 100-999: 10, 1000-9999: 100 ...; a number with decimals steps by its last digit), so a small
-     value moves gently and a big one quickly; data-step sets a fixed notch, min / max (or data-min / data-max on text) clamp. A tap still focuses; a focused field is not scrubbed. */
+     value moves gently and a big one quickly; data-step sets a fixed notch, min / max (or data-min / data-max on text) clamp. A tap still focuses, and a focused number is scrubbed too: tap it, then pull it. */
   const SCRUB_SEL = 'input[type=number], [data-g-number] input, [data-g-scrub]', SCRUB_PX = 16, SCRUB_NUM = /^-?\d+(?:[.,]\d+)?$/;
   const scrubRead = n => (n.matches('input') ? n.value : n._gScrub != null ? n._gScrub : n.textContent).trim();   /* _gScrub: the number the drum is turning to (the text is the old one until the morph has started); typing clears it */
   ['input', 'focusin', 'focusout'].forEach(t => document.addEventListener(t, e => { if (e.target._gScrub != null) e.target._gScrub = null; }, true));
@@ -1019,7 +1019,9 @@
     const v0 = scrubMove(n, st.v, st.dec, k); let v = v0;
     const mn = scrubAttr(n, 'min'), mx = scrubAttr(n, 'max');
     if (mn !== null) v = Math.max(mn, v); if (mx !== null) v = Math.min(mx, v);
-    let t = v.toFixed(st.dec); if (st.comma) t = t.replace('.', ',');
+    const sd = ((String(parseFloat(n.getAttribute('data-step')) || '').split('.')[1]) || '').length;   /* a fixed notch of 2.5 on 55 reaches 57.5: the decimals are shown while the number needs them */
+    const dec = sd ? (Number.isInteger(v) ? 0 : Math.max(st.dec, sd)) : st.dec; if (sd) st.dec = dec;
+    let t = v.toFixed(dec); if (st.comma) t = t.replace('.', ',');
     if (t !== scrubRead(n)) {
       if (n.matches('input')) { n.value = t; n.dispatchEvent(new Event('input', { bubbles: true })); } else { const m = global.Glass && global.Glass.morph; n._gScrub = t; if (m && !document.hidden) m(n, t); else n.textContent = t; }   /* the same drum as every number of the kit */
       try { navigator.vibrate && navigator.vibrate(7); } catch {}
