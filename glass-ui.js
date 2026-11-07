@@ -334,6 +334,33 @@
     if (!history.replaceState || !p || !t.id || mem(t, 'idGen') || h === t.id || h === p.id || (place && p.contains(place))) return;
     history.replaceState(history.state, '', '#' + encodeURIComponent(t.id));
   }
+  /* A tablist wider than its box scrolls sideways (no scrollbar): the wheel moves it, the chosen tab is brought into view, and a soft edge shows where more tabs are (data-g-edge="start|end|both") */
+  function revealTab(list, t, smooth) {
+    if (list.scrollWidth <= list.clientWidth + 1 || !t) return;
+    const pad = 24;
+    let to = list.scrollLeft;
+    if (t.offsetLeft - pad < list.scrollLeft) to = t.offsetLeft - pad;
+    else if (t.offsetLeft + t.offsetWidth + pad > list.scrollLeft + list.clientWidth) to = t.offsetLeft + t.offsetWidth + pad - list.clientWidth;
+    if (Math.abs(to - list.scrollLeft) > 1) list.scrollTo({ left: Math.max(0, to), behavior: smooth && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 'smooth' : 'instant' });
+  }
+  function edgesOf(list) {
+    const max = list.scrollWidth - list.clientWidth, x = list.scrollLeft, a = max > 1 && x > 1, b = max > 1 && x < max - 1;
+    if (a && b) list.setAttribute('data-g-edge', 'both'); else if (a) list.setAttribute('data-g-edge', 'start'); else if (b) list.setAttribute('data-g-edge', 'end'); else list.removeAttribute('data-g-edge');
+  }
+  function scrollableTabs(list) {
+    if (mem(list, 'sc')) return; mem(list, 'sc', 1);
+    const f = () => edgesOf(list);
+    list.addEventListener('scroll', f, { passive: true });
+    if (window.ResizeObserver) new ResizeObserver(f).observe(list);
+    if (window.MutationObserver) new MutationObserver(f).observe(list, { childList: true, subtree: true, characterData: true });
+    list.addEventListener('wheel', e => {   // a mouse wheel turns the tabs sideways (a track of panels has a handler of its own)
+      if (mem(list, 'track') || e.ctrlKey || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+      const max = list.scrollWidth - list.clientWidth; if (max <= 1) return;
+      const x = list.scrollLeft + e.deltaY; if ((e.deltaY < 0 && list.scrollLeft <= 0) || (e.deltaY > 0 && list.scrollLeft >= max)) return;
+      e.preventDefault(); list.scrollLeft = Math.min(Math.max(x, 0), max);
+    }, { passive: false });
+    f();
+  }
   function initTabs(list) {   // idempotent wiring of roles / ids / panels; run at idle, on first touch, or by Glass.init
     const tabs = tabsOf(list), n = mem(list, 'n') || mem(list, 'n', ++uid);
     /* panels: role="tabpanel" siblings of the tablist, matched to the tabs by order (or by aria-controls when given) */
@@ -349,6 +376,7 @@
     });
     if (!list.hasAttribute('data-no-scroll') && !mem(list, 'track') && panels.length === tabs.length && tabs.every(t => mem(t, 'panel') && panels.includes(mem(t, 'panel')))) trackOf(list, tabs.map(t => mem(t, 'panel')));
     selectTab(list, tabOfHash(list, curHash()) || tabs.find(t => t.getAttribute('aria-selected') === 'true') || tabs[0], false, true);
+    scrollableTabs(list);
     list.setAttribute('data-g-ready', '');   // from here on JS owns the panels (before: CSS shows the first one)
   }
   /* The panels of a tablist are one horizontal scroll box (a hidden scrollbar, scroll-snap): a tab scrolls to its panel, and a swipe or a drag scrolls to the tab. Native,
@@ -417,6 +445,7 @@
         else mem(p, 'offT', setTimeout(() => { if (p.inert) { const cs = getComputedStyle(p); p.style.setProperty('contain-intrinsic-block-size', (p.getBoundingClientRect().height - ['paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth'].reduce((a, k) => a + parseFloat(cs[k] || 0), 0)) + 'px'); p.setAttribute('data-g-off', ''); } }, 500));   // its height stays: the box is as high as the highest panel
       } else p.hidden = !on;
     });
+    if (!fromScroll) revealTab(list, t, !silent);
     if (track && !fromScroll) goTo(list, t, !silent);
     if (track && mem(t, 'panel')) ageAll.forEach(n => { if (mem(t, 'panel').contains(n)) ageDraw(n, false); });   // the times of the panel coming in are brought up to date at once, not when the scroll reaches them
     if (focus) t.focus();

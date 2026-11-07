@@ -740,6 +740,9 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 :where(:is(.g-root,[role="listbox"]) [role="tablist"] > :is(button, [role="tab"]), :is(.g-root,[role="listbox"]) nav a) { --g-icon-size: var(--g-icon-sm); }
 :where(:is(.g-root,[role="listbox"]) [role="tablist"] > [role="tab"] > [data-g-close]) { display: inline-grid; place-items: center; flex: none; width: 22px; height: 22px; margin-inline-end: calc(var(--g-inset) * -1 + var(--g-inset)); border-radius: 50%; cursor: pointer; opacity: .55; --g-icon-size: 14px; }   /* a close cross inside a tab: its box ends where the tab's padding does, so the cross is as far from the right edge as the label is from the left (test/tabclose.test.mjs) */
 :where(:is(.g-root,[role="listbox"]) [role="tablist"] > [role="tab"] > [data-g-close]:hover) { opacity: 1; background: rgba(var(--g-ov), .18); }
+:where(:is(.g-root,[role="listbox"]) [role="tablist"][data-g-edge]) { --g-edge-a: 0; --g-edge-b: 0; -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--g-edge-a), #000 calc(100% - var(--g-edge-b)), transparent 100%); mask-image: linear-gradient(to right, transparent 0, #000 var(--g-edge-a), #000 calc(100% - var(--g-edge-b)), transparent 100%); }   /* a tablist with more tabs out of sight fades at that edge */
+:where(:is(.g-root,[role="listbox"]) [role="tablist"][data-g-edge="start"], :is(.g-root,[role="listbox"]) [role="tablist"][data-g-edge="both"]) { --g-edge-a: 28px; }
+:where(:is(.g-root,[role="listbox"]) [role="tablist"][data-g-edge="end"], :is(.g-root,[role="listbox"]) [role="tablist"][data-g-edge="both"]) { --g-edge-b: 28px; }
 :where(:is(.g-root,[role="listbox"]) [role="tablist"][data-block]) { display: flex; width: 100%; }   /* data-block: the tabs share the full width, each one the same share */
 :where(:is(.g-root,[role="listbox"]) [role="tablist"][data-block] > :is(button, [role="tab"])) { flex: 1 1 0; }
 :where(:is(.g-root,[role="listbox"]) [role="tablist"][data-variant="underline"]) { display: flex; width: 100%; background: none; box-shadow: none; padding: 0; gap: var(--g-gap); border-radius: 0; border-bottom: 1px solid var(--g-line); }
@@ -1422,3 +1425,46 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 .g-ruler .g-ruler__seg { text-decoration: none; position: absolute; left: 0; right: 0; box-sizing: border-box; padding-top: 2px; border-top: var(--g-edge-w) solid var(--g-line); font: 600 var(--g-fs-caption)/1 var(--g-font); letter-spacing: .06em; text-transform: uppercase; color: var(--g-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: top var(--g-dur-md) var(--g-ease), height var(--g-dur-md) var(--g-ease), opacity var(--g-dur-md) var(--g-ease), color var(--g-dur), border-color var(--g-dur); }
 .g-ruler .g-ruler__seg--new { opacity: 0; }
 .g-ruler .g-ruler__seg:is(:hover, [data-g-hover]), .g-ruler .g-ruler__seg[aria-current] { color: var(--g-text); border-top-color: var(--g-text); }
+
+/* ---------- Timeline ----------
+   <ol class="tl" in a .tl-wrap>: time on the left, a 1px rule, a dot per event; <i data-icon> swaps the dot for an icon disc; aria-current="step" pulses. */
+.tl{ --tl-t:88px; --tl-g:var(--g-gap); --tl-m:9px; --tl-cx:calc(var(--tl-t) + var(--tl-g) + var(--tl-m) / 2); list-style:none; margin:0; padding:0; display:flex; flex-direction:column; min-width:0; }
+.tl:has(> li > i){ --tl-m:28px; }
+.tl > li{ position:relative; display:grid; grid-template-columns:var(--tl-t) var(--tl-m) minmax(0,1fr); grid-template-areas:"t m c"; column-gap:var(--tl-g); padding-bottom:22px; min-width:0; }
+.tl > li:last-child, .tl[data-scaled] > li{ padding-bottom:0; }
+.tl :is(h4,p){ margin:0; }
+.tl > li > time{ grid-area:t; text-align:right; font-size:13px; line-height:20px; color:var(--g-text-3); white-space:nowrap; }
+.tl > li > div{ grid-area:c; min-width:0; }
+.tl h4{ font-size:15px; line-height:20px; font-weight:600; color:var(--g-text); }
+.tl p{ font-size:14px; line-height:1.5; color:var(--g-text-2); }
+.tl > li:has(> i) > :is(time,div){ padding-top:4px; }
+/* the rule */
+.tl > li::before{ content:""; position:absolute; left:calc(var(--tl-cx) - .5px); top:20px; bottom:-4px; width:1px; background:rgba(var(--g-ov),.26); }
+.tl > li:has(> i)::before{ top:28px; }
+.tl > li[data-gap]::before{ background:repeating-linear-gradient(to bottom, rgba(var(--g-ov),.26) 0 4px, transparent 4px 8px); }
+.tl > li[data-gap][data-state="done"]::before{ background:repeating-linear-gradient(to bottom, var(--g-accent) 0 4px, transparent 4px 8px); }
+.tl-gap{ position:absolute; left:0; width:var(--tl-t); text-align:right; transform:translateY(-50%); font-size:12px; line-height:16px; color:var(--g-text-3); white-space:nowrap; pointer-events:none; }
+.tl > li:has(+ li > i)::before{ bottom:0; }
+.tl > li:last-child::before{ display:none; }
+/* the dot */
+.tl > li::after{ content:""; position:absolute; left:calc(var(--tl-cx) - 4.5px); top:5.5px; width:9px; height:9px; border-radius:50%; background:rgba(var(--g-ov),.55); box-shadow:0 0 0 4px rgba(var(--g-ov),.10); }
+.tl > li[aria-current]::after{ background:var(--g-ink); box-shadow:0 0 0 4px rgba(var(--g-ov),.22); animation:tl-pulse 2.4s ease-out infinite; }
+@keyframes tl-pulse{ 0%{ box-shadow:0 0 0 4px rgba(var(--g-ov),.22), 0 0 0 4px rgba(var(--g-ov),.45); } 70%,100%{ box-shadow:0 0 0 4px rgba(var(--g-ov),.22), 0 0 0 16px transparent; } }
+/* an icon disc replaces the dot */
+.tl > li:has(> i)::after{ display:none; }
+.tl > li > i{ grid-area:m; position:relative; display:grid; place-items:center; width:var(--tl-m); height:var(--tl-m); border-radius:50%; background:var(--g-fill-strong); box-shadow:var(--g-rim); color:var(--g-text-2); font-size:var(--g-icon-sm); }
+.tl > li[data-state="done"] > i{ background:var(--g-accent); color:var(--g-accent-fg); box-shadow:inset 0 .5px 0 rgba(255,255,255,.5); }
+.tl > li[data-state="done"]::before{ background:var(--g-accent); }
+.tl > li[aria-current] > i{ color:var(--g-text); }
+.tl > li[aria-current] > i::after{ content:""; position:absolute; inset:0; border-radius:50%; animation:tl-pulse-i 2.4s ease-out infinite; }
+@keyframes tl-pulse-i{ 0%{ box-shadow:0 0 0 0 rgba(var(--g-ov),.45); } 70%,100%{ box-shadow:0 0 0 12px transparent; } }
+.tl > li[data-state="todo"]{ opacity:.55; } .tl > li[data-state="todo"] > i{ background:transparent; box-shadow:inset 0 0 0 1px rgba(var(--g-ov),.35); }
+@media (prefers-reduced-motion:reduce){ .tl > li[aria-current]::after, .tl > li[aria-current] > i::after{ animation:none; } }
+/* narrow (the .tl-wrap is under 380px): the layout stays, time on the left of the rule and the text on the right of it; only the time column gets narrower and its text may wrap */
+.tl-wrap{ container-type:inline-size; padding:8px 4px; }
+@container (max-width:380px){
+  .tl{ --tl-t:52px; --tl-g:var(--g-gap-inner); }
+  .tl > li > time{ font-size:12px; white-space:normal; overflow-wrap:anywhere; }
+  .tl > li{ padding-bottom:28px; }
+  .tl > li:last-child{ padding-bottom:0; }
+}
