@@ -3,6 +3,6 @@
 .scene .waves-canvas { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: block; }
 .scene.is-waves[data-scene="waves"] { background: var(--sc0, #1d2b52); }
 .bg-row .sw-btn[data-scene="waves"] { --sw: radial-gradient(70% 60% at 30% 25%, #6f93ff, transparent 70%), radial-gradient(60% 60% at 80% 85%, #3c5fb8, transparent 70%), #1a2550; }
-/* The veil over the waves: livelier than the other backgrounds, so a deeper teal keeps them the dark steel blue. One theme for every page that loads the kit (the demo and the site) */
+/* The veil over the waves: livelier than the other backgrounds, so a deeper teal keeps them the dark steel blue. One theme for every page that loads the kit (the demo and the site), the same in the light theme: the waves never go pale (the generic light veil is out of reach: this rule is more specific) */
 .scene[data-scene="waves"]::after { background: linear-gradient(rgba(0,48,70,.7), rgba(0,50,74,.6)); }
-[data-theme="light"] .scene[data-scene="waves"]::after { background: linear-gradient(rgba(255,255,255,.05), rgba(255,255,255,.12)); }
+[data-theme="light"] .scene[data-scene="waves"]::after { background: linear-gradient(rgba(0,48,70,.7), rgba(0,50,74,.6)); }
