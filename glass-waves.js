@@ -28,6 +28,9 @@
 		' o=vec4(c,1.);}';
 
 	var cv = null, gl = null, prog, loc, off = null, acc = 30, cols = null, colsAt = 0;
+	try { var kept = parseFloat(sessionStorage.getItem('g-waves')); if (isFinite(kept)) acc = kept; } catch (e) {}   /* a reload goes on from the same moment of the waves */
+	function keep() { try { sessionStorage.setItem('g-waves', String(acc)); } catch (e) {} }
+	window.addEventListener('pagehide', keep);
 		var SCALE = .5;   /* the field is soft: half the pixels are enough, the browser smooths it up */
 
 	function rgb(s) {
