@@ -136,7 +136,8 @@
   (function(){ var a=load('g-accent'); if(/^#[0-9a-f]{6}$/i.test(a||'')){ setAccent(a,true); var b=accRow.querySelector('button[data-accent="'+a+'" i]'); if(b) pick(accRow,b); else { $('accentCustom').value=a; pick(accRow,$('accentCustom').parentNode); } }
     var P=null, id=load('g-colour'); try{ P=JSON.parse(load('g-palette')); }catch(_){}
     if (id&&/^[bc]:/.test(id)){ P=paletteFor(id); store('g-palette',JSON.stringify(P)); }   /* worked out again: the tone may have changed since it was saved */
-    if (!(P&&P.g&&P.g[0]&&P.q&&P.q[0]&&P.lt)){ applyColours(); window.addEventListener('load', applyColours); return; }   /* nothing saved: the default colour, the one Reset puts back */
+    if (!(P&&P.g&&P.g[0]&&P.q&&P.q[0]&&P.lt)){ if (load('g-tone')) store('g-palette',JSON.stringify(paletteOf(DEFAULT)));   /* a saved tone: the page's first script must paint this tone, not its built-in Pastel, or the first frame flashes */
+      applyColours(); window.addEventListener('load', applyColours); return; }   /* nothing saved: the default colour, the one Reset puts back */
     setColour(P,id,true); window.addEventListener('load', applyColours);   /* the liquid may mount after this script */
     var b=null; if (id&&id.indexOf('b:')===0) b=liqRow.querySelector('button[data-color="'+id.slice(2)+'"],button[data-hue="'+id.slice(2)+'"]');
     if (b) pick(liqRow,b); else if (id&&id.indexOf('c:')===0){ $('liquidCustom').value=id.slice(2); pick(liqRow,$('liquidCustom').parentNode); } })();
