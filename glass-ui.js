@@ -1002,6 +1002,7 @@
      any [data-g-scrub] element with numeric text (a [data-g-edit] one saves itself; others get a "change" with { value, was }). The notch follows the size of the number (0-99: 1, 100-999: 10, 1000-9999: 100 ...; a number with decimals steps by its last digit), so a small
      value moves gently and a big one quickly; data-step sets a fixed notch, min / max (or data-min / data-max on text) clamp. A tap still focuses, and a focused number is scrubbed too: tap it, then pull it. */
   const SCRUB_SEL = 'input[type=number], [data-g-number] input, [data-g-scrub]', SCRUB_PX = 16, SCRUB_NUM = /^-?\d+(?:[.,]\d+)?$/;
+  const SCRUB_RANGE = /^(\d+(?:[.,]\d+)?)(\s*[–—-]\s*)(\d+(?:[.,]\d+)?)$/;   /* "8–12": the end under the finger is pulled, the other stays (the low end never passes the high one) */
   const scrubRead = n => (n.matches('input') ? n.value : n._gScrub != null ? n._gScrub : n.textContent).trim();   /* _gScrub: the number the drum is turning to (the text is the old one until the morph has started); typing clears it */
   ['input', 'focusin', 'focusout'].forEach(t => document.addEventListener(t, e => { if (e.target._gScrub != null) e.target._gScrub = null; }, true));
   const scrubAttr = (n, k) => { const v = parseFloat(n.getAttribute(n.matches('input') ? k : 'data-' + k)); return isNaN(v) ? null : v; };
@@ -1015,13 +1016,26 @@
     return v;
   }
   /* the one way a number moves, by a drag or by the arrow keys: k notches from state st ({ v, dec, comma }), clamped, written back, "input" fired on a real input */
+  /* what a press on n pulls: a plain number, or one end of a range such as 8–12 (the end the finger is on); null when the text is neither */
+  function scrubState(n, e) {
+    const t = scrubRead(n), num = x => ({ v: parseFloat(x.replace(',', '.')), dec: (x.split(/[.,]/)[1] || '').length, comma: x.includes(',') });
+    if (SCRUB_NUM.test(t)) return { t, ...num(t) };
+    const m = !n.matches('input') && SCRUB_RANGE.exec(t); if (!m) return null;
+    let side = 0; const tn = n.firstChild;
+    if (tn && tn.nodeType === 3 && n.childNodes.length === 1) { const r = document.createRange(); r.setStart(tn, m[1].length); r.setEnd(tn, m[1].length + m[2].length); const b = r.getBoundingClientRect(); side = e.clientX > b.left + b.width / 2 ? 1 : 0; }
+    else { const b = n.getBoundingClientRect(); side = e.clientX > b.left + b.width * (m[1].length + m[2].length / 2) / t.length ? 1 : 0; }
+    const mine = m[side ? 3 : 1], other = m[side ? 1 : 3];
+    return { t, ...num(mine), rng: { side, sep: m[2], other, otherV: parseFloat(other.replace(',', '.')) } };
+  }
   function scrubSet(n, st, k) {
     const v0 = scrubMove(n, st.v, st.dec, k); let v = v0;
     const mn = scrubAttr(n, 'min'), mx = scrubAttr(n, 'max');
     if (mn !== null) v = Math.max(mn, v); if (mx !== null) v = Math.min(mx, v);
+    if (st.rng) v = st.rng.side ? Math.max(v, st.rng.otherV) : Math.min(v, st.rng.otherV);
     const sd = ((String(parseFloat(n.getAttribute('data-step')) || '').split('.')[1]) || '').length;   /* a fixed notch of 2.5 on 55 reaches 57.5: the decimals are shown while the number needs them */
     const dec = sd ? (Number.isInteger(v) ? 0 : Math.max(st.dec, sd)) : st.dec; if (sd) st.dec = dec;
     let t = v.toFixed(dec); if (st.comma) t = t.replace('.', ',');
+    if (st.rng) t = st.rng.side ? st.rng.other + st.rng.sep + t : t + st.rng.sep + st.rng.other;
     if (t !== scrubRead(n)) {
       if (n.matches('input')) { n.value = t; n.dispatchEvent(new Event('input', { bubbles: true })); } else { const m = global.Glass && global.Glass.morph; n._gScrub = t; if (m && !document.hidden) m(n, t); else n.textContent = t; }   /* the same drum as every number of the kit */
       try { navigator.vibrate && navigator.vibrate(7); } catch {}
@@ -1069,8 +1083,8 @@
   document.addEventListener('click', e => { if (Date.now() - scrubbedAt < 400 && e.target.closest(SCRUB_SEL)) { scrubbedAt = 0; e.stopImmediatePropagation(); e.preventDefault(); } }, true);   /* the click after a drag is not a tap */
   on('pointerdown', SCRUB_SEL, (e, n) => {
     if ((e.pointerType === 'mouse' && e.button !== 0) || n.disabled || n.readOnly) return;   /* a focused number is scrubbed too: tap it, then pull it */
-    const t = scrubRead(n); if (!SCRUB_NUM.test(t)) return;
-    scrub = { n, id: e.pointerId, y: e.clientY, t, v: parseFloat(t.replace(',', '.')), dec: (t.split(/[.,]/)[1] || '').length, comma: t.includes(','), on: false };
+    const st = scrubState(n, e); if (!st) return;
+    scrub = { n, id: e.pointerId, y: e.clientY, on: false, ...st };
   });
   window.addEventListener('pointermove', e => {
     const s = scrub; if (!s || e.pointerId !== s.id) return;
@@ -1085,7 +1099,7 @@
     const s = scrub; if (!s || !s.on || e.pointerId !== s.id) return;
     s.n.style.setProperty('--g-pull', Math.max(-SCRUB_PX, Math.min(SCRUB_PX, e.clientY - s.y)) + 'px');
   }, { passive: true });
-  document.addEventListener('dragstart', e => { if (scrub && scrub.on) e.preventDefault(); }, true);
+  document.addEventListener('dragstart', e => { const t = e.target, el = t && t.nodeType === 3 ? t.parentElement : t; if (scrub || (el && el.closest && el.closest(SCRUB_SEL))) e.preventDefault(); }, true);   /* a pull is never the browser's drag of the selected text (a focused number is selected whole) */
   function scrubEnd(e) {
     const s = scrub; if (!s || e.pointerId !== s.id) return; scrub = null;
     if (!s.on) return;

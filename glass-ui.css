@@ -458,6 +458,8 @@
   text-decoration: underline dotted transparent 1px; text-underline-offset: .22em; transition: text-decoration-color var(--g-dur), background var(--g-dur), box-shadow var(--g-dur); }
 /* scrub: a vertical drag on a number changes it; the page still pans sideways */
 input[type=number], [data-g-number] input, [data-g-scrub] { touch-action: pan-x; }
+[data-g-scrub] { -webkit-user-drag: none; }
+[data-g-scrub]:not(:focus):not([data-g-editing]) { cursor: ns-resize; }   /* a number that can be pulled says so */
 [data-g-scrubbing], [data-g-scrub] { position: relative; top: var(--g-pull, 0px); }   /* held by the finger: the number follows it by the part of a notch not turned yet */
 [data-g-scrub]:not([data-g-scrubbing]) { transition: top .18s var(--g-ease, ease-out); }   /* and settles back on release */
 [data-g-scrubbing] { cursor: ns-resize; user-select: none; -webkit-user-select: none; }
