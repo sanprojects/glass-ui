@@ -459,10 +459,10 @@
 /* scrub: a vertical drag on a number changes it; the page still pans sideways */
 input[type=number], [data-g-number] input, [data-g-scrub] { touch-action: pan-x; }
 [data-g-scrubbing] { cursor: ns-resize; user-select: none; -webkit-user-select: none; }
-[data-g-edit][data-g-scrubbing] { text-decoration-line: underline; text-decoration-style: solid; text-decoration-color: var(--g-accent); background: color-mix(in srgb, var(--g-accent) 16%, transparent); }
+[data-g-edit][data-g-scrubbing] { text-decoration-line: underline; text-decoration-style: solid; text-decoration-color: var(--g-text); background: color-mix(in srgb, var(--g-accent) 16%, transparent); }
 @media (hover: hover) { [data-g-edit]:hover { text-decoration-color: var(--g-text-3); } }
 @media (hover: none) { [data-g-edit]:not(:focus) { text-decoration-color: var(--g-text-4); } }
-[data-g-edit]:focus { text-decoration: underline solid var(--g-accent) 2px; text-underline-offset: .22em; background: color-mix(in srgb, var(--g-accent) 16%, transparent); box-shadow: 0 0 0 .14em color-mix(in srgb, var(--g-accent) 16%, transparent); }
+[data-g-edit]:focus { text-decoration: underline solid var(--g-text) 2px; text-underline-offset: .22em; background: color-mix(in srgb, var(--g-accent) 16%, transparent); box-shadow: 0 0 0 .14em color-mix(in srgb, var(--g-accent) 16%, transparent); }
 [data-g-edit]:empty::before { content: attr(data-placeholder) "\200b"; color: var(--g-text-4); }
 [data-g-edit][aria-invalid="true"] { text-decoration: underline solid var(--g-danger-text, #ff9d96) 2px; text-underline-offset: .22em; }
 [data-g-edit][data-saved] { animation: g-edit-saved .6s var(--g-ease, ease-out); }
