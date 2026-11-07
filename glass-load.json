@@ -8,7 +8,9 @@
     { "file": "glass-morph.css", "load": "block", "part": "morph" },
     { "file": "glass-morph.js", "load": "defer", "part": "morph" },
     { "file": "glass-appearance.css", "load": "block", "part": "appearance" },
+    { "file": "glass-waves.css", "load": "block", "part": "appearance" },
     { "file": "glass-ui-liquid.js", "load": "defer", "part": "appearance" },
-    { "file": "glass-appearance.js", "load": "defer", "part": "appearance" }
+    { "file": "glass-appearance.js", "load": "defer", "part": "appearance" },
+    { "file": "glass-waves.js", "load": "defer", "part": "appearance" }
   ]
 }
