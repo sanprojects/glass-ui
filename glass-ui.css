@@ -465,7 +465,6 @@ input[type=number], [data-g-number] input, [data-g-scrub] { touch-action: pan-x;
 [data-g-edit]:focus { text-decoration: underline solid var(--g-text) 2px; text-underline-offset: .22em; background: color-mix(in srgb, var(--g-text) 16%, transparent); box-shadow: 0 0 0 .14em color-mix(in srgb, var(--g-text) 16%, transparent); }
 /* touch: a bigger target around the text, and 16px while typing (a smaller field zooms the page in iOS) */
 @media (pointer: coarse) { [data-g-edit] { padding-inline: .3em; margin-inline: -.3em; font-size: max(1em, 16px); } }
-[data-g-edit]::selection { background: var(--g-ink); color: var(--g-ink-fg); }   /* selected text: the solid ink with its own text colour, clear on the focus wash in both themes */
 [data-g-edit]:empty::before { content: attr(data-placeholder) "\200b"; color: var(--g-text-4); }
 [data-g-edit][aria-invalid="true"] { text-decoration: underline solid var(--g-danger-text, #ff9d96) 2px; text-underline-offset: .22em; }
 [data-g-edit][data-saved] { animation: g-edit-saved .6s var(--g-ease, ease-out); }
