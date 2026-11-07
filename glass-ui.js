@@ -982,10 +982,10 @@
     commit(inp); numSync(w);
   });
   ['input', 'change'].forEach(t => { on(t, '[data-g-number]', (e, w) => { if (e.target.matches('input')) numSync(w); }); });
-  /* scrub: drag a number up or down to change it, one notch per 16px. Works on <input type="number">, on a number field's input ([data-g-number]), on any [data-g-scrub] input and on
-     numeric [data-g-edit] text. The notch follows the size of the number (0-99: 1, 100-999: 10, 1000-9999: 100 ...; a number with decimals steps by its last digit), so a small
+  /* scrub: drag a number up or down to change it, one notch per 16px. Works on <input type="number">, on a number field's input ([data-g-number]), on
+     any [data-g-scrub] element with numeric text (a [data-g-edit] one saves itself; others get a "change" with { value, was }). The notch follows the size of the number (0-99: 1, 100-999: 10, 1000-9999: 100 ...; a number with decimals steps by its last digit), so a small
      value moves gently and a big one quickly; data-step sets a fixed notch, min / max (or data-min / data-max on text) clamp. A tap still focuses; a focused field is not scrubbed. */
-  const SCRUB_SEL = 'input[type=number], [data-g-number] input, input[data-g-scrub], [data-g-edit][data-g-scrub]', SCRUB_PX = 16, SCRUB_NUM = /^-?\d+(?:[.,]\d+)?$/;
+  const SCRUB_SEL = 'input[type=number], [data-g-number] input, [data-g-scrub]', SCRUB_PX = 16, SCRUB_NUM = /^-?\d+(?:[.,]\d+)?$/;
   const scrubRead = n => (n.matches('input') ? n.value : n.textContent).trim();
   const scrubAttr = (n, k) => { const v = parseFloat(n.getAttribute(n.matches('input') ? k : 'data-' + k)); return isNaN(v) ? null : v; };
   function scrubStep(n, v, dec) {
@@ -1021,7 +1021,7 @@
     if (!s.on) return;
     s.n.removeAttribute('data-scrubbing');
     scrubbedAt = Date.now();
-    if (s.n.matches('input')) { s.n.dispatchEvent(new Event('change', { bubbles: true })); const w = s.n.closest('[data-g-number]'); if (w) numSync(w); } else editCommit(s.n);
+    if (s.n.matches('input')) { s.n.dispatchEvent(new Event('change', { bubbles: true })); const w = s.n.closest('[data-g-number]'); if (w) numSync(w); } else if (s.n.matches('[data-g-edit]')) editCommit(s.n); else fire(s.n, 'change', { value: scrubRead(s.n), was: s.t });
   }
   window.addEventListener('pointerup', scrubEnd); window.addEventListener('pointercancel', scrubEnd);
 

@@ -457,7 +457,7 @@
 [data-g-edit] { display: inline; font: inherit; color: inherit; cursor: text; outline: none; border-radius: .25em; -webkit-box-decoration-break: clone; box-decoration-break: clone;
   text-decoration: underline dotted transparent 1px; text-underline-offset: .22em; transition: text-decoration-color var(--g-dur), background var(--g-dur), box-shadow var(--g-dur); }
 /* scrub: a vertical drag on a number changes it; the page still pans sideways */
-input[type=number], [data-g-number] input, input[data-g-scrub], [data-g-edit][data-g-scrub] { touch-action: pan-x; }
+input[type=number], [data-g-number] input, [data-g-scrub] { touch-action: pan-x; }
 [data-g-scrubbing] { cursor: ns-resize; user-select: none; -webkit-user-select: none; }
 [data-g-edit][data-g-scrubbing] { text-decoration-line: underline; text-decoration-style: solid; text-decoration-color: var(--g-accent); background: color-mix(in srgb, var(--g-accent) 16%, transparent); }
 @media (hover: hover) { [data-g-edit]:hover { text-decoration-color: var(--g-text-3); } }
