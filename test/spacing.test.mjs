@@ -13,6 +13,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MEASURE = `(() => {
   const ok = e => { const cs = getComputedStyle(e); if (cs.display==='none'||cs.visibility==='hidden'||cs.position==='absolute'||cs.position==='fixed') return false;
     if (e.hasAttribute('data-g-edit')) return false;   // an in-place field is a word inside running text, not a box on the rhythm
+    if (e.closest('svg')) return false;   // the marks of a drawing overlap by design
     if (!e.checkVisibility()) return false;   // the body of a closed <details> keeps its box but is not rendered
     if (/^(SCRIPT|STYLE|TEMPLATE|OPTION|LINK|META|BR|COL|COLGROUP)$/.test(e.tagName)) return false; const r=e.getBoundingClientRect(); return r.width>0&&r.height>0; };
   const path = e => { const p=[]; while(e&&e!==document.body&&p.length<4){ p.unshift(e.tagName.toLowerCase()+(e.className&&typeof e.className==='string'?'.'+e.className.trim().split(/\\s+/)[0]:'')); e=e.parentElement;} return p.join(' > '); };
@@ -20,10 +21,11 @@ const MEASURE = `(() => {
   document.querySelectorAll('dialog').forEach(d=>{ try{ d.show(); d.style.position='static'; d.style.margin='0'; }catch(e){} }); document.querySelectorAll('[popover]').forEach(d=>{ try{ d.showPopover(); }catch(e){} });
   const roots = [...document.querySelectorAll('.demo, .g-shell, [data-code], dialog, [popover]')].filter(e=>!e.closest('.code, pre'));
   const seen = new Set(), out = [];
-  const INNER='.g-field, hgroup, .g-empty, .g-file__drop, .g-file__main, .g-file__row, .g-file__item, blockquote, .g-list > li, .g-toast, [data-tile], summary, a, button, label, data, th, td, [role=menu], [role=listbox], [role=option], .g-select__value';
+  const INNER='.g-player-bar, .g-field, hgroup, .g-empty, .g-file__drop, .g-file__main, .g-file__row, .g-file__item, blockquote, .g-list > li, .g-toast, [data-tile], summary, a, button, label, data, th, td, [role=menu], [role=listbox], [role=option], .g-select__value';
   const TIGHT='[role=tablist], .g-pager__pages, nav > ul, .g-shell__head [role=tablist]';
   const allowedIn = c => c.matches(INNER) ? 8 : (c.matches(TIGHT) ? 'tight' : null);
-  const visit = c => { if (seen.has(c) || c.closest('pre,.code,[data-code-src]')) return; seen.add(c);
+  const visit = c => { if (seen.has(c) || c.closest('pre,.code,[data-code-src]') || c.matches('.g-chart')) return; seen.add(c);   // a chart lays out its drawing, not boxes
+   
     const cs0 = getComputedStyle(c);
     if (cs0.display==='grid' || cs0.display==='inline-grid') { const rg=parseFloat(cs0.rowGap)||0, cg=parseFloat(cs0.columnGap)||0; if (c.children.length>1) { out.push({axis:'gv', gap:rg, allowed:allowedIn(c), at:path(c), a:'grid', b:'rows'}); out.push({axis:'gh', gap:cg, allowed:allowedIn(c), at:path(c), a:'grid', b:'cols'}); } c.querySelectorAll(':scope > *').forEach(visit); return; }
     if (c.closest('tfoot')) return;

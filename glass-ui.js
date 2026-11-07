@@ -986,13 +986,40 @@
      any [data-g-scrub] element with numeric text (a [data-g-edit] one saves itself; others get a "change" with { value, was }). The notch follows the size of the number (0-99: 1, 100-999: 10, 1000-9999: 100 ...; a number with decimals steps by its last digit), so a small
      value moves gently and a big one quickly; data-step sets a fixed notch, min / max (or data-min / data-max on text) clamp. A tap still focuses; a focused field is not scrubbed. */
   const SCRUB_SEL = 'input[type=number], [data-g-number] input, [data-g-scrub]', SCRUB_PX = 16, SCRUB_NUM = /^-?\d+(?:[.,]\d+)?$/;
-  const scrubRead = n => (n.matches('input') ? n.value : n.textContent).trim();
+  const scrubRead = n => (n.matches('input') ? n.value : n._gScrub != null ? n._gScrub : n.textContent).trim();   /* _gScrub: the number the drum is turning to (the text is the old one until the morph has started); typing clears it */
+  ['input', 'focusin', 'focusout'].forEach(t => document.addEventListener(t, e => { if (e.target._gScrub != null) e.target._gScrub = null; }, true));
   const scrubAttr = (n, k) => { const v = parseFloat(n.getAttribute(n.matches('input') ? k : 'data-' + k)); return isNaN(v) ? null : v; };
   function scrubStep(n, v, dec) {
     const fixed = parseFloat(n.getAttribute('data-step')) || 0; if (fixed > 0) return fixed;
     const base = dec ? Math.pow(10, -dec) : 1, mag = Math.abs(v) >= 100 ? Math.pow(10, Math.floor(Math.log10(Math.abs(v))) - 1) : 1;
     return Math.max(base, mag);
   }
+  /* the one way a number moves, by a drag or by the arrow keys: k notches from state st ({ v, dec, comma }), clamped, written back, "input" fired on a real input */
+  function scrubSet(n, st, k) {
+    let v = st.v;
+    for (let i = Math.abs(k); i > 0; i--) { const d = scrubStep(n, v, st.dec); v = Math.round((v + Math.sign(k) * d) / d * 1e6) / 1e6 * d; }
+    const mn = scrubAttr(n, 'min'), mx = scrubAttr(n, 'max');
+    if (mn !== null) v = Math.max(mn, v); if (mx !== null) v = Math.min(mx, v);
+    let t = v.toFixed(st.dec); if (st.comma) t = t.replace('.', ',');
+    if (t !== scrubRead(n)) {
+      if (n.matches('input')) { n.value = t; n.dispatchEvent(new Event('input', { bubbles: true })); } else { const m = global.Glass && global.Glass.morph; n._gScrub = t; if (m && !document.hidden) m(n, t); else n.textContent = t; }   /* the same drum as every number of the kit */
+      try { navigator.vibrate && navigator.vibrate(7); } catch {}
+    }
+    return v;
+  }
+  /* the arrow keys step a focused number the same way: ArrowUp / ArrowDown one notch, Shift ten; it is saved on leaving (Enter, blur), Esc brings the old one back */
+  on('keydown', SCRUB_SEL, (e, n) => {
+    if ((e.key !== 'ArrowUp' && e.key !== 'ArrowDown') || e.altKey || e.ctrlKey || e.metaKey || n.disabled || n.readOnly) return;
+    n.querySelectorAll('.g-reel').forEach(b => b._finish && b._finish());   /* a drum still turning is the plain number now */
+    const t = scrubRead(n); if (!SCRUB_NUM.test(t)) return;
+    e.preventDefault();
+    scrubSet(n, { v: parseFloat(t.replace(',', '.')), dec: (t.split(/[.,]/)[1] || '').length, comma: t.includes(',') }, (e.key === 'ArrowUp' ? 1 : -1) * (e.shiftKey ? 10 : 1));
+    if (!n.matches('input')) { const r = document.createRange(); r.selectNodeContents(n); const g = getSelection(); g.removeAllRanges(); g.addRange(r); }
+  });
+  on('keyup', SCRUB_SEL, (e, n) => {
+    if ((e.key !== 'ArrowUp' && e.key !== 'ArrowDown') || n.matches('[data-g-edit]')) return;
+    if (n.matches('input')) { n.dispatchEvent(new Event('change', { bubbles: true })); const w = n.closest('[data-g-number]'); if (w) numSync(w); } else fire(n, 'change', { value: scrubRead(n) });
+  });
   let scrub = null, scrubbedAt = 0;
   document.addEventListener('click', e => { if (Date.now() - scrubbedAt < 400 && e.target.closest(SCRUB_SEL)) { scrubbedAt = 0; e.stopImmediatePropagation(); e.preventDefault(); } }, true);   /* the click after a drag is not a tap */
   on('pointerdown', SCRUB_SEL, (e, n) => {
@@ -1007,14 +1034,7 @@
     e.preventDefault();
     const k = Math.trunc(dy / SCRUB_PX); if (!k) return;
     s.y -= k * SCRUB_PX;   /* the notches are spent: the next ones count from here, with the step of the new value */
-    let v = s.v;
-    for (let i = Math.abs(k); i > 0; i--) { const st = scrubStep(s.n, v, s.dec); v = Math.round((v + Math.sign(k) * st) / st * 1e6) / 1e6 * st; }
-    const mn = scrubAttr(s.n, 'min'), mx = scrubAttr(s.n, 'max');
-    if (mn !== null) v = Math.max(mn, v); if (mx !== null) v = Math.min(mx, v);
-    s.v = v; let t = v.toFixed(s.dec); if (s.comma) t = t.replace('.', ',');
-    if (t === scrubRead(s.n)) return;
-    if (s.n.matches('input')) { s.n.value = t; s.n.dispatchEvent(new Event('input', { bubbles: true })); } else s.n.textContent = t;
-    try { navigator.vibrate && navigator.vibrate(7); } catch {}
+    s.v = scrubSet(s.n, s, k);
   }, { passive: false });
   function scrubEnd(e) {
     const s = scrub; if (!s || e.pointerId !== s.id) return; scrub = null;
