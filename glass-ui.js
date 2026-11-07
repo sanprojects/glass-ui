@@ -1044,7 +1044,7 @@
     const v = colorNorm(p.t.value); p.t.value = (v || p.c.value).toUpperCase(); p.t.removeAttribute('aria-invalid'); p.sw.style.setProperty('--c', p.c.value);
   });
   /* in-place text: <span data-g-edit data-placeholder="Add a name"> inside any text. Enter or leaving saves, Esc brings back what it was, paste is plain text on one line,
-     data-max limits the length, data-required refuses an empty text. A save fires "change" ({ value }) on the element; the native "input" fires as you type. */
+     data-max limits the length, data-required refuses an empty text. A save fires "change" ({ value, was }) on the element; the native "input" fires as you type. */
   function initEdit(n) {
     owns(n, 'contenteditable', 'role', 'tabindex', 'spellcheck');
     n.setAttribute('contenteditable', 'plaintext-only' in document.createElement('i') || CSS.supports('-webkit-user-modify', 'read-write-plaintext-only') ? 'plaintext-only' : 'true');
@@ -1058,7 +1058,7 @@
     if (!v && n.hasAttribute('data-required')) v = was;
     if (n.textContent !== v) n.textContent = v;
     if (v === was) return;
-    mem(n, 'v', v); fire(n, 'change', { value: v });
+    mem(n, 'v', v); fire(n, 'change', { value: v, was });
     n.setAttribute('data-saved', ''); setTimeout(() => n.removeAttribute('data-saved'), 650);
   }
   on('focusin', '[data-g-edit]', (e, n) => { mem(n, 'v', n.textContent); });
