@@ -463,6 +463,8 @@ input[type=number], [data-g-number] input, [data-g-scrub] { touch-action: pan-x;
 @media (hover: hover) { [data-g-edit]:hover { text-decoration-color: var(--g-text-3); } }
 @media (hover: none) { [data-g-edit]:not(:focus) { text-decoration-color: var(--g-text-4); } }
 [data-g-edit]:focus { text-decoration: underline solid var(--g-text) 2px; text-underline-offset: .22em; background: color-mix(in srgb, var(--g-text) 16%, transparent); box-shadow: 0 0 0 .14em color-mix(in srgb, var(--g-text) 16%, transparent); }
+/* touch: a bigger target around the text, and 16px while typing (a smaller field zooms the page in iOS) */
+@media (pointer: coarse) { [data-g-edit] { padding-inline: .3em; margin-inline: -.3em; font-size: max(1em, 16px); } }
 [data-g-edit]:empty::before { content: attr(data-placeholder) "\200b"; color: var(--g-text-4); }
 [data-g-edit][aria-invalid="true"] { text-decoration: underline solid var(--g-danger-text, #ff9d96) 2px; text-underline-offset: .22em; }
 [data-g-edit][data-saved] { animation: g-edit-saved .6s var(--g-ease, ease-out); }
@@ -653,6 +655,40 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 :where(:is(.g-root,[role="listbox"]) input[type="range"])::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; border: 0; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
 :where(:is(.g-root,[role="listbox"]) input[type="range"]:active)::-webkit-slider-thumb { transform: scale(1.12); }
 :where(:is(.g-root,[role="listbox"]) input[type="range"]:focus-visible) { outline: none; }
+
+/* ---------- Utilities: .g-sr (read by a screen reader only), .g-note (a small caption under a block) ---------- */
+.g-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.g-note { padding-top: 4px; font-size: 12px; line-height: 16px; color: var(--g-text-3); }
+
+/* ---------- Player: a 16:9 frame for an embedded video. Inside it, .g-player-bar holds the kit's own ghost button and range slider, drawn white on the dark frame.
+   <div class="g-player"><div class="g-player-box"></div><div class="g-player-tap"></div><div class="g-player-bar"><button data-variant="ghost" data-icon="pause" aria-label="Pause"></button><input type="range"></div></div>
+   .g-player-tap (optional) covers the picture, so a tap goes to the page and not into the iframe. ---------- */
+.g-player { position: relative; max-width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; background: #000; box-shadow: var(--g-rim); }
+.g-player iframe { display: block; width: 100%; height: 100%; border: 0; }
+.g-player:has(> .g-player-tap) iframe { pointer-events: none; }
+.g-player-tap { position: absolute; inset: 0 0 40px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.g-player-bar { --g-ink: #fff; --g-text: #fff; --g-text-2: #fff; --g-fill-recessed: rgba(255,255,255,.3); --g-fill-strong: rgba(255,255,255,.18);
+  position: absolute; inset: auto 0 0; display: flex; align-items: center; gap: var(--g-gap-inner); padding: 14px 10px 6px 6px; background: linear-gradient(transparent, rgba(0,0,0,.65)); }
+.g-player-bar input[type="range"] { flex: 1; min-width: 0; touch-action: none; }
+
+/* ---------- Chart: a line chart drawn as SVG. Parts: .gl grid line, .ln the line, .pt a point (.plan hollow, .grab held), .hit a wide invisible target, .cr crosshair, .hv hover dot, text (.lb the label).
+   .g-chart-anchor is a 1px marker the kit tooltip (a direct child .g-tooltip) hangs on; .g-chart.on shows the crosshair and the hover dot. ---------- */
+.g-chart { position: relative; }
+.g-chart h5 { margin: 0; padding-bottom: 2px; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--g-text-2); }
+.g-chart svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: pan-y; }
+.g-chart .gl { stroke: rgba(var(--g-ov), .14); stroke-width: 1; }
+.g-chart text { fill: var(--g-text-3); font-size: 11px; font-family: inherit; font-variant-numeric: tabular-nums; }
+.g-chart text.lb { fill: var(--g-text-2); font-size: 12px; font-weight: 600; }
+.g-chart .ln { fill: none; stroke: var(--g-accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.g-chart .pt { fill: var(--g-accent); stroke: none; }
+.g-chart .hit { fill: transparent; stroke: none; cursor: ns-resize; touch-action: none; }
+.g-chart .pt.grab { stroke: var(--g-text); stroke-width: 2; }
+.g-chart .pt.plan { fill: none; stroke: var(--g-accent); stroke-width: 2; }
+.g-chart .cr { stroke: rgba(var(--g-ov), .35); stroke-width: 1; opacity: 0; }
+.g-chart .hv { fill: var(--g-accent); opacity: 0; }
+.g-chart.on .cr, .g-chart.on .hv { opacity: 1; }
+.g-chart-anchor { position: absolute; width: 1px; height: 1px; pointer-events: none; anchor-name: --g-chart-pt; }
+.g-chart > .g-tooltip { position-anchor: --g-chart-pt; }
 :where(:is(.g-root,[role="listbox"]) input[type="range"]:focus-visible)::-webkit-slider-thumb { box-shadow: var(--g-focus); }
 :where(:is(.g-root,[role="listbox"]) input[type="range"]:disabled) { opacity: .4; cursor: not-allowed; }
 
