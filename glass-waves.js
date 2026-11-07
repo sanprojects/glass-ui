@@ -1,6 +1,6 @@
 /* The "Waves" background (#scene[data-scene="waves"]): slow flowing swells of colour with thin light contour lines running along them, drawn by a fragment shader.
-   Optional, no dependencies except the kit's shared timer (Glass.scene). Own code: warped fractal noise, the contour lines are the iso-lines of that noise field.
-   It takes the colours of the scene (--sc0 the dark ground, --sc1..--sc4; glass-appearance.js sets them), so a picked background colour and tone follow. Draws only while the scene is "waves" and the page is visible; WebGL 2 is needed, without it the CSS gradient (site.css) stays. */
+   Own code: warped fractal noise, the contour lines are the iso-lines of that noise field. It takes the colours the Appearance panel sets on the scene (--sc0 the dark ground, --sc1..--sc4),
+   so the picked background colour and the tone follow. Draws only while the scene is "waves" and the page is visible; WebGL 2 is needed, without it the CSS gradient (site.css) stays. */
 (function () {
 	'use strict';
 	var scene = document.getElementById('scene');
@@ -27,11 +27,13 @@
 		' c+=(h(gl_FragCoord.xy+uT)-.5)/255.;\n' +
 		' o=vec4(c,1.);}';
 
-	var cv = null, gl = null, prog, loc, off = null, acc = 30, cols = null, colsAt = 0;
-	try { var kept = parseFloat(sessionStorage.getItem('g-waves')); if (isFinite(kept)) acc = kept; } catch (e) {}   /* a reload goes on from the same moment of the waves */
-	function keep() { try { sessionStorage.setItem('g-waves', String(acc)); } catch (e) {} }
-	window.addEventListener('pagehide', keep);
-		var SCALE = .5;   /* the field is soft: half the pixels are enough, the browser smooths it up */
+	var cv = null, gl = null, prog, loc, off = null, acc = 30, cols = null, colsAt = 0, saveAt = 0, saveTimer = 0;
+	/* where the last page (or this one before a reload) left off: its time and its last frame (a small JPEG) are kept in localStorage (it is shared by tabs, so a link opened in a new tab goes on too); the time is taken up here, and the frame is painted
+	   before the first paint by an inline script after the scene (--g-waves-poster), so the background goes on from the same moment instead of starting over */
+	var KEY = 'g-waves';
+	try { var P = JSON.parse(localStorage.getItem(KEY)); if (P && typeof P.t === 'number') acc = P.t; } catch (e) {}
+	var SLOW = .5;   /* Waves drift at half the kit speed (Calm was too quick for them); every speed step scales with it */
+	var SCALE = .5;   /* the field is soft: half the pixels are enough, the browser smooths it up */
 
 	function rgb(s) {
 		var m = /^#([0-9a-f]{6})$/i.exec((s || '').trim());
@@ -67,7 +69,9 @@
 		return true;
 	}
 	function size() {
-		var w = Math.max(2, Math.round(scene.clientWidth * SCALE)), h = Math.max(2, Math.round(scene.clientHeight * SCALE));
+		/* one size on every page: the window's, whatever the scene around it (the home page's is taller), centred; the browser stretches the small picture up */
+		var w = Math.max(2, Math.round(innerWidth * SCALE)), h = Math.max(2, Math.round(innerHeight * SCALE));
+		cv.style.width = innerWidth + 'px'; cv.style.height = innerHeight + 'px';
 		if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
 	}
 	function draw() {
@@ -81,23 +85,36 @@
 		return true;
 	}
 	/* the kit's shared timer (Glass.scene: one clock and one speed for every animated background; speed 0 = still) calls this with the seconds already times the speed */
-	function step(dt) { cols = null; acc += dt; return draw(); }
+	function save() {
+		saveTimer = 0;
+		if (!cv || !cv.parentNode || !draw()) return;
+		try { localStorage.setItem(KEY, JSON.stringify({ t: acc, u: cv.toDataURL('image/jpeg', .72), w: innerWidth, h: innerHeight })); saveAt = performance.now(); } catch (e) {}
+	}
+	function later() { if (!saveTimer) saveTimer = setTimeout(save, 600); }
+	function step(dt) { cols = null; acc += dt * SLOW; var ok = draw(); if (ok && performance.now() - saveAt > 6000) later(); return ok; }
+	/* the colours (--sc0..4) come from an inline script that runs after this file: drawing before that would paint the stock palette (a bluish-pink flash, like Aurora) and save it as the poster;
+	   the poster / CSS ground stays until they are there (the style observer calls sync again), and a page that never sets them gets the stock palette once it has loaded */
+	function haveColours() { return getComputedStyle(scene).getPropertyValue('--sc1').trim() !== '' || document.readyState === 'complete'; }
 	function start() {
-		if (!cv && !build()) { scene.classList.add('waves-off'); return; }
+		if (!haveColours()) return;
+		if (!cv && !build()) return;
 		if (!cv.parentNode) scene.appendChild(cv);
 		scene.classList.add('is-waves');
-		draw();
+		draw(); later();
 		if (!off && window.Glass && Glass.scene) off = Glass.scene.add(step);
 	}
 	function stop() {
 		if (off) off(); off = null;
-		scene.classList.remove('is-waves', 'waves-off');
+		scene.classList.remove('is-waves');
 		if (cv && cv.parentNode) cv.parentNode.removeChild(cv);
 	}
-	function sync() { cols = null; scene.getAttribute('data-scene') === 'waves' ? start() : stop(); }   /* also on the style: a picked colour sets --sc0..4 there, and a still scene must repaint */
+	function sync() { cols = null; if (cv) later(); scene.getAttribute('data-scene') === 'waves' ? start() : stop(); }   /* also on the style: a picked colour sets --sc0..4 there, and a still scene must repaint */
 
 	new MutationObserver(sync).observe(scene, { attributes: true, attributeFilter: ['data-scene', 'style'] });
 	window.addEventListener('resize', function () { cols = null; draw(); });
 	sync();
-	window.addEventListener('load', sync);   /* the kit (Glass.scene) may come after this file */
+	window.addEventListener('load', sync);
+	function leave() { clearTimeout(saveTimer); save(); }
+	window.addEventListener('pagehide', leave);
+	document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') leave(); });   /* the frame and the time of this very moment */
 })();
