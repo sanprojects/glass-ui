@@ -144,6 +144,8 @@
   /* restore the saved colours: the accent and the colour of the liquid and gradient backgrounds */
   (function(){ var a=load('g-accent'); if(/^#[0-9a-f]{6}$/i.test(a||'')){ setAccent(a,true); var b=accRow.querySelector('button[data-accent="'+a+'" i]'); if(b) pick(accRow,b); else { $('accentCustom').value=a; pick(accRow,$('accentCustom').parentNode); } }
     var P=null, id=load('g-colour'); try{ P=JSON.parse(load('g-palette')); }catch(_){}
+    /* the old default colours (a visitor saved them: picked the first swatch, or a tone on the default): they were the default then, now they are a retired swatch - the default is the new one */
+    if (id==='b:#33a7e1'||id==='b:#3b9fde'||(!id&&P&&P.g&&P.g[0]&&P.g[0][1]==='#33a7e1')){ id=null; P=null; try{ ['g-colour','g-palette'].forEach(function(k){ localStorage.removeItem(k); }); }catch(_){} }
     if (id&&/^[bc]:/.test(id)){ P=paletteFor(id); store('g-palette',JSON.stringify(P)); }   /* worked out again: the tone may have changed since it was saved */
     if (!(P&&P.g&&P.g.length===2&&P.q&&P.q.length===2&&P.lt)){ if (load('g-tone')) store('g-palette',JSON.stringify(paletteOf(DEFAULT)));   /* a saved tone: the page's first script must paint this tone, not its built-in Vivid, or the first frame flashes */
       applyColours(); window.addEventListener('load', applyColours); return; }   /* nothing saved: the default colour, the one Reset puts back */
