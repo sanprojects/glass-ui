@@ -111,79 +111,54 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
 .resizable{ resize:horizontal; overflow:hidden; min-width:300px; max-width:100%; width:100%; border-radius:var(--g-radius-pill); padding-bottom:2px; }
 @media (max-width:520px){ .hide-sm{display:none} nav{padding-left:16px;gap:8px} nav > a{font-size:15px} }
 @media (max-width:860px){ .pair{ grid-template-columns:minmax(0,1fr); } .sec{ padding:24px 20px; border-radius:var(--g-radius-card); } }
-/* ---- Timeline prototypes (demo only, promoted to glass-ui.css once a variant is picked) ---- */
-.tl{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; min-width:0; }
-.tl > li{ position:relative; min-width:0; }
+/* ---- Timeline (demo only for now; moves into glass-ui.css as .g-timeline once the look is signed off) ----
+   <ol class="tl">: time on the left, a 1px rule, a dot per event; <i data-icon> swaps the dot for an icon disc; aria-current="step" pulses. */
+.tl{ --tl-max:120px; --tl-t:88px; --tl-g:14px; --tl-m:9px; --tl-cx:calc(var(--tl-t) + var(--tl-g) + var(--tl-m) / 2); list-style:none; margin:0; padding:0; display:flex; flex-direction:column; min-width:0; }
+.tl:has(> li > i){ --tl-m:28px; }
+.tl > li{ position:relative; display:grid; grid-template-columns:var(--tl-t) var(--tl-m) minmax(0,1fr); grid-template-areas:"t m c"; column-gap:var(--tl-g); padding-bottom:22px; min-width:0; }
+.tl > li:last-child, .tl[data-scaled] > li{ padding-bottom:0; }
 .tl :is(h4,p){ margin:0; }
-.tl time{ display:block; font-size:12px; line-height:1.4; color:var(--g-text-3); letter-spacing:.02em; }
-.tl h4{ font-size:15px; line-height:1.35; font-weight:600; color:var(--g-text); }
-.tl p{ font-size:14px; line-height:1.5; color:var(--g-text-2); }
+.tl > li > time{ grid-area:t; text-align:right; font-size:13px; line-height:20px; color:var(--g-text-3); white-space:nowrap; }
+.tl > li > div{ grid-area:c; min-width:0; }
+.tl h4{ font-size:15px; line-height:20px; font-weight:600; color:var(--g-text); }
+.tl p{ margin-top:2px; font-size:14px; line-height:1.5; color:var(--g-text-2); }
+.tl > li:has(> i) > :is(time,div){ padding-top:4px; }
+/* the rule */
+.tl > li::before{ content:""; position:absolute; left:calc(var(--tl-cx) - .5px); top:20px; bottom:-4px; width:1px; background:rgba(var(--g-ov),.26); }
+.tl > li:has(> i)::before{ top:28px; }
+.tl > li[data-gap]::before{ background:repeating-linear-gradient(to bottom, rgba(var(--g-ov),.26) 0 4px, transparent 4px 8px); }
+.tl > li[data-gap][data-state="done"]::before{ background:repeating-linear-gradient(to bottom, var(--g-accent) 0 4px, transparent 4px 8px); }
+.tl-gap{ position:absolute; left:0; width:var(--tl-t); text-align:right; transform:translateY(-50%); font-size:12px; line-height:16px; color:var(--g-text-3); white-space:nowrap; pointer-events:none; }
+.tl > li:has(+ li > i)::before{ bottom:0; }
+.tl > li:last-child::before{ display:none; }
+/* the dot */
+.tl > li::after{ content:""; position:absolute; left:calc(var(--tl-cx) - 4.5px); top:5.5px; width:9px; height:9px; border-radius:50%; background:rgba(var(--g-ov),.55); box-shadow:0 0 0 4px rgba(var(--g-ov),.10); }
+.tl > li[aria-current]::after{ background:var(--g-ink); box-shadow:0 0 0 4px rgba(var(--g-ov),.22); animation:tl-pulse 2.4s ease-out infinite; }
+@keyframes tl-pulse{ 0%{ box-shadow:0 0 0 4px rgba(var(--g-ov),.22), 0 0 0 4px rgba(var(--g-ov),.45); } 70%,100%{ box-shadow:0 0 0 4px rgba(var(--g-ov),.22), 0 0 0 16px transparent; } }
+/* an icon disc replaces the dot */
+.tl > li:has(> i)::after{ display:none; }
+.tl > li > i{ grid-area:m; position:relative; display:grid; place-items:center; width:var(--tl-m); height:var(--tl-m); border-radius:50%; background:var(--g-fill-strong); box-shadow:var(--g-rim); color:var(--g-text-2); font-size:var(--g-icon-sm); }
+.tl > li[data-state="done"] > i{ background:var(--g-accent); color:var(--g-accent-fg); box-shadow:inset 0 .5px 0 rgba(255,255,255,.5); }
+.tl > li[data-state="done"]::before{ background:var(--g-accent); }
+.tl > li[aria-current] > i{ color:var(--g-text); }
+.tl > li[aria-current] > i::after{ content:""; position:absolute; inset:0; border-radius:50%; animation:tl-pulse-i 2.4s ease-out infinite; }
+@keyframes tl-pulse-i{ 0%{ box-shadow:0 0 0 0 rgba(var(--g-ov),.45); } 70%,100%{ box-shadow:0 0 0 12px transparent; } }
+.tl > li[data-state="todo"]{ opacity:.55; } .tl > li[data-state="todo"] > i{ background:transparent; box-shadow:inset 0 0 0 1px rgba(var(--g-ov),.35); }
+@media (prefers-reduced-motion:reduce){ .tl > li[aria-current]::after, .tl > li[aria-current] > i::after{ animation:none; } }
+/* narrow: the time moves above the title, the rule keeps the left edge */
 .tl-wrap{ container-type:inline-size; padding:8px 4px; }
-.tl-cap{ display:flex; align-items:baseline; gap:10px; margin:0; font-size:13px; color:var(--g-text-3); }
-.tl-cap b{ font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--g-text); }
-/* A · Hairline: a 1px rule, small dots, nothing else */
-.tl-a > li{ padding:0 0 22px 28px; } .tl-a > li:last-child{ padding-bottom:0; }
-.tl-a > li::before{ content:""; position:absolute; left:4px; top:16px; bottom:-6px; width:1px; background:rgba(var(--g-ov),.26); }
-.tl-a > li:last-child::before{ display:none; }
-.tl-a > li::after{ content:""; position:absolute; left:0; top:6px; width:9px; height:9px; border-radius:50%; background:rgba(var(--g-ov),.55); box-shadow:0 0 0 4px rgba(var(--g-ov),.10); }
-.tl-a > li[aria-current]::after{ background:var(--g-ink); box-shadow:0 0 0 4px rgba(var(--g-ov),.22); }
-/* B · Cards: every event is a soft glass tile on the rule */
-.tl-b{ gap:12px; }
-.tl-b > li{ padding-left:34px; }
-.tl-b > li::before{ content:""; position:absolute; left:5px; top:0; bottom:-12px; width:1px; background:rgba(var(--g-ov),.22); }
-.tl-b > li:first-child::before{ top:22px; } .tl-b > li:last-child::before{ bottom:calc(100% - 22px); }
-.tl-b > li::after{ content:""; position:absolute; left:0; top:17px; width:11px; height:11px; border-radius:50%; background:var(--g-ink); box-shadow:0 0 0 4px rgba(var(--g-ov),.16); }
-.tl-b > li > div{ display:flex; flex-direction:column; gap:3px; padding:14px 18px; border-radius:22px; background:var(--g-fill); box-shadow:var(--g-rim); }
-.tl-b > li > div > header{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
-.tl-b > li[aria-current] > div{ background:var(--g-fill-strong); }
-/* C · Alternating: a centre rule, cards swing left and right, one column when narrow */
-.tl-c{ position:relative; gap:18px; }
-.tl-c::before{ content:""; position:absolute; left:50%; top:6px; bottom:6px; width:1px; background:rgba(var(--g-ov),.22); }
-.tl-c > li{ width:50%; padding:0 28px 0 0; text-align:right; }
-.tl-c > li:nth-child(even){ margin-left:auto; padding:0 0 0 28px; text-align:left; }
-.tl-c > li::after{ content:""; position:absolute; top:7px; right:-5px; width:9px; height:9px; border-radius:50%; background:var(--g-ink); box-shadow:0 0 0 4px rgba(var(--g-ov),.16); }
-.tl-c > li:nth-child(even)::after{ right:auto; left:-4px; }
-.tl-c > li > div{ display:inline-flex; flex-direction:column; gap:3px; max-width:100%; padding:12px 16px; border-radius:20px; background:var(--g-fill); box-shadow:var(--g-rim); }
-@container (max-width:460px){
-  .tl-c::before{ left:4px; } .tl-c > li, .tl-c > li:nth-child(even){ width:auto; margin:0; padding:0 0 0 28px; text-align:left; }
-  .tl-c > li::after, .tl-c > li:nth-child(even)::after{ left:0; right:auto; }
+@container (max-width:380px){
+  .tl{ --tl-cx:calc(var(--tl-m) / 2); }
+  .tl > li{ grid-template-columns:var(--tl-m) minmax(0,1fr); grid-template-areas:"m t" "m c"; }
+  .tl > li > time{ text-align:left; line-height:16px; font-size:12px; margin-bottom:2px; }
+  .tl-gap{ left:calc(var(--tl-m) + var(--tl-g)); width:auto; text-align:left; }
+  .tl > li::after{ top:3px; } .tl > li:has(> i) > :is(time,div){ padding-top:0; } .tl > li:has(> i) > time{ padding-top:4px; }
 }
-/* D · Progress: icons in glass discs, the rule fills with the accent up to the current step */
-.tl-d > li{ display:grid; grid-template-columns:30px minmax(0,1fr); gap:0 14px; padding-bottom:24px; }
-.tl-d > li:last-child{ padding-bottom:0; }
-.tl-d > li > i{ position:relative; z-index:1; display:grid; place-items:center; width:30px; height:30px; border-radius:50%; background:var(--g-fill-strong); box-shadow:var(--g-rim); color:var(--g-text-2); font-size:var(--g-icon-sm); }
-.tl-d > li::before{ content:""; position:absolute; left:14.5px; top:30px; bottom:0; width:1px; background:rgba(var(--g-ov),.22); }
-.tl-d > li:last-child::before{ display:none; }
-.tl-d > li[data-state="done"]::before{ background:var(--g-accent); }
-.tl-d > li[data-state="done"] > i{ background:var(--g-accent); color:var(--g-accent-fg); box-shadow:inset 0 .5px 0 rgba(255,255,255,.5); }
-.tl-d > li[aria-current] > i{ background:var(--g-fill); color:var(--g-text); box-shadow:inset 0 0 0 1.5px var(--g-accent), 0 0 0 5px rgba(var(--g-ov),.10); }
-.tl-d > li[aria-current] > i::after{ content:""; position:absolute; inset:-1.5px; border-radius:50%; box-shadow:0 0 0 0 var(--g-accent); animation:tl-pulse 2.4s ease-out infinite; }
-@keyframes tl-pulse{ 0%{ box-shadow:0 0 0 0 rgba(var(--g-ov),.45); } 70%,100%{ box-shadow:0 0 0 12px transparent; } }
-@media (prefers-reduced-motion:reduce){ .tl-d > li[aria-current] > i::after{ animation:none; } }
-.tl-d > li[data-state="todo"]{ opacity:.55; } .tl-d > li[data-state="todo"] > i{ background:transparent; box-shadow:inset 0 0 0 1px rgba(var(--g-ov),.35); }
-.tl-d > li > div{ padding-top:4px; }
-/* E · Feed: one line per event, grouped by day, time at the end */
-.tl-e{ gap:0; }
-.tl-e > li.tl-day{ padding:14px 0 8px; font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--g-text-3); } .tl-e > li.tl-day:first-child{ padding-top:0; }
-.tl-e > li:not(.tl-day){ display:grid; grid-template-columns:28px minmax(0,1fr) auto; gap:0 12px; align-items:center; padding:7px 0; }
-.tl-e > li:not(.tl-day)::before{ content:""; position:absolute; left:13.5px; top:-50%; bottom:50%; width:1px; background:rgba(var(--g-ov),.18); }
-.tl-e > li.tl-day + li::before, .tl-e > li:nth-child(2)::before{ display:none; }
-.tl-e > li > i{ position:relative; z-index:1; display:grid; place-items:center; width:28px; height:28px; border-radius:50%; background:var(--g-fill-strong); box-shadow:var(--g-rim); font:600 11px/1 var(--g-font); font-style:normal; color:var(--g-text); }
-.tl-e > li > span{ font-size:14px; line-height:1.4; color:var(--g-text-2); min-width:0; overflow-wrap:anywhere; } .tl-e > li > span b{ font-weight:600; color:var(--g-text); }
-.tl-e > li > time{ font-size:12px; color:var(--g-text-4); }
-/* F · Date rail: the date is the left column, the rule sits right of it */
-.tl-f > li{ display:grid; grid-template-columns:52px minmax(0,1fr); gap:0 30px; padding-bottom:22px; }
-.tl-f > li:last-child{ padding-bottom:0; }
-.tl-f > li::before{ content:""; position:absolute; left:calc(52px + 14.5px); top:10px; bottom:-10px; width:1px; background:rgba(var(--g-ov),.22); }
-.tl-f > li:last-child::before{ display:none; }
-.tl-f > li::after{ content:""; position:absolute; left:calc(52px + 10px); top:8px; width:9px; height:9px; border-radius:50%; background:rgba(var(--g-ov),.55); }
-.tl-f > li[aria-current]::after{ background:var(--g-accent); box-shadow:0 0 0 4px color-mix(in srgb, var(--g-accent) 30%, transparent); }
-.tl-f > li > time{ text-align:right; display:flex; flex-direction:column; align-items:flex-end; line-height:1; padding-top:2px; }
-.tl-f > li > time b{ font-size:24px; font-weight:600; letter-spacing:-.02em; color:var(--g-text); } .tl-f > li > time span{ margin-top:4px; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--g-text-3); }
-.tl-f > li > div{ display:flex; flex-direction:column; gap:6px; align-items:flex-start; padding-top:2px; }
 </style>
 
 <div class="scene" id="scene" data-scene="waves" data-g-gradient aria-hidden="true"><div class="g-liquid" data-g-liquid data-for="liquid" data-colors="#20485e,#70bbe7,#bcd2fd,#76cad6"><i></i><i></i><i></i><i></i></div></div>
+<script>/* Waves: the last frame of the previous page is the ground until the shader draws its first one (glass-waves.js keeps it in localStorage) */
+try{var w=JSON.parse(localStorage.getItem('g-waves'));if(w&&/^data:image\/jpeg;base64,[\w+\/=]+$/.test(w.u)){var e=document.getElementById('scene');e.style.setProperty('--g-waves-poster','url('+w.u+')');if(w.w>0&&w.h>0)e.style.setProperty('--g-waves-poster-size',Math.round(w.w)+'px '+Math.round(w.h)+'px')}}catch(e){}</script>
 <script>/* the gradient goes on where the last page (or this one before a reload) left it: README, "Gradient background across pages" */
 try{document.getElementById('scene').style.cssText+=(function(g){return g&&/^[\w\s:;.%#-]*$/.test(g.css)?g.css:''})(JSON.parse(sessionStorage.getItem('g-gradient')))}catch(e){}</script>
 
@@ -836,75 +811,17 @@ Glass.morph('#result', html);              // html string or an element; returns
   </section>
 
   <section class="sec g-glass g-anim-scroll" id="timeline" data-title="Timeline">
-    <div class="sec__head"><h2>Timeline</h2><p class="g-desc">Prototypes of a vertical timeline: an <span class="inline-code">&lt;ol&gt;</span> of events with a rule and markers drawn in CSS. Six variants to choose from, from the quietest to the busiest. <span class="inline-code">aria-current="step"</span> marks the present event.</p></div>
-    <div class="tl-cap"><b>A · Hairline</b>the lightest: a 1px rule and small dots</div>
+    <div class="sec__head"><h2>Timeline</h2><p class="g-desc">A vertical list of events: the time on the left, a hairline rule, a dot for each event. Any event can take an icon instead of a dot: put <span class="inline-code">&lt;i data-icon&gt;</span> in it (the dots and icons share one column, so they mix freely). <span class="inline-code">aria-current="step"</span> marks the present event and pulses; <span class="inline-code">data-state="done"</span> fills an icon with the accent and colours the rule below it, <span class="inline-code">"todo"</span> dims it. Give each event <span class="inline-code">data-at</span> (an ISO time) and the distance between events is proportional to the time between them; the scale is the smallest one at which the closest pair still fits. A gap longer than <span class="inline-code">--tl-max</span> (120px) collapses: the rule turns dashed and a label says how long it is. Put <span class="inline-code">data-even</span> on the list for equal spacing. Below 380px the time moves above the title. Drag the corner to see it.</p></div>
+    <label><input type="checkbox" role="switch" id="tlScaled" checked> Spacing proportional to time (off: <span class="inline-code">data-even</span>)</label>
     <div class="pair">
-      <div class="tl-wrap" data-code>
-        <ol class="tl tl-a">
-          <li><time>9:41</time><h4>Order placed</h4><p>Payment confirmed, the warehouse is notified.</p></li>
-          <li><time>11:20</time><h4>Packed</h4><p>Two items, one box.</p></li>
-          <li aria-current="step"><time>Today, 14:05</time><h4>Out for delivery</h4><p>The courier is 12 minutes away.</p></li>
-          <li><time>Expected 15:00</time><h4>Delivered</h4></li>
-        </ol>
-      </div>
-      <div class="code" data-for-prev><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
-    </div>
-    <div class="tl-cap"><b>B · Cards</b>each event is a soft glass tile</div>
-    <div class="pair">
-      <div class="tl-wrap" data-code>
-        <ol class="tl tl-b">
-          <li><div><header><h4>Design review</h4><time>Mon</time></header><p>Three comments left on the new empty states.</p></div></li>
-          <li aria-current="step"><div><header><h4>Beta rollout</h4><time>Wed</time></header><p>10% of users, crash-free so far.</p></div></li>
-          <li><div><header><h4>Public release</h4><time>Fri</time></header><p>Release notes are drafted.</p></div></li>
-        </ol>
-      </div>
-      <div class="code" data-for-prev><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
-    </div>
-    <div class="tl-cap"><b>C · Alternating</b>centre rule, cards left and right, one column when narrow</div>
-    <div class="pair" style="grid-template-columns:minmax(0,1fr)">
-      <div class="tl-wrap" data-code>
-        <ol class="tl tl-c">
-          <li><div><time>2024</time><h4>Prototype</h4><p>First glass panel on a gradient.</p></div></li>
-          <li><div><time>2025</time><h4>Open source</h4><p>One stylesheet, one script.</p></div></li>
-          <li><div><time>2026</time><h4>Light theme</h4><p>Every token has a day twin.</p></div></li>
-          <li><div><time>Next</time><h4>Timeline</h4><p>You are choosing it now.</p></div></li>
-        </ol>
-      </div>
-      <div class="code" data-for-prev><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
-    </div>
-    <div class="tl-cap"><b>D · Progress</b>icons in discs, the rule fills up to the current step</div>
-    <div class="pair">
-      <div class="tl-wrap" data-code>
-        <ol class="tl tl-d">
-          <li data-state="done"><i data-icon="check"></i><div><h4>Account created</h4><time>Mon, 10:02</time></div></li>
-          <li data-state="done"><i data-icon="check"></i><div><h4>Identity verified</h4><time>Mon, 10:14</time></div></li>
-          <li aria-current="step"><i data-icon="clock"></i><div><h4>Under review</h4><p>Usually takes under a day.</p></div></li>
-          <li data-state="todo"><i data-icon="flag"></i><div><h4>Approved</h4></div></li>
-        </ol>
-      </div>
-      <div class="code" data-for-prev><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
-    </div>
-    <div class="tl-cap"><b>E · Feed</b>one line per event, grouped by day</div>
-    <div class="pair">
-      <div class="tl-wrap" data-code>
-        <ol class="tl tl-e">
-          <li class="tl-day">Today</li>
-          <li><i>AK</i><span><b>Anna</b> merged <b>feat/search</b></span><time>14:02</time></li>
-          <li><i>MB</i><span><b>Mark</b> commented on the design</span><time>11:40</time></li>
-          <li class="tl-day">Yesterday</li>
-          <li><i>JD</i><span><b>Jo</b> closed 3 issues</span><time>18:15</time></li>
-          <li><i>AK</i><span><b>Anna</b> opened <b>feat/search</b></span><time>09:30</time></li>
-        </ol>
-      </div>
-      <div class="code" data-for-prev><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
-    </div>
-    <div class="tl-cap"><b>F · Date rail</b>the date leads, the rule follows</div>
-    <div class="pair">
-      <div class="tl-wrap" data-code>
-        <ol class="tl tl-f">
-          <li><time><b>03</b><span>Nov</span></time><div><h4>Kick-off</h4><p>Scope agreed with the team.</p></div></li>
-          <li aria-current="step"><time><b>07</b><span>Nov</span></time><div><data data-variant="accent" data-dot>Today</data><h4>Prototype review</h4><p>Pick one of the six timelines.</p></div></li>
-          <li><time><b>14</b><span>Nov</span></time><div><h4>Ship to the kit</h4><p>CSS, docs and the light theme.</p></div></li>
+      <div class="tl-wrap" data-code style="resize:horizontal;overflow:auto;min-width:240px">
+        <ol class="tl">
+          <li data-state="done" data-at="2026-11-07T09:41"><time>9:41</time><i data-icon="check"></i><div><h4>Order placed</h4><p>Payment confirmed, the warehouse is notified.</p></div></li>
+          <li data-at="2026-11-07T11:20"><time>11:20</time><div><h4>Packed</h4><p>Two items, one box.</p></div></li>
+          <li data-at="2026-11-07T12:30"><time>12:30</time><div><h4>Handed to the courier</h4></div></li>
+          <li aria-current="step" data-at="2026-11-07T14:05"><time>14:05</time><i data-icon="map-pin"></i><div><h4>Out for delivery</h4><p>The courier is 12 minutes away.</p></div></li>
+          <li data-state="todo" data-at="2026-11-07T15:00"><time>15:00</time><i data-icon="flag"></i><div><h4>Delivered</h4></div></li>
+          <li data-at="2026-11-08T09:00"><time>Nov 8, 9:00</time><div><h4>Rate your order</h4></div></li>
         </ol>
       </div>
       <div class="code" data-for-prev><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
@@ -1088,4 +1005,30 @@ document.addEventListener('DOMContentLoaded', function(){
   (function(){ var up=document.getElementById('uploader'), inp=up && up.querySelector('input'), sim={}; if(!inp) return;
     inp.addEventListener('change', function(){ Array.prototype.forEach.call(inp.files, function(f){ var k=f.name+'|'+f.size+'|'+f.lastModified; if(sim[k] || f.size>10*1048576) return; sim[k]=1; var p=0;
       (function tick(){ p=Math.min(100, p+Math.random()*14+5); Glass.fileProgress(up, f, Math.round(p)); if(p<100) setTimeout(tick, 260); })(); }); }); })();
+</script>
+<script>
+(function(){ /* Timeline: when every li has data-at, the gap after an event is proportional to the time to the next one; gaps over --tl-max collapse to it and get a duration label. data-even turns this off. */
+  function dur(m){ var d=Math.floor(m/1440), h=Math.floor(m%1440/60), r=Math.round(m%60), o=[]; if(d) o.push(d+' d'); if(h) o.push(h+' h'); if(r&&!d) o.push(r+' min'); return o.join(' ')||'0 min'; }
+  function fit(ol){
+    var li=Array.prototype.slice.call(ol.children), n=li.length, t=li.map(function(x){ return Date.parse(x.getAttribute('data-at')); }), k=0, i;
+    li.forEach(function(x){ x.style.minHeight=''; x.removeAttribute('data-gap'); var g=x.querySelector('.tl-gap'); if(g) g.remove(); });
+    var on=!ol.hasAttribute('data-even'); ol.toggleAttribute('data-scaled',on);
+    if(!on) return;
+    var max=parseFloat(getComputedStyle(ol).getPropertyValue('--tl-max'))||120, nat=li.map(function(x){ return x.offsetHeight; });
+    for(i=0;i<n-1;i++){ var d=t[i+1]-t[i]; if(d>0&&nat[i]+14<=max) k=Math.max(k,(nat[i]+14)/d); }
+    for(i=0;i<n-1;i++){
+      var g=t[i+1]-t[i]; if(!(g>0)) continue;
+      var h=g*k, cap=Math.max(max,nat[i]+14);
+      if(h>cap){ h=cap; li[i].setAttribute('data-gap',''); var s=document.createElement('span'); s.className='tl-gap'; s.textContent=dur(g/60000); s.style.top=((nat[i]+h)/2)+'px'; li[i].appendChild(s); }
+      li[i].style.minHeight=h+'px';
+    }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.tl'), function(ol){
+    if(!ol.firstElementChild.hasAttribute('data-at')) return;
+    ol.__fit=function(){ fit(ol); }; fit(ol);
+    if(window.ResizeObserver) new ResizeObserver(function(){ fit(ol); }).observe(ol.parentNode);
+    if(document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ fit(ol); });
+  });
+  var sw=document.getElementById('tlScaled'); if(sw) sw.addEventListener('change',function(){ var ol=document.querySelector('#timeline .tl'); ol.toggleAttribute('data-even',!sw.checked); ol.__fit(); });
+})();
 </script>

@@ -673,19 +673,19 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 
 /* ---------- Chart: a line chart drawn as SVG. Parts: .gl grid line, .ln the line, .pt a point (.plan hollow, .grab held), .hit a wide invisible target, .cr crosshair, .hv hover dot, text (.lb the label).
    .g-chart-anchor is a 1px marker the kit tooltip (a direct child .g-tooltip) hangs on; .g-chart.on shows the crosshair and the hover dot. ---------- */
-.g-chart { position: relative; }
+.g-chart { position: relative; --g-chart: var(--g-text); }
 .g-chart h5 { margin: 0; padding-bottom: 2px; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--g-text-2); }
 .g-chart svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: pan-y; }
 .g-chart .gl { stroke: rgba(var(--g-ov), .14); stroke-width: 1; }
 .g-chart text { fill: var(--g-text-3); font-size: 11px; font-family: inherit; font-variant-numeric: tabular-nums; }
 .g-chart text.lb { fill: var(--g-text-2); font-size: 12px; font-weight: 600; }
-.g-chart .ln { fill: none; stroke: var(--g-accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
-.g-chart .pt { fill: var(--g-accent); stroke: none; }
+.g-chart .ln { fill: none; stroke: var(--g-chart); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.g-chart .pt { fill: var(--g-chart); stroke: none; }
 .g-chart .hit { fill: transparent; stroke: none; cursor: ns-resize; touch-action: none; }
 .g-chart .pt.grab { stroke: var(--g-text); stroke-width: 2; }
-.g-chart .pt.plan { fill: none; stroke: var(--g-accent); stroke-width: 2; }
+.g-chart .pt.plan { fill: none; stroke: var(--g-chart); stroke-width: 2; }
 .g-chart .cr { stroke: rgba(var(--g-ov), .35); stroke-width: 1; opacity: 0; }
-.g-chart .hv { fill: var(--g-accent); opacity: 0; }
+.g-chart .hv { fill: var(--g-chart); opacity: 0; }
 .g-chart.on .cr, .g-chart.on .hv { opacity: 1; }
 .g-chart-anchor { position: absolute; width: 1px; height: 1px; pointer-events: none; anchor-name: --g-chart-pt; }
 .g-chart > .g-tooltip { position-anchor: --g-chart-pt; }
