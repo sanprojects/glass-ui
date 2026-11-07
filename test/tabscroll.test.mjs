@@ -47,3 +47,19 @@ test('timeline on a narrow box: time left of the rule, text right of it', async 
   });
   assert.ok(r.tr <= r.ml && r.cl >= r.mr, JSON.stringify(r));
 });
+
+test('tabs replaced and a panel added later: Glass.init maps them, a tab click scrolls the track', async () => {
+  const r = await page.evaluate(async () => {
+    const w = ms => new Promise(r => setTimeout(r, ms)), box = document.createElement('div'); box.className = 'g-root'; box.style.cssText = 'width:300px;position:fixed;top:300px;left:0;z-index:9';
+    const mk = n => Array.from({ length: n }, (_, i) => `<span role="tab" tabindex="0">T${i}</span>`).join('');
+    box.innerHTML = `<div role="tablist" id="rt">${mk(2)}</div>` + [0, 1].map(i => `<div role="tabpanel">P${i}</div>`).join('');
+    document.body.append(box); Glass.init(box); await w(300);
+    const l = box.querySelector('#rt'), track = box.querySelector('.g-tabtrack');
+    l.innerHTML = mk(3); const p = document.createElement('div'); p.setAttribute('role', 'tabpanel'); p.textContent = 'P2'; track.appendChild(p);   // the site rebuilds its strip and adds a panel
+    Glass.init(box); await w(100);
+    const out = [];
+    for (const i of [2, 0, 1]) { l.children[i].click(); await w(700); out.push([i, Math.round(track.scrollLeft / track.clientWidth)]); }
+    return out;
+  });
+  assert.deepEqual(r, [[2, 2], [0, 0], [1, 1]], JSON.stringify(r));
+});

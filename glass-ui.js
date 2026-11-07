@@ -1251,6 +1251,7 @@
   }
   function init(root) {   // synchronous: Glass.init(root) for markup added later
     MOUNTS.forEach(m => { mount(m[0], m[1], root); });
+    $$('[role="tablist"][data-g-ready]', root).forEach(l => { if (tabsOf(l).some(t => !mem(t, 'panel') || !mem(t, 'panel').isConnected)) initTabs(l); });   // tabs added or replaced later: initTabs is idempotent, it maps the new ones to their panels
     $$('table[data-g-selectable]', root).forEach(initTable);   // rows added later
     tail(root);
   }
