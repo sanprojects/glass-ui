@@ -1073,7 +1073,7 @@
   window.addEventListener('pointermove', e => {
     const s = scrub; if (!s || e.pointerId !== s.id) return;
     let dy = s.y - e.clientY;
-    if (!s.on) { if (Math.abs(dy) < 7) return; s.on = true; s.n.setAttribute('data-scrubbing', ''); if (document.activeElement === s.n) s.n.blur(); getSelection().removeAllRanges(); try { s.n.setPointerCapture(e.pointerId); } catch {} }
+    if (!s.on) { if (Math.abs(dy) < 7) return; s.on = true; s.n.setAttribute('data-g-scrubbing', ''); if (document.activeElement === s.n) s.n.blur(); getSelection().removeAllRanges(); try { s.n.setPointerCapture(e.pointerId); } catch {} }
     e.preventDefault();
     const k = Math.trunc(dy / SCRUB_PX); if (!k) return;
     s.y -= k * SCRUB_PX;   /* the notches are spent: the next ones count from here, with the step of the new value */
@@ -1087,7 +1087,7 @@
   function scrubEnd(e) {
     const s = scrub; if (!s || e.pointerId !== s.id) return; scrub = null;
     if (!s.on) return;
-    s.n.removeAttribute('data-scrubbing'); s.n.style.removeProperty('--g-pull');
+    s.n.removeAttribute('data-g-scrubbing'); s.n.style.removeProperty('--g-pull');
     scrubbedAt = Date.now();
     s.n.querySelectorAll('.g-reel').forEach(b => b._finish && b._finish());   /* a drum still turning is the plain number now: that is what is saved */
     if (s.n.matches('input')) { s.n.dispatchEvent(new Event('change', { bubbles: true })); const w = s.n.closest('[data-g-number]'); if (w) numSync(w); } else if (s.n.matches('[data-g-edit]')) editCommit(s.n); else fire(s.n, 'change', { value: scrubRead(s.n), was: s.t });
