@@ -353,8 +353,8 @@
     list.addEventListener('scroll', f, { passive: true });
     if (window.ResizeObserver) new ResizeObserver(f).observe(list);
     if (window.MutationObserver) new MutationObserver(f).observe(list, { childList: true, subtree: true, characterData: true });
-    list.addEventListener('wheel', e => {   // a mouse wheel turns the tabs sideways (a track of panels has a handler of its own)
-      if (mem(list, 'track') || e.ctrlKey || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    list.addEventListener('wheel', e => {   // a mouse wheel over the tabs turns the tabs sideways, only the tabs: the pages turn by a swipe or a scroll on the page itself
+      if (e.ctrlKey || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
       const max = list.scrollWidth - list.clientWidth; if (max <= 1) return;
       const x = list.scrollLeft + e.deltaY; if ((e.deltaY < 0 && list.scrollLeft <= 0) || (e.deltaY > 0 && list.scrollLeft >= max)) return;
       e.preventDefault(); list.scrollLeft = Math.min(Math.max(x, 0), max);
@@ -404,19 +404,6 @@
     track.addEventListener('scroll', () => { follow(); clearTimeout(t0); t0 = setTimeout(settle, 140); }, { passive: true });   // scrollend where there is one, else the pause of the scroll
     track.addEventListener('scrollend', () => { clearTimeout(t0); mem(track, 'auto', false); settle(true); });
     if (window.ResizeObserver) new ResizeObserver(() => alignTrack(list)).observe(track);
-    /* the tabs are a handle of the same scroll: the wheel (either axis) and a horizontal swipe on the tablist move the box, the snap does the rest */
-    list.style.touchAction = 'pan-y';
-    list.addEventListener('wheel', e => {
-      const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY; if (!d || e.ctrlKey) return;
-      const tabs = tabsOf(list), i = tabs.findIndex(x => x.getAttribute('aria-selected') === 'true'), n = tabs[i + (d > 0 ? 1 : -1)]; if (!n) return;   // at the end the page keeps the wheel
-      e.preventDefault(); if (Date.now() < wl) return;
-      wl = Date.now() + 350; selectTab(list, n, false); writeHash(n);   // one tab per turn of the wheel
-    }, { passive: false });
-    let wl = 0;
-    let sx = null, s0 = 0;
-    list.addEventListener('touchstart', e => { sx = e.touches.length === 1 ? e.touches[0].clientX : null; if (sx !== null) { track.style.scrollSnapType = 'none'; s0 = track.scrollLeft; } }, { passive: true });
-    list.addEventListener('touchmove', e => { if (sx === null) return; const x = e.touches[0].clientX; track.scrollBy({ left: sx - x, behavior: 'instant' }); sx = x; }, { passive: true });
-    list.addEventListener('touchend', () => { if (sx === null) return; sx = null; const w = track.clientWidth, d = track.scrollLeft - s0; if (w) track.scrollTo({ left: Math.min(Math.max(Math.round(s0 / w) + (d > 40 ? 1 : d < -40 ? -1 : 0), 0), tabsOf(list).length - 1) * w, behavior: 'smooth' }); setTimeout(() => track.style.removeProperty('scroll-snap-type'), 600); }, { passive: true });   // the snap is back when the turn is done; a short swipe is enough to turn the page
     mem(list, 'track', track); return track;
   }
   function alignTrack(list) {   // the box got another width (a resize): it stays on the chosen panel
@@ -445,7 +432,7 @@
         else mem(p, 'offT', setTimeout(() => { if (p.inert) { const cs = getComputedStyle(p); p.style.setProperty('contain-intrinsic-block-size', (p.getBoundingClientRect().height - ['paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth'].reduce((a, k) => a + parseFloat(cs[k] || 0), 0)) + 'px'); p.setAttribute('data-g-off', ''); } }, 500));   // its height stays: the box is as high as the highest panel
       } else p.hidden = !on;
     });
-    if (!fromScroll) revealTab(list, t, !silent);
+    revealTab(list, t, !silent);   // the chosen tab is brought into the strip, by a click or by a swipe of the page alike; the strip itself only scrolls, smoothly
     if (track && !fromScroll) goTo(list, t, !silent);
     if (track && mem(t, 'panel')) ageAll.forEach(n => { if (mem(t, 'panel').contains(n)) ageDraw(n, false); });   // the times of the panel coming in are brought up to date at once, not when the scroll reaches them
     if (focus) t.focus();
@@ -1079,24 +1066,30 @@
   let scrub = null, scrubbedAt = 0;
   document.addEventListener('click', e => { if (Date.now() - scrubbedAt < 400 && e.target.closest(SCRUB_SEL)) { scrubbedAt = 0; e.stopImmediatePropagation(); e.preventDefault(); } }, true);   /* the click after a drag is not a tap */
   on('pointerdown', SCRUB_SEL, (e, n) => {
-    if ((e.pointerType === 'mouse' && e.button !== 0) || n.disabled || n.readOnly || document.activeElement === n) return;
+    if ((e.pointerType === 'mouse' && e.button !== 0) || n.disabled || n.readOnly) return;   /* a focused number is scrubbed too: tap it, then pull it */
     const t = scrubRead(n); if (!SCRUB_NUM.test(t)) return;
     scrub = { n, id: e.pointerId, y: e.clientY, t, v: parseFloat(t.replace(',', '.')), dec: (t.split(/[.,]/)[1] || '').length, comma: t.includes(','), on: false };
   });
   window.addEventListener('pointermove', e => {
     const s = scrub; if (!s || e.pointerId !== s.id) return;
     let dy = s.y - e.clientY;
-    if (!s.on) { if (Math.abs(dy) < 7) return; s.on = true; s.n.setAttribute('data-scrubbing', ''); getSelection().removeAllRanges(); try { s.n.setPointerCapture(e.pointerId); } catch {} }
+    if (!s.on) { if (Math.abs(dy) < 7) return; s.on = true; s.n.setAttribute('data-scrubbing', ''); if (document.activeElement === s.n) s.n.blur(); getSelection().removeAllRanges(); try { s.n.setPointerCapture(e.pointerId); } catch {} }
     e.preventDefault();
     const k = Math.trunc(dy / SCRUB_PX); if (!k) return;
     s.y -= k * SCRUB_PX;   /* the notches are spent: the next ones count from here, with the step of the new value */
     s.v = scrubSet(s.n, s, k);
   }, { passive: false });
+  window.addEventListener('pointermove', e => {   /* the number is held by the finger: it follows it, and settles back when the notch is turned or the finger lets go */
+    const s = scrub; if (!s || !s.on || e.pointerId !== s.id) return;
+    s.n.style.setProperty('--g-pull', Math.max(-SCRUB_PX, Math.min(SCRUB_PX, e.clientY - s.y)) + 'px');
+  }, { passive: true });
+  document.addEventListener('dragstart', e => { if (scrub && scrub.on) e.preventDefault(); }, true);
   function scrubEnd(e) {
     const s = scrub; if (!s || e.pointerId !== s.id) return; scrub = null;
     if (!s.on) return;
-    s.n.removeAttribute('data-scrubbing');
+    s.n.removeAttribute('data-scrubbing'); s.n.style.removeProperty('--g-pull');
     scrubbedAt = Date.now();
+    s.n.querySelectorAll('.g-reel').forEach(b => b._finish && b._finish());   /* a drum still turning is the plain number now: that is what is saved */
     if (s.n.matches('input')) { s.n.dispatchEvent(new Event('change', { bubbles: true })); const w = s.n.closest('[data-g-number]'); if (w) numSync(w); } else if (s.n.matches('[data-g-edit]')) editCommit(s.n); else fire(s.n, 'change', { value: scrubRead(s.n), was: s.t });
   }
   window.addEventListener('pointerup', scrubEnd); window.addEventListener('pointercancel', scrubEnd);
@@ -1140,6 +1133,7 @@
   }
   const editEnd = n => { if (n.getAttribute('data-g-edit') === 'dblclick') { n.removeAttribute('contenteditable'); n.removeAttribute('role'); n.removeAttribute('data-g-editing'); } };
   function editCommit(n) {
+    n.querySelectorAll('.g-reel').forEach(b => b._finish && b._finish());   /* a number whose drum is still turning is read as the plain number */
     let v = editText(n).trim(); const was = mem(n, 'v');
     if (!v && n.hasAttribute('data-required')) v = was;
     if (n.textContent !== v) n.textContent = v;
