@@ -20,6 +20,7 @@ html,body{ overflow-x:clip; max-width:100%; }
 body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-family:var(--g-font); font-size:var(--g-fs-body); line-height:1.5; }
 .scene{ position:fixed; inset:-80px; z-index:-1; will-change:transform; transform:translateZ(0); contain:strict; background:#20485e center/cover no-repeat; transition:opacity .3s; }
 .scene::after{ content:""; position:absolute; inset:0; background:linear-gradient(rgba(8,12,28,.18),rgba(8,12,28,.34)); }
+.scene[data-scene="waves"]::after{ background:linear-gradient(rgba(8,12,28,.5),rgba(8,12,28,.68)); }   /* the waves are livelier than the other backgrounds: a deeper veil keeps them the dark steel blue */
 /* fine noise over the gradient: 8-bit colour steps would show as bands, the grain dithers them. It blends soft-light: its grey is neutral there, so it adds no light of its own. No shade over it, and its blobs stand where the WebGL
    scene (glass-ui-liquid.js) has them at t = 0 (the --gx/--gy defaults): it is the first frame of that scene, which replaces it without a jump. */
 .scene[data-scene="gradient"]::after{ background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 0 0 0 0 .04'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0/200px; mix-blend-mode: soft-light; }
