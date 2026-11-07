@@ -94,10 +94,12 @@
 		return true;
 	}
 	/* the kit's shared timer (Glass.scene: one clock and one speed for every animated background; speed 0 = still) calls this with the seconds already times the speed */
+	/* the poster is only the picture of the colours it was drawn with: the ground it was saved over is recorded, and a poster of another ground is not shown */
+	function ground() { var c = getComputedStyle(cv.parentNode); return c.getPropertyValue('--sc0').trim() + c.getPropertyValue('--sc1').trim() + document.documentElement.getAttribute('data-theme'); }
 	function save(force) {
 		saveTimer = 0;
 		if ((!force && document.hidden) || !cv || !cv.parentNode || !draw()) return;
-		try { savedR = rate(); localStorage.setItem(KEY, JSON.stringify({ t: acc, at: Date.now(), r: savedR, u: cv.toDataURL('image/jpeg', .72), w: innerWidth, h: innerHeight })); saveAt = performance.now(); } catch (e) {}
+		try { savedR = rate(); localStorage.setItem(KEY, JSON.stringify({ t: acc, at: Date.now(), r: savedR, k: ground(), u: cv.toDataURL('image/jpeg', .72), w: innerWidth, h: innerHeight })); saveAt = performance.now(); } catch (e) {}
 	}
 	function later() { if (!saveTimer) saveTimer = setTimeout(save, 600); }
 	function step(dt) { cols = null; acc += dt * SLOW; var ok = draw(); if (ok && performance.now() - saveAt > 6000) later(); return ok; }

@@ -114,7 +114,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
 
 <div class="scene" id="scene" data-scene="waves" data-g-gradient aria-hidden="true"><div class="g-liquid" data-g-liquid data-for="liquid" data-colors="#001a27,#2b7797,#6d8dbc,#378489"><i></i><i></i><i></i><i></i></div></div>
 <script>/* Waves: the last frame of the previous page is the ground until the shader draws its first one (glass-waves.js keeps it in localStorage) */
-try{var w=JSON.parse(localStorage.getItem('g-waves'));if(w&&/^data:image\/jpeg;base64,[\w+\/=]+$/.test(w.u)){var e=document.getElementById('scene');e.style.setProperty('--g-waves-poster','url('+w.u+')');if(w.w>0&&w.h>0)e.style.setProperty('--g-waves-poster-size',Math.round(w.w)+'px '+Math.round(w.h)+'px')}}catch(e){}</script>
+try{var w=JSON.parse(localStorage.getItem('g-waves'));var e=document.getElementById('scene'),c=getComputedStyle(e);if(w&&w.k===c.getPropertyValue('--sc0').trim()+c.getPropertyValue('--sc1').trim()+document.documentElement.getAttribute('data-theme')&&/^data:image\/jpeg;base64,[\w+\/=]+$/.test(w.u)){e.style.setProperty('--g-waves-poster','url('+w.u+')');if(w.w>0&&w.h>0)e.style.setProperty('--g-waves-poster-size',Math.round(w.w)+'px '+Math.round(w.h)+'px')}}catch(e){}</script>
 <script>/* the gradient goes on where the last page (or this one before a reload) left it: README, "Gradient background across pages" */
 try{document.getElementById('scene').style.cssText+=(function(g){return g&&/^[\w\s:;.%#-]*$/.test(g.css)?g.css:''})(JSON.parse(sessionStorage.getItem('g-gradient')))}catch(e){}</script>
 
