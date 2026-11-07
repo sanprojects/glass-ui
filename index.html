@@ -378,6 +378,16 @@ try{document.getElementById('scene').style.cssText+=(function(g){return g&&/^[\w
             <div role="tabpanel">Add or remove cards.</div>
           </div>
         </div>
+        <div data-tabs-close-demo>
+          <div>
+            <div role="tablist" id="closeTabs">
+              <span role="tab" tabindex="0" aria-selected="true">Workout A<span role="button" tabindex="0" data-g-close data-icon="x" aria-label="Close tab"></span></span>
+              <span role="tab" tabindex="-1">Workout B<span role="button" tabindex="0" data-g-close data-icon="x" aria-label="Close tab"></span></span>
+            </div>
+            <div role="tabpanel">A tab with a close cross: the cross sits as far from the right edge as the label does from the left.</div>
+            <div role="tabpanel">Closing a tab removes it and its panel.</div>
+          </div>
+        </div>
       </div>
       <div class="code" data-for="9,10"><button class="copy" data-size="sm" data-variant="recessed">Copy</button><pre tabindex="0"></pre></div>
     </div>
@@ -911,6 +921,8 @@ window.Prism={manual:true};var _self="undefined"!=typeof window?window:"undefine
 })();
 </script>
 <script>
+/* the tab-close demo: the cross removes its tab (the panel stays in step with the tabs) */
+document.addEventListener("click",function(e){var x=e.target.closest("#closeTabs [data-g-close]");if(!x)return;e.stopPropagation();var t=x.parentNode,l=t.parentNode,i=[].indexOf.call(l.querySelectorAll("[role=tab]"),t),p=l.parentNode.querySelectorAll("[role=tabpanel]")[i];if(l.querySelectorAll("[role=tab]").length<2)return;t.remove();if(p)p.remove();var n=l.querySelector("[role=tab]");if(n)n.click()},true);
 (function(){
   /* Fill code panels from the live markup before glass-ui.js enhances it */
   var demos = Array.prototype.slice.call(document.querySelectorAll('[data-code]'));

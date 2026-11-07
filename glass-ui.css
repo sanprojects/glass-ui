@@ -738,6 +738,8 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) [role="tablist"] > :is(button, [role="tab"]):hover) { color: var(--g-text); } }
 :where(:is(.g-root,[role="listbox"]) [role="tablist"] > :is(button, [role="tab"])[data-g-hover]) { color: var(--g-text); }
 :where(:is(.g-root,[role="listbox"]) [role="tablist"] > :is(button, [role="tab"]), :is(.g-root,[role="listbox"]) nav a) { --g-icon-size: var(--g-icon-sm); }
+:where(:is(.g-root,[role="listbox"]) [role="tablist"] > [role="tab"] > [data-g-close]) { display: inline-grid; place-items: center; flex: none; width: 22px; height: 22px; margin-inline-end: calc(var(--g-inset) * -1 + var(--g-inset)); border-radius: 50%; cursor: pointer; opacity: .55; --g-icon-size: 14px; }   /* a close cross inside a tab: its box ends where the tab's padding does, so the cross is as far from the right edge as the label is from the left (test/tabclose.test.mjs) */
+:where(:is(.g-root,[role="listbox"]) [role="tablist"] > [role="tab"] > [data-g-close]:hover) { opacity: 1; background: rgba(var(--g-ov), .18); }
 :where(:is(.g-root,[role="listbox"]) [role="tablist"][data-block]) { display: flex; width: 100%; }   /* data-block: the tabs share the full width, each one the same share */
 :where(:is(.g-root,[role="listbox"]) [role="tablist"][data-block] > :is(button, [role="tab"])) { flex: 1 1 0; }
 :where(:is(.g-root,[role="listbox"]) [role="tablist"][data-variant="underline"]) { display: flex; width: 100%; background: none; box-shadow: none; padding: 0; gap: var(--g-gap); border-radius: 0; border-bottom: 1px solid var(--g-line); }
