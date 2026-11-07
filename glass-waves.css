@@ -1,5 +1,6 @@
 /* "Waves" (glass-waves.js): the canvas it draws on; until then (or without WebGL 2) a gradient of the same colours (--sc0..--sc4) */
-.scene[data-scene="waves"] { background: radial-gradient(60% 50% at 25% 20%, var(--sc1, #5ea0ff), transparent 65%), radial-gradient(55% 55% at 80% 85%, var(--sc3, #46d1c1), transparent 65%), var(--sc0, #1d2b52); }
+.scene[data-scene="waves"] { background: var(--sc0, #1d2b52); }   /* the ground colour until the canvas draws (its blobs would show as a pale haze that then turns dark) */
+.scene.waves-off[data-scene="waves"] { background: radial-gradient(60% 50% at 25% 20%, var(--sc1, #5ea0ff), transparent 65%), radial-gradient(55% 55% at 80% 85%, var(--sc3, #46d1c1), transparent 65%), var(--sc0, #1d2b52); }   /* no WebGL 2: the gradient stays */
 .scene .waves-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .scene.is-waves[data-scene="waves"] { background: var(--sc0, #1d2b52); }
 .bg-row .sw-btn[data-scene="waves"] { --sw: radial-gradient(70% 60% at 30% 25%, #6f93ff, transparent 70%), radial-gradient(60% 60% at 80% 85%, #3c5fb8, transparent 70%), #1a2550; }

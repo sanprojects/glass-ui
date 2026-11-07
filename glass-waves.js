@@ -80,7 +80,7 @@
 	/* the kit's shared timer (Glass.scene: one clock and one speed for every animated background; speed 0 = still) calls this with the seconds already times the speed */
 	function step(dt) { cols = null; acc += dt; return draw(); }
 	function start() {
-		if (!cv && !build()) return;
+		if (!cv && !build()) { scene.classList.add('waves-off'); return; }
 		if (!cv.parentNode) scene.appendChild(cv);
 		scene.classList.add('is-waves');
 		draw();
@@ -88,7 +88,7 @@
 	}
 	function stop() {
 		if (off) off(); off = null;
-		scene.classList.remove('is-waves');
+		scene.classList.remove('is-waves', 'waves-off');
 		if (cv && cv.parentNode) cv.parentNode.removeChild(cv);
 	}
 	function sync() { cols = null; scene.getAttribute('data-scene') === 'waves' ? start() : stop(); }   /* also on the style: a picked colour sets --sc0..4 there, and a still scene must repaint */
