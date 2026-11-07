@@ -11,7 +11,7 @@ No dependencies, no build step.
 
 </div>
 
-Translucent, blurred panels over a photo, gradient or colour field. Themed through CSS tokens, dark.
+Translucent, blurred panels over a photo, gradient or colour field. Themed through CSS tokens: dark by default, light optional (`Glass.setTheme('light' | 'dark' | 'auto')`, loads `glass-ui-light.css`; the Appearance panel has a Dark / Light switch, remembered in `g-theme`).
 
 ## Quick start
 

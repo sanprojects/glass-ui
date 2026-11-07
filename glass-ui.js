@@ -2273,13 +2273,19 @@
     });
   }
 
-  /* The kit is dark only (the light theme was removed: glass-ui-light.css and Glass.setTheme are in the git history). data-theme="dark" stays on <html>
-     for pages that style by it */
+  /* Theme: Glass.setTheme('dark' | 'light' | 'auto') sets data-theme on <html> (glass-ui-light.css styles the light one) and follows the system in 'auto'; dark is the default.
+     g:themechange {theme, mode} fires on document when it changes */
+  const themeMq = window.matchMedia ? matchMedia('(prefers-color-scheme: light)') : null;
+  let themeMode = 'dark';
+  function applyTheme() { const t = themeMode === 'auto' ? (themeMq && themeMq.matches ? 'light' : 'dark') : themeMode; if (document.documentElement.getAttribute('data-theme') !== t) document.documentElement.setAttribute('data-theme', t); fire(document, 'g:themechange', { theme: t, mode: themeMode }); }
+  function setTheme(m) { themeMode = m === 'light' || m === 'auto' ? m : 'dark'; applyTheme(); }
+  if (themeMq && themeMq.addEventListener) themeMq.addEventListener('change', () => { if (themeMode === 'auto') applyTheme(); });
   if (!document.documentElement.hasAttribute('data-theme')) document.documentElement.setAttribute('data-theme', 'dark');
+  else if (document.documentElement.getAttribute('data-theme') === 'light') themeMode = 'light';   /* a page that starts light (its first script) */
   function popBy(sel) { return document.querySelector(sel); }
   /* glass-morph.js (Glass.morph, Glass.watch) may be on the page before or after this file: both add to one Glass */
   global.Glass = Object.assign(global.Glass || {}, {
-    init, animate, busy, fileProgress, ruler, toast, setProgress, validate, nav: navAuto, syncClock,
+    init, animate, busy, fileProgress, ruler, setTheme, toast, setProgress, validate, nav: navAuto, syncClock,
     fit: box => { if (box._gFit) box._gFit(); else mount1(box, ['[data-g-fit]', initFit]); },   /* measure a [data-g-fit] box now (glass-morph.js, in the reads of an update) */
     quiet: (n, fn) => quiet(n, fn),   /* fn changes a table in a way that cannot change its columns: it needs no fit (glass-morph.js, a reel that is over) */
     fitTable: t => { if (t.matches(FIT_T)) { tableFit(t); fitted(t); } },   /* the columns of a table fit its box now (glass-morph.js, in the reads of an update) */
