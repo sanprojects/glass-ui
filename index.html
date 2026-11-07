@@ -1,7 +1,7 @@
 <meta charset="utf-8">
 <script>/* the saved theme, background and colour are applied before the first paint, so a light or auto visitor never sees the dark page first and the background never starts in other colours (glass-appearance.js keeps them from here).
    The background is set by an observer that fires as soon as #scene is parsed: a script in the middle of the page would hold the parser and the page would appear in pieces. */
-try{var D={"g":[["#00283c","#33a7e1","#9bbbf9","#34b8c9","#74b7f9"],["#e8f6ff","#79bfe8","#d1e0fd","#89cfda","#add5fe"]],"q":[["#00283c","#33a7e1","#9bbbf9","#34b8c9"],["#b2def9","#79bfe8","#d1e0fd","#89cfda"]],"lt":["#fff8f2","#ffffff"]};function colour(sc){var P;try{P=JSON.parse(localStorage.getItem('g-palette'))}catch(e){}if(!P||!P.g||!P.g[0])P=D;var i=document.documentElement.getAttribute('data-theme')==='light'?1:0;P.g[i].forEach(function(c,n){sc.style.setProperty('--sc'+n,c)});var dd=i&&P.dl?P.dl:P.d;if(dd){sc.style.setProperty('--sd0',dd[0]);sc.style.setProperty('--sd1',dd[1])}var q=sc.querySelector('.g-liquid');if(!q)return false;q.setAttribute('data-colors',P.q[i].join());q.setAttribute('data-light',P.lt[i]);q.style.background=P.q[i][0];if(P.day)q.setAttribute('data-day',i?'.55':'0');var b=q.querySelectorAll('i');b.forEach(function(e,n){e.style.setProperty('--c',P.q[i][n])});return b.length>3}
+try{var D={"g":[["#001a27","#2b7797","#6d8dbc","#378489","#5788af"],["#e8f6fd","#80b1c9","#c6d9f5","#93c1c4","#aacbe7"]],"q":[["#001a27","#2b7797","#6d8dbc","#378489"],["#b3d2e2","#80b1c9","#c6d9f5","#93c1c4"]],"lt":["#fff8f2","#ffffff"],"d":["#20282b","#628698"],"dl":["#baced9","#eff6fa"]};function colour(sc){var P;try{P=JSON.parse(localStorage.getItem('g-palette'))}catch(e){}if(!P||!P.g||!P.g[0])P=D;var i=document.documentElement.getAttribute('data-theme')==='light'?1:0;P.g[i].forEach(function(c,n){sc.style.setProperty('--sc'+n,c)});var dd=i&&P.dl?P.dl:P.d;if(dd){sc.style.setProperty('--sd0',dd[0]);sc.style.setProperty('--sd1',dd[1])}var q=sc.querySelector('.g-liquid');if(!q)return false;q.setAttribute('data-colors',P.q[i].join());q.setAttribute('data-light',P.lt[i]);q.style.background=P.q[i][0];if(P.day)q.setAttribute('data-day',i?'.55':'0');var b=q.querySelectorAll('i');b.forEach(function(e,n){e.style.setProperty('--c',P.q[i][n])});return b.length>3}
 try{document.documentElement.setAttribute('data-theme',localStorage.getItem('g-theme')==='light'?'light':'dark')}catch(e){document.documentElement.setAttribute('data-theme','dark')}
 new MutationObserver(function(_,o){var sc=document.getElementById('scene');if(!sc)return;if(!sc.__s){sc.__s=1;try{var k=localStorage.getItem('g-bg-scene')||'waves',c;if(k.indexOf('custom:')===0){c=(JSON.parse(localStorage.getItem('g-bg-custom')||'[]')||[]).find(function(x){return'custom:'+x.id===k});if(c){sc.setAttribute('data-scene','custom');sc.style.backgroundImage='url("'+c.src+'")'}}else if(/^[a-z-]+$/.test(k))sc.setAttribute('data-scene',k)}catch(e){}}if(colour(sc))o.disconnect()}).observe(document,{childList:true,subtree:true})}catch(e){}</script>
 <title>Glass UI</title>
@@ -155,7 +155,7 @@ body{ background:#1b2a3f; color:#fff; font-variant-numeric:tabular-nums; font-fa
 }
 </style>
 
-<div class="scene" id="scene" data-scene="waves" data-g-gradient aria-hidden="true"><div class="g-liquid" data-g-liquid data-for="liquid" data-colors="#20485e,#70bbe7,#bcd2fd,#76cad6"><i></i><i></i><i></i><i></i></div></div>
+<div class="scene" id="scene" data-scene="waves" data-g-gradient aria-hidden="true"><div class="g-liquid" data-g-liquid data-for="liquid" data-colors="#001a27,#2b7797,#6d8dbc,#378489"><i></i><i></i><i></i><i></i></div></div>
 <script>/* Waves: the last frame of the previous page is the ground until the shader draws its first one (glass-waves.js keeps it in localStorage) */
 try{var w=JSON.parse(localStorage.getItem('g-waves'));if(w&&/^data:image\/jpeg;base64,[\w+\/=]+$/.test(w.u)){var e=document.getElementById('scene');e.style.setProperty('--g-waves-poster','url('+w.u+')');if(w.w>0&&w.h>0)e.style.setProperty('--g-waves-poster-size',Math.round(w.w)+'px '+Math.round(w.h)+'px')}}catch(e){}</script>
 <script>/* the gradient goes on where the last page (or this one before a reload) left it: README, "Gradient background across pages" */
@@ -876,7 +876,7 @@ Glass.morph('#result', html);              // html string or an element; returns
       </div></fieldset>
     <fieldset class="ctl__group"><legend>Background colour</legend>
       <div class="sw-row" id="liquidRow">
-        <button class="sw-btn" data-color="#33a7e1" style="--sw:#33a7e1" aria-label="Sky blue" aria-pressed="true"></button>
+        <button class="sw-btn" data-color="#2b7797" style="--sw:#2b7797" aria-label="Steel blue" aria-pressed="true"></button>
         <button class="sw-btn" data-hue="265" style="--sw:hsl(265 68% 55%)" aria-label="Violet" aria-pressed="false"></button>
         <button class="sw-btn" data-hue="175" style="--sw:hsl(175 68% 45%)" aria-label="Teal" aria-pressed="false"></button>
         <button class="sw-btn" data-hue="12" style="--sw:hsl(12 75% 55%)" aria-label="Coral" aria-pressed="false"></button>

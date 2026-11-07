@@ -62,15 +62,15 @@
      so the very first frame already has it. Its lists hold the dark theme ([0]) and the light one ([1]) */
   /* the tone of every background (liquid, gradient, duo, day cycle and the pictures): c scales the chroma, l lifts the colours, g lifts the dark ground; Glass.tone({...}) changes and saves it. Vivid is the default */
   var TONE={c:1,l:0,g:0}; try{ var tn=JSON.parse(load('g-tone')); if (tn) ['c','l','g'].forEach(function(n){ if (typeof tn[n]==='number') TONE[n]=tn[n]; }); }catch(_){}
-  var firstC=document.querySelector('#liquidRow [data-color]'), DEFAULT=firstC?firstC.getAttribute('data-color'):'#33a7e1',   /* the first background colour of the panel is the default one */
+  var firstC=document.querySelector('#liquidRow [data-color]'), DEFAULT=firstC?firstC.getAttribute('data-color'):'#2b7797',   /* the first background colour of the panel is the default one */
      liqHost=document.querySelector('.g-liquid[data-for="liquid"]'), liqApi=function(){ return Glass.liquid && Glass.liquid(liqHost); };
   var STOCK=[['#1d2b52','#5ea0ff','#ff9ec2','#46d1c1','#a78bfa'],['#e8eefb','#9cc4ff','#ffc2d9','#9be8dc','#c9b8f7']], GOLD=[['#2a1a0d','#b7721e','#f2c66d','#7b3d1b'],['#f3d9a8','#e3b062','#fbeac0','#e9c08a']];
   var isLight=function(){ return document.documentElement.getAttribute('data-theme')==='light'; };
   var GRAD=['--sc0','--sc1','--sc2','--sc3','--sc4'];
   /* the plain gradient (data-scene="duo"): light at the top right, where the glass catches the light, running down to a dark corner; both of the picked colour's hue (--sd1 light, --sd0 dark) */
   function duoOf(hex){ var o=hexToOk(hex), C=Math.min(o[1],.2)*TONE.c, k=function(v,a,b){ return Math.max(a,Math.min(b,v)); }; return [okToHex(Math.min(.6,.27+TONE.g),C*.14,o[2]), okToHex(Math.min(.95,k(o[0]*1.1,.6,.78)+TONE.l),C*.55,o[2])]; }
-  function paletteOf(hex){ var o=hexToOk(hex), c=liquidPalette(hex), l=liquidPalette(hex,true); l[0]=okToHex(.965,Math.min(o[1],.2)*.2,o[2]);   /* [dark theme, light theme]; gradient: five colours, liquid: four */
-    return { g:[c,l], q:[c.slice(0,4),l.slice(0,4)], lt:['#fff8f2','#ffffff'], d:duoOf(hex), dl:[okToHex(.84,Math.min(o[1],.2)*.3,o[2]),okToHex(.97,Math.min(o[1],.2)*.1,o[2])] }; }
+  function paletteOf(hex){ var o=hexToOk(hex), c=liquidPalette(hex), l=liquidPalette(hex,true), g1=l.slice(); g1[0]=okToHex(.965,Math.min(o[1],.2)*.2,o[2]);   /* [dark theme, light theme]; gradient: five colours, liquid: four */
+    return { g:[c,g1], q:[c.slice(0,4),l.slice(0,4)], lt:['#fff8f2','#ffffff'], d:duoOf(hex), dl:[okToHex(.84,Math.min(o[1],.2)*.3,o[2]),okToHex(.97,Math.min(o[1],.2)*.1,o[2])] }; }
   function presetPalette(v){ var P;
     if (v==='day'){ P=paletteOf(DEFAULT); P.g=STOCK; P.day=1; return P; }
     if (v==='gold'){ P=paletteOf(hslToHex(38,75,55)); P.q=GOLD; P.lt=['#ffe3a3','#ffffff']; return P; }
