@@ -59,8 +59,8 @@
   $('accentCustom').addEventListener('input', function(e){ pick(accRow, e.target.parentNode); setAccent(e.target.value); });
   /* background colour: the palette is worked out when a colour is picked and saved (g-palette), and the host page's first script puts it on the page,
      so the very first frame already has it. Its lists stay lists of one ([0]): a palette saved while the kit had a light theme ([1]) still reads */
-  /* the tone of every background (liquid, gradient, duo, day cycle and the pictures): c scales the chroma, l lifts the colours, g lifts the dark ground; Glass.tone({...}) changes and saves it. Pastel is the default */
-  var TONE={c:.75,l:.07,g:.12}; try{ var tn=JSON.parse(load('g-tone')); if (tn) ['c','l','g'].forEach(function(n){ if (typeof tn[n]==='number') TONE[n]=tn[n]; }); }catch(_){}
+  /* the tone of every background (liquid, gradient, duo, day cycle and the pictures): c scales the chroma, l lifts the colours, g lifts the dark ground; Glass.tone({...}) changes and saves it. Vivid is the default */
+  var TONE={c:1,l:0,g:0}; try{ var tn=JSON.parse(load('g-tone')); if (tn) ['c','l','g'].forEach(function(n){ if (typeof tn[n]==='number') TONE[n]=tn[n]; }); }catch(_){}
   var firstC=document.querySelector('#liquidRow [data-color]'), DEFAULT=firstC?firstC.getAttribute('data-color'):'#33a7e1',   /* the first background colour of the panel is the default one */
      liqHost=document.querySelector('.g-liquid[data-for="liquid"]'), liqApi=function(){ return Glass.liquid && Glass.liquid(liqHost); };
   var STOCK=[['#1d2b52','#5ea0ff','#ff9ec2','#46d1c1','#a78bfa']], GOLD=[['#2a1a0d','#b7721e','#f2c66d','#7b3d1b']];
@@ -98,11 +98,11 @@
   Array.prototype.forEach.call(liqRow.querySelectorAll('button.sw-btn'), function(b){ b.addEventListener('click', function(){ pick(liqRow,b); setColour(presetPalette(presetOf(b)),'b:'+presetOf(b)); }); });
   $('liquidCustom').addEventListener('input', function(e){ pick(liqRow, e.target.parentNode); setColour(paletteOf(e.target.value),'c:'+e.target.value); });
   applyColours();   /* the default colour until a saved one is restored below (the theme switch used to apply it) */
-  /* tone of the colour backgrounds: the tabs of the optional #toneTabs set Glass.tone (Pastel is the default, Vivid the saturated original) */
+  /* tone of the colour backgrounds: the tabs of the optional #toneTabs set Glass.tone (Vivid is the default, the saturated original) */
   var TONES=[{c:1,l:0,g:0},{c:.85,l:.04,g:.06},{c:.75,l:.07,g:.12},{c:.5,l:.12,g:.22}], toneTabs=$('toneTabs');
   if (toneTabs){ toneTabs.addEventListener('g:tabchange', function(e){ Glass.tone(TONES[e.detail.index]); });
     (function(){ var t=Glass.tone(), i=-1; TONES.forEach(function(x,n){ if (Math.abs(x.c-t.c)<.005&&Math.abs(x.l-t.l)<.005&&Math.abs(x.g-t.g)<.005) i=n; });
-      if (i!==2) { var b=toneTabs.children; if (i>=0) b[i].click(); else b[2].removeAttribute('aria-selected'); } })(); }
+      if (i!==0) { var b=toneTabs.children; if (i>=0) b[i].click(); else b[0].removeAttribute('aria-selected'); } })(); }
   /* liquid speed */
   var SPEEDS=[0,1,1,2.5,5.8], REAL=1, CALM=2, restoring=false;   /* one speed for the liquid and the gradient: 1 = calm; Real time (after Still, the slowest) is calm too, with the day of the day-cycle colours set by the local clock */
   $('speedTabs').addEventListener('g:tabchange', function(e){ var i=e.detail.index; Glass.scene.speed(SPEEDS[i]); store('g-speed2',i);
@@ -121,7 +121,7 @@
     bgIn.value=''; bgIn.dispatchEvent(new Event('change')); bgIn.removeAttribute('aria-invalid'); customs=[]; Array.prototype.forEach.call(chips.querySelectorAll('[data-id]'), function(b){ b.remove(); }); store('g-bg-custom','[]'); setScene(DEF_SCENE); setAccent('#0071E3'); pick(accRow, accRow.querySelector('button')); pick(liqRow, liqRow.querySelector('button'));
     ['--g-accent','--g-accent-hover','--g-accent-fg','--g-blur','--g-fill','--g-fill-strong','--g-fill-hover','--g-fill-selected'].forEach(function(p){ root.removeProperty(p); });
     br.value=30; fr.value=10; br.dispatchEvent(new Event('input')); fr.dispatchEvent(new Event('input')); root.removeProperty('--g-blur'); root.removeProperty('--g-fill');
-    TONE.c=.75; TONE.l=.07; TONE.g=.12; toneImage(); if (toneTabs) toneTabs.children[2].click(); curPal=paletteOf(DEFAULT); curId=null; pick(liqRow,liqRow.firstElementChild); applyColours(); try{ ['g-palette','g-colour','g-accent','g-blur','g-fill','g-tone'].forEach(function(k){ localStorage.removeItem(k); }); }catch(_){}
+    TONE.c=1; TONE.l=0; TONE.g=0; toneImage(); if (toneTabs) toneTabs.children[0].click(); curPal=paletteOf(DEFAULT); curId=null; pick(liqRow,liqRow.firstElementChild); applyColours(); try{ ['g-palette','g-colour','g-accent','g-blur','g-fill','g-tone'].forEach(function(k){ localStorage.removeItem(k); }); }catch(_){}
     var tabs=document.querySelectorAll('#speedTabs > *'); tabs[CALM].click();
     /* as on a first visit: nothing of the panel stays saved (the default scene and speed are what a visitor with no storage gets), the old g-scene key and the gradient carried across pages included */
     try{ ['g-bg-scene','g-bg-custom','g-scene','g-speed','g-speed2'].forEach(function(k){ localStorage.removeItem(k); }); sessionStorage.removeItem('g-gradient'); }catch(_){}
@@ -136,7 +136,7 @@
   (function(){ var a=load('g-accent'); if(/^#[0-9a-f]{6}$/i.test(a||'')){ setAccent(a,true); var b=accRow.querySelector('button[data-accent="'+a+'" i]'); if(b) pick(accRow,b); else { $('accentCustom').value=a; pick(accRow,$('accentCustom').parentNode); } }
     var P=null, id=load('g-colour'); try{ P=JSON.parse(load('g-palette')); }catch(_){}
     if (id&&/^[bc]:/.test(id)){ P=paletteFor(id); store('g-palette',JSON.stringify(P)); }   /* worked out again: the tone may have changed since it was saved */
-    if (!(P&&P.g&&P.g[0]&&P.q&&P.q[0]&&P.lt)){ if (load('g-tone')) store('g-palette',JSON.stringify(paletteOf(DEFAULT)));   /* a saved tone: the page's first script must paint this tone, not its built-in Pastel, or the first frame flashes */
+    if (!(P&&P.g&&P.g[0]&&P.q&&P.q[0]&&P.lt)){ if (load('g-tone')) store('g-palette',JSON.stringify(paletteOf(DEFAULT)));   /* a saved tone: the page's first script must paint this tone, not its built-in Vivid, or the first frame flashes */
       applyColours(); window.addEventListener('load', applyColours); return; }   /* nothing saved: the default colour, the one Reset puts back */
     setColour(P,id,true); window.addEventListener('load', applyColours);   /* the liquid may mount after this script */
     var b=null; if (id&&id.indexOf('b:')===0) b=liqRow.querySelector('button[data-color="'+id.slice(2)+'"],button[data-hue="'+id.slice(2)+'"]');
