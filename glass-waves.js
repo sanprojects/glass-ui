@@ -27,7 +27,7 @@
 		' c+=(h(gl_FragCoord.xy+uT)-.5)/255.;\n' +
 		' o=vec4(c,1.);}';
 
-	var cv = null, gl = null, prog, loc, off = null, acc = 30, cols = null, colsAt = 0, saveAt = 0, saveTimer = 0, savedR = -1, watch = 0;
+	var cv = null, gl = null, prog, loc, off = null, acc = 0, cols = null, colsAt = 0, saveAt = 0, saveTimer = 0, savedR = -1, watch = 0;
 	/* where the last page (or this one before a reload) left off: its time and its last frame (a small JPEG) are kept in localStorage (it is shared by tabs, so a link opened in a new tab goes on too); the time is taken up here, and the frame is painted
 	   before the first paint by an inline script after the scene (--g-waves-poster), so the background goes on from the same moment instead of starting over */
 	var KEY = 'g-waves';
@@ -38,7 +38,10 @@
 	function rate() { var k = window.Glass && Glass.scene && Glass.scene.speed ? Glass.scene.speed() : 1; return (typeof k === 'number' ? k : 1) * SLOW; }
 	function phase(P) { return P && typeof P.t === 'number' ? (typeof P.at === 'number' && typeof P.r === 'number' ? P.t + Math.max(0, Date.now() - P.at) / 1000 * P.r : P.t) : null; }
 	function adopt() { try { var t = phase(JSON.parse(localStorage.getItem(KEY))); if (t !== null) { acc = t; return true; } } catch (e) {} return false; }
-	adopt();
+	/* no record yet (first visit, cleared storage, another browser): start from the Unix clock, not from a fixed number, so the first phase is the same on every device that starts at the default speed; the time runs at SLOW per second, like the clock,
+	   and wraps every 20000 s so the shader's float stays precise */
+	function epoch() { return (Date.now() / 1000 % 20000) * SLOW; }
+	if (!adopt()) acc = epoch();
 	var SCALE = .5;   /* the field is soft: half the pixels are enough, the browser smooths it up */
 
 	function rgb(s) {
