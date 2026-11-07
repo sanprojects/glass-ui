@@ -1093,6 +1093,7 @@
   /* in-place text: <span data-g-edit data-placeholder="Add a name"> inside any text. Enter or leaving saves, Esc brings back what it was, paste is plain text on one line,
      data-max limits the length, data-required refuses an empty text. A save fires "change" ({ value, was }) on the element; the native "input" fires as you type. */
   function initEdit(n) {
+    if (n.getAttribute('data-g-edit') === 'dblclick') { mem(n, 'v', n.textContent); return; }   // text until a double click (or F2): a single click goes to whatever the text sits in (a tab, a link), at once
     owns(n, 'contenteditable', 'role', 'tabindex', 'spellcheck');
     n.setAttribute('contenteditable', 'plaintext-only' in document.createElement('i') || CSS.supports('-webkit-user-modify', 'read-write-plaintext-only') ? 'plaintext-only' : 'true');
     if (!n.hasAttribute('role')) n.setAttribute('role', 'textbox');
@@ -1100,19 +1101,36 @@
     n.spellcheck = false; mem(n, 'v', n.textContent);
   }
   const editText = n => n.textContent.replace(/\s*\n\s*/g, ' ');
+  /* data-g-edit="dblclick": not editable until a double click (or F2 on it / on the box it is the only text of); it is editable until it loses focus, then plain text again */
+  function editStart(n) {
+    if (n.isContentEditable) return;
+    mem(n, 'v', n.textContent); owns(n, 'contenteditable', 'role', 'spellcheck');
+    n.setAttribute('contenteditable', 'plaintext-only' in document.createElement('i') || CSS.supports('-webkit-user-modify', 'read-write-plaintext-only') ? 'plaintext-only' : 'true');
+    n.setAttribute('role', 'textbox'); n.spellcheck = false; n.setAttribute('data-g-editing', ''); n.focus();
+    const r = document.createRange(); r.selectNodeContents(n); const g = getSelection(); g.removeAllRanges(); g.addRange(r);
+  }
+  const editEnd = n => { if (n.getAttribute('data-g-edit') === 'dblclick') { n.removeAttribute('contenteditable'); n.removeAttribute('role'); n.removeAttribute('data-g-editing'); } };
   function editCommit(n) {
     let v = editText(n).trim(); const was = mem(n, 'v');
     if (!v && n.hasAttribute('data-required')) v = was;
     if (n.textContent !== v) n.textContent = v;
+    editEnd(n);
     if (v === was) return;
     mem(n, 'v', v); fire(n, 'change', { value: v, was });
     n.setAttribute('data-saved', ''); setTimeout(() => n.removeAttribute('data-saved'), 650);
   }
+  on('dblclick', '[data-g-edit="dblclick"]', (e, n) => { e.preventDefault(); editStart(n); });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'F2' || e.target.isContentEditable) return;
+    const t = e.target.closest ? e.target.closest('[data-g-edit="dblclick"]') || e.target.querySelector('[data-g-edit="dblclick"]') : null;
+    if (t) { e.preventDefault(); editStart(t); }
+  });
   on('focusin', '[data-g-edit]', (e, n) => { mem(n, 'v', n.textContent); });
   on('focusout', '[data-g-edit]', (e, n) => editCommit(n));
   on('keydown', '[data-g-edit]', (e, n) => {
-    if (e.key === 'Enter') { e.preventDefault(); n.blur(); }
-    else if (e.key === 'Escape') { n.textContent = mem(n, 'v'); n.blur(); }
+    if (!n.isContentEditable) return;
+    if (e.key === 'Enter') { e.preventDefault(); n.blur(); editCommit(n); }   // (a window without focus sends no focusout: commit here too, it is idempotent)
+    else if (e.key === 'Escape') { n.textContent = mem(n, 'v'); n.blur(); editEnd(n); }
   });
   on('paste', '[data-g-edit]', (e, n) => {
     e.preventDefault();

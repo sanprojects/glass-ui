@@ -468,6 +468,10 @@ input[type=number], [data-g-number] input, [data-g-scrub] { touch-action: pan-x;
 [data-g-edit]:empty::before { content: attr(data-placeholder) "\200b"; color: var(--g-text-4); }
 [data-g-edit][aria-invalid="true"] { text-decoration: underline solid var(--g-danger-text, #ff9d96) 2px; text-underline-offset: .22em; }
 [data-g-edit][data-saved] { animation: g-edit-saved .6s var(--g-ease, ease-out); }
+/* data-g-edit="dblclick": plain text (the pointer and the hover of the surroundings) until it is double-clicked; then it looks like any edited text */
+[data-g-edit="dblclick"]:not([data-g-editing]) { text-decoration: none; cursor: inherit; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+@media (hover: hover) { [data-g-edit="dblclick"]:not([data-g-editing]):hover { text-decoration: none; } }
+@media (hover: none) { [data-g-edit="dblclick"]:not([data-g-editing]) { text-decoration: none; } }
 @keyframes g-edit-saved { from { background: color-mix(in srgb, var(--g-text) 45%, transparent); } }
 @media (forced-colors: active) { [data-g-edit] { text-decoration-color: LinkText; } [data-g-edit]:focus { outline: 2px solid Highlight; } }
 /* Native select (also the fallback without JS; glass-ui.js replaces it with the glass dropdown when it has data-g-select) */
