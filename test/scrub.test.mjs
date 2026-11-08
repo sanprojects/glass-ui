@@ -65,3 +65,13 @@ test('a pull on a focused, fully selected number scrubs it; every dragstart is c
   assert.ok(Number(await text('scrubDemo')) > before, `${before} → ${await text('scrubDemo')}`);
   assert.ok((await page.evaluate(() => window.__ds)).every(Boolean), 'a dragstart was not cancelled');
 });
+
+test('a number inside a text: the one under the pointer moves, the rest of the text stays; no click needed with dblclick editing', async () => {
+  const el = () => page.evaluate(() => { const n = document.getElementById('scrubText'); return { t: n.textContent, ce: n.isContentEditable }; });
+  await pull(await at('scrubText', 0, 1), -48);   // the "3"
+  let r = await el(); assert.match(r.t, /^\d+ sets of 10 reps$/); assert.ok(parseInt(r.t) > 3, r.t); assert.equal(r.ce, false);
+  const n = (await el()).t; const i = n.indexOf('10');
+  await pull(await at('scrubText', i, i + 2), -48);   // the "10"
+  r = await el(); assert.match(r.t, /^\d+ sets of \d+ reps$/); assert.ok(parseInt(r.t.split(' of ')[1]) > 10, r.t); assert.equal(r.t.split(' ')[0], n.split(' ')[0]);
+  await pull(await at('scrubText', 0, 1), 400); assert.match((await el()).t, /^0 sets/);   // clamped at data-min
+});

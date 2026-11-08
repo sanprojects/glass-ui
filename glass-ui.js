@@ -717,6 +717,11 @@
       '<button class="g-toast__close" type="button" data-icon="x" aria-label="Dismiss"></button>';
     t.querySelector('.g-toast__title').textContent = o.title || '';
     const tx = t.querySelector('.g-toast__text'); if (o.text) tx.textContent = o.text; else tx.remove();
+    if (o.action && o.action.label) {   // one plain kit button under the text, never a link
+      const ab = el('button', 'g-toast__action'); ab.type = 'button'; ab.textContent = o.action.label; ab.setAttribute('data-size', 'sm');
+      ab.addEventListener('click', () => { dismiss(); if (o.action.onClick) o.action.onClick(); });
+      t.querySelector('.g-toast__main').appendChild(ab);
+    }
     const host = toastHost(o.position);
     let timer;
     function dismiss() { clearTimeout(timer); if (!t.parentNode) return; t.hidden = true; if (t.getAnimations().length) t.addEventListener('transitionend', () => { t.remove(); }, { once: true }); else t.remove(); }
@@ -1012,15 +1017,29 @@
     return Math.max(base, mag);
   }
   function scrubMove(n, v, dec, k) {
-    for (let i = Math.abs(k); i > 0; i--) { const d = scrubStep(n, v, dec); v = Math.round((v + Math.sign(k) * d) / d * 1e6) / 1e6 * d; }
+    for (let i = Math.abs(k); i > 0; i--) { const d = scrubStep(n, v, dec), x = Math.round(v / d * 1e6) / 1e6, g = Math.sign(k); v = Math.round((Number.isInteger(x) ? x + g : g > 0 ? Math.ceil(x) : Math.floor(x)) * d * 1e6) / 1e6; }   /* a number off the grid (47.5 on a notch of 1) first lands on the grid in the direction pulled (48 up, 47 down), then moves by whole notches */
     return v;
   }
   /* the one way a number moves, by a drag or by the arrow keys: k notches from state st ({ v, dec, comma }), clamped, written back, "input" fired on a real input */
   /* what a press on n pulls: a plain number, or one end of a range such as 8–12 (the end the finger is on); null when the text is neither */
+  /* a number inside a longer text ("3 x 10", "20 kg + 5"): the one under the pointer, else the nearest on the line; { a, b, s } is its place in the text. A minus
+     counts only at the start or after a space ("10-12" is two numbers, not 10 and -12). Only for a text of one text node, so the markup around it stays. */
+  function scrubToken(n, e, t) {
+    const tn = n.firstChild; if (!tn || tn.nodeType !== 3 || n.childNodes.length !== 1) return null;
+    let best = null, bd = 1e9;
+    for (const m of t.matchAll(/\d+(?:[.,]\d+)?/g)) {
+      let a = m.index; const b = a + m[0].length; if (t[a - 1] === '-' && (a === 1 || /\s/.test(t[a - 2]))) a--;
+      const r = document.createRange(); r.setStart(tn, a); r.setEnd(tn, b); const bx = r.getBoundingClientRect();
+      const d = e.clientX < bx.left ? bx.left - e.clientX : e.clientX > bx.right ? e.clientX - bx.right : 0;
+      if (d < bd) { bd = d; best = { a, b, s: t.slice(a, b) }; }
+    }
+    return best;
+  }
   function scrubState(n, e) {
     const t = scrubRead(n), num = x => ({ v: parseFloat(x.replace(',', '.')), dec: (x.split(/[.,]/)[1] || '').length, comma: x.includes(',') });
     if (SCRUB_NUM.test(t)) return { t, ...num(t) };
-    const m = !n.matches('input') && SCRUB_RANGE.exec(t); if (!m) return null;
+    const m = !n.matches('input') && SCRUB_RANGE.exec(t);
+    if (!m) { const tk = !n.matches('input') && n.hasAttribute('data-g-scrub') && scrubToken(n, e, t); return tk ? { t, ...num(tk.s), tok: tk } : null; }
     let side = 0; const tn = n.firstChild;
     if (tn && tn.nodeType === 3 && n.childNodes.length === 1) { const r = document.createRange(); r.setStart(tn, m[1].length); r.setEnd(tn, m[1].length + m[2].length); const b = r.getBoundingClientRect(); side = e.clientX > b.left + b.width / 2 ? 1 : 0; }
     else { const b = n.getBoundingClientRect(); side = e.clientX > b.left + b.width * (m[1].length + m[2].length / 2) / t.length ? 1 : 0; }
@@ -1033,11 +1052,12 @@
     if (mn !== null) v = Math.max(mn, v); if (mx !== null) v = Math.min(mx, v);
     if (st.rng) v = st.rng.side ? Math.max(v, st.rng.otherV) : Math.min(v, st.rng.otherV);
     const sd = ((String(parseFloat(n.getAttribute('data-step')) || '').split('.')[1]) || '').length;   /* a fixed notch of 2.5 on 55 reaches 57.5: the decimals are shown while the number needs them */
-    const dec = sd ? (Number.isInteger(v) ? 0 : Math.max(st.dec, sd)) : st.dec; if (sd) st.dec = dec;
+    const fs = parseFloat(n.getAttribute('data-step')) || 0, dec = fs ? (Number.isInteger(v) ? 0 : Math.max(st.dec, sd)) : st.dec; if (fs) st.dec = dec;
     let t = v.toFixed(dec); if (st.comma) t = t.replace('.', ',');
     if (st.rng) t = st.rng.side ? st.rng.other + st.rng.sep + t : t + st.rng.sep + st.rng.other;
+    else if (st.tok) { const cur = scrubRead(n), tk = st.tok, nt = t; t = cur.slice(0, tk.a) + nt + cur.slice(tk.b); tk.b = tk.a + nt.length; }   /* the number is replaced inside the text; its place follows its new length */
     if (t !== scrubRead(n)) {
-      if (n.matches('input')) { n.value = t; n.dispatchEvent(new Event('input', { bubbles: true })); } else { const m = global.Glass && global.Glass.morph; n._gScrub = t; if (m && !document.hidden) m(n, t); else n.textContent = t; }   /* the same drum as every number of the kit */
+      if (n.matches('input')) { n.value = t; n.dispatchEvent(new Event('input', { bubbles: true })); } else { const m = global.Glass && global.Glass.morph; n._gScrub = t; if (m && !document.hidden) m(n, t.replace(/&/g, '&amp;').replace(/</g, '&lt;')); else n.textContent = t; }   /* the same drum as every number of the kit */
       try { navigator.vibrate && navigator.vibrate(7); } catch {}
     }
     return v;

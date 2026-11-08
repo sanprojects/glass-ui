@@ -474,6 +474,7 @@ input[type=number], [data-g-number] input, [data-g-scrub] { touch-action: pan-x;
 [data-g-edit][data-saved] { animation: g-edit-saved .6s var(--g-ease, ease-out); }
 /* data-g-edit="dblclick": plain text (the pointer and the hover of the surroundings) until it is double-clicked; then it looks like any edited text */
 [data-g-edit="dblclick"]:not([data-g-editing]) { text-decoration: none; cursor: inherit; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+[data-g-edit="dblclick"][data-g-scrub]:not([data-g-editing]) { touch-action: pan-x; }   /* a number that is pulled: a pull needs no click first, so the vertical swipe is the page's to take only on the rest of the screen */
 @media (hover: hover) { [data-g-edit="dblclick"]:not([data-g-editing]):hover { text-decoration: none; } }
 @media (hover: none) { [data-g-edit="dblclick"]:not([data-g-editing]) { text-decoration: none; } }
 @keyframes g-edit-saved { from { background: color-mix(in srgb, var(--g-text) 45%, transparent); } }
@@ -674,6 +675,8 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 .g-player { position: relative; max-width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; background: #000; box-shadow: var(--g-rim); }
 .g-player iframe { display: block; width: 100%; height: 100%; border: 0; }
 .g-player:has(> .g-player-tap) iframe { pointer-events: none; }
+/* the player draws its own controls: the embed is taller than the box, so YouTube's title strip, logo and gradient fall outside it (the video is centred in it, nothing of the picture is lost) */
+.g-player:has(> .g-player-tap) iframe { position: absolute; inset-inline: 0; top: -72px; height: calc(100% + 144px); }
 .g-player-tap { position: absolute; inset: 0 0 40px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .g-player-bar { --g-ink: #fff; --g-text: #fff; --g-text-2: #fff; --g-fill-recessed: rgba(255,255,255,.3); --g-fill-strong: rgba(255,255,255,.18);
   position: absolute; inset: auto 0 0; display: flex; align-items: center; gap: var(--g-gap-inner); padding: 14px 10px 6px 6px; background: linear-gradient(transparent, rgba(0,0,0,.65)); }
@@ -1189,6 +1192,7 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 .g-toast__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--g-gap-inner); }
 .g-toast__title { font-size: var(--g-fs-subhead); font-weight: 600; margin: 0; }   /* margin 0: toasts live outside .g-root, so reset the browser's paragraph margin */
 .g-toast__main > :empty { display: none; }
+.g-toast__action { align-self: flex-start; }
 .g-toast__text { font-size: var(--g-fs-footnote); line-height: 1.38; color: var(--g-text-2); margin: 0; }
 .g-toast__close { --g-icon-size: var(--g-icon-md); all: unset; flex: none; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; cursor: pointer; color: var(--g-text-2); transition: background var(--g-dur); }   /* the same cross as the one in a field (.g-input-end) */
 @media (hover: hover) { .g-toast__close:hover { background: var(--g-fill-strong); } }
