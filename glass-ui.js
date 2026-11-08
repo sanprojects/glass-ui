@@ -189,33 +189,39 @@
   let swipe = null, swiped = 0;
   const NO_SWIPE = 'a, input, textarea, select, [data-g-actions], [data-g-no-swipe], [role="menu"]';
   document.addEventListener('pointerdown', e => {
-    const t = e.target, row = rowOf(t);
+    const row = rowOf(e.target);
     $$('[data-g-row][data-g-open]').forEach(r => { if (r !== row) rowOpen(r, false); });   /* a press outside the open row hides its actions */
-    swipe = null;
-    if (!row || e.pointerType !== 'touch' || !e.isPrimary || t.closest(NO_SWIPE) || t.isContentEditable || !actionsOf(row)) return;
-    const W = reach(row);
-    swipe = { row, W, x: e.clientX, y: e.clientY, base: row.hasAttribute('data-g-open') ? -W : 0, on: false, v: 0, lx: e.clientX, lt: e.timeStamp, vel: 0 };
   }, true);
-  document.addEventListener('pointermove', e => {
-    if (!swipe || !e.isPrimary) return;
-    const dx = e.clientX - swipe.x, dy = e.clientY - swipe.y;
+  /* the swipe runs on touch events, not pointer events: a row inside a horizontal scroll box (the workouts of /gym) loses its pointer events to that scroll on iOS (pointercancel), while a touchmove that is cancelled keeps both the events and the page still */
+  document.addEventListener('touchstart', e => {
+    swipe = null;
+    const t = e.target, row = rowOf(t), c = e.touches[0];
+    if (e.touches.length !== 1 || !row || !t.closest || t.closest(NO_SWIPE) || t.isContentEditable || !actionsOf(row)) return;
+    const W = reach(row);
+    swipe = { row, W, id: c.identifier, x: c.clientX, y: c.clientY, base: row.hasAttribute('data-g-open') ? -W : 0, on: false, v: 0, lx: c.clientX, lt: e.timeStamp, vel: 0 };
+  }, { capture: true, passive: true });
+  document.addEventListener('touchmove', e => {
+    if (!swipe) return;
+    const c = [...e.changedTouches].find(x => x.identifier === swipe.id); if (!c) return;
+    const dx = c.clientX - swipe.x, dy = c.clientY - swipe.y;
     if (!swipe.on) {
       if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { swipe = null; return; }   /* a scroll */
       if (Math.abs(dx) < 10 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
       swipe.on = true; swipe.row.setAttribute('data-g-dragging', '');
       const sel = getSelection && getSelection(); if (sel && !sel.isCollapsed) sel.empty();
     }
+    if (e.cancelable) e.preventDefault();   /* the page (the workout tabs) does not turn under the swipe */
     swipe.v = Math.min(0, Math.max(-swipe.W, swipe.base + dx)); swipe.row.style.setProperty('--g-swipe', swipe.v + 'px');
-    const dt = e.timeStamp - swipe.lt; if (dt > 0) { swipe.vel = (e.clientX - swipe.lx) / dt; swipe.lx = e.clientX; swipe.lt = e.timeStamp; }
-  }, true);
+    const dt = e.timeStamp - swipe.lt; if (dt > 0) { swipe.vel = (c.clientX - swipe.lx) / dt; swipe.lx = c.clientX; swipe.lt = e.timeStamp; }
+  }, { capture: true, passive: false });
   function swipeEnd(cancel) {
     const s = swipe; swipe = null; if (!s || !s.on) return;
     s.row.removeAttribute('data-g-dragging'); swiped = Date.now();   /* the click that follows the lift is not a tap on the row */
     const open = !cancel && (s.vel < -.4 || (s.vel <= .4 && s.v < -s.W * .4));
     if (open) { s.row.removeAttribute('data-g-open'); rowOpen(s.row, true); } else rowOpen(s.row, false);
   }
-  document.addEventListener('pointerup', () => swipeEnd(false), true);
-  document.addEventListener('pointercancel', () => swipeEnd(true), true);
+  document.addEventListener('touchend', () => swipeEnd(false), true);
+  document.addEventListener('touchcancel', () => swipeEnd(true), true);
   document.addEventListener('click', e => { if (Date.now() - swiped < 400 && rowOf(e.target)) { e.stopPropagation(); e.preventDefault(); } }, true);
   /* the same actions as a menu at the pointer: a throw-away 1px anchor and a role="menu" copy of the buttons; an item runs the original button */
   on('contextmenu', '[data-g-row]', (e, row) => {
