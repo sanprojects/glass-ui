@@ -37,6 +37,7 @@
  *   (automatic) touch hover: a finger on an element is a mouse over it ([data-g-hover] + mouseover/mouseenter for the page's handlers), lifted off it: no click; <html data-g-touch-hover="off"> turns it off
  *   title="…" on any element inside .g-root -> glass tooltip (data-tip-position="bottom" to show it below)
  *   data-icon="play" / data-icon-end="chevron-down" / data-icon="heart" on any element -> icon from glass-icons.css (Lucide subset, CSS masks; no JS involved)
+ *   <li data-g-row><h4 data-g-swipe>…</h4><span data-g-actions><button aria-label="Delete" data-icon="trash-2"></button></span></li>  -> row actions: a pill on hover / focus, a swipe to the left on touch, the same buttons as a right-click menu (data-g-peek="name" on the list hints the swipe once)
  *   Glass.toast({ title, text, variant, duration })
  */
 (global => {
@@ -166,6 +167,84 @@
     const fp = mem(t, 'fp');
     if (fp && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { e.preventDefault(); openMenu(fp, e.key === 'ArrowUp'); }
   });
+
+  /* ---------- Row actions: one set of buttons, three ways to reach it ----------
+   * <li data-g-row> <h4 data-g-swipe>…</h4> <span data-g-actions><button aria-label="Delete" data-icon="trash-2">…</button>…</span> </li>
+   *   a mouse: the actions are a glass pill at the right of the row, shown by hover and by focus inside the row (so also by Tab)
+   *   a finger: a swipe to the left slides [data-g-swipe] away and shows the pill under it; a swipe back, a tap outside, or Glass.rowActions.close(row) hides it
+   *   everywhere: the same buttons as a menu on a right click, the menu key or Shift+F10 (data-g-nomenu on a button keeps it out of the menu: a drag handle)
+   *   data-g-peek="name" on the list: once, the first row slides a little and back on a touch screen, so the swipe is found (remembered in localStorage under g-peek:name)
+   * A swipe does not start on a link, a field, a contenteditable or inside [data-g-actions]. Glass.rowActions.open(row) / close(row) do it from a script. */
+  const rowOf = n => n.closest && n.closest('[data-g-row]');
+  const actionsOf = row => row.querySelector('[data-g-actions]');
+  const reach = row => { const a = actionsOf(row); return a ? a.offsetWidth + 8 : 0; };
+  function rowOpen(row, open) {
+    if (open) {
+      if (!actionsOf(row)) return;
+      $$('[data-g-row][data-g-open]').forEach(r => r !== row && rowOpen(r, false));
+      row.setAttribute('data-g-open', ''); row.style.setProperty('--g-swipe', -reach(row) + 'px');
+    } else { row.removeAttribute('data-g-open'); row.style.removeProperty('--g-swipe'); }
+    fire(row, 'g:rowactions', { open: !!open });
+  }
+  let swipe = null, swiped = 0;
+  const NO_SWIPE = 'a, input, textarea, select, [data-g-actions], [data-g-no-swipe], [role="menu"]';
+  document.addEventListener('pointerdown', e => {
+    const t = e.target, row = rowOf(t);
+    $$('[data-g-row][data-g-open]').forEach(r => { if (r !== row) rowOpen(r, false); });   /* a press outside the open row hides its actions */
+    swipe = null;
+    if (!row || e.pointerType !== 'touch' || !e.isPrimary || t.closest(NO_SWIPE) || t.isContentEditable || !actionsOf(row)) return;
+    const W = reach(row);
+    swipe = { row, W, x: e.clientX, y: e.clientY, base: row.hasAttribute('data-g-open') ? -W : 0, on: false, v: 0, lx: e.clientX, lt: e.timeStamp, vel: 0 };
+  }, true);
+  document.addEventListener('pointermove', e => {
+    if (!swipe || !e.isPrimary) return;
+    const dx = e.clientX - swipe.x, dy = e.clientY - swipe.y;
+    if (!swipe.on) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { swipe = null; return; }   /* a scroll */
+      if (Math.abs(dx) < 10 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      swipe.on = true; swipe.row.setAttribute('data-g-dragging', '');
+      const sel = getSelection && getSelection(); if (sel && !sel.isCollapsed) sel.empty();
+    }
+    swipe.v = Math.min(0, Math.max(-swipe.W, swipe.base + dx)); swipe.row.style.setProperty('--g-swipe', swipe.v + 'px');
+    const dt = e.timeStamp - swipe.lt; if (dt > 0) { swipe.vel = (e.clientX - swipe.lx) / dt; swipe.lx = e.clientX; swipe.lt = e.timeStamp; }
+  }, true);
+  function swipeEnd(cancel) {
+    const s = swipe; swipe = null; if (!s || !s.on) return;
+    s.row.removeAttribute('data-g-dragging'); swiped = Date.now();   /* the click that follows the lift is not a tap on the row */
+    const open = !cancel && (s.vel < -.4 || (s.vel <= .4 && s.v < -s.W * .4));
+    if (open) { s.row.removeAttribute('data-g-open'); rowOpen(s.row, true); } else rowOpen(s.row, false);
+  }
+  document.addEventListener('pointerup', () => swipeEnd(false), true);
+  document.addEventListener('pointercancel', () => swipeEnd(true), true);
+  document.addEventListener('click', e => { if (Date.now() - swiped < 400 && rowOf(e.target)) { e.stopPropagation(); e.preventDefault(); } }, true);
+  /* the same actions as a menu at the pointer: a throw-away 1px anchor and a role="menu" copy of the buttons; an item runs the original button */
+  on('contextmenu', '[data-g-row]', (e, row) => {
+    const acts = actionsOf(row); if (!acts || e.target.closest('input, textarea, select, a, [role="menu"]') || e.target.isContentEditable) return;
+    const src = $$('button, a', acts).filter(b => !b.closest('[data-g-nomenu]') && !b.disabled); if (!src.length) return;
+    e.preventDefault();
+    const r = row.getBoundingClientRect(), x = e.clientX || r.left + 24, y = e.clientY || r.top + 16;
+    const anchor = attrs(el('button'), { type: 'button', tabindex: '-1', 'aria-hidden': 'true' }), menu = el('div'); menu.id = 'g-ctx-' + (++uid);
+    anchor.style.cssText = 'position:fixed;left:' + x + 'px;top:' + y + 'px;width:1px;height:1px;padding:0;border:0;opacity:0;pointer-events:none';
+    src.forEach(b => {
+      const c = attrs(el('button'), { type: 'button' }); c.textContent = b.getAttribute('aria-label') || b.title || b.textContent.trim();
+      ['data-icon', 'data-variant'].forEach(k => { if (b.hasAttribute(k)) c.setAttribute(k, b.getAttribute(k)); });
+      c.addEventListener('click', () => b.click()); menu.appendChild(c);
+    });
+    anchor.setAttribute('data-g-menu', '#' + menu.id); menu.setAttribute('role', 'menu'); document.body.append(anchor, menu);
+    initMenu(anchor);
+    menu.addEventListener('toggle', ev => { if (ev.newState === 'closed') setTimeout(() => { anchor.remove(); menu.remove(); }, 0); });
+    anchor.click();
+  });
+  function initPeek(list) {
+    const key = 'g-peek:' + (list.getAttribute('data-g-peek') || 'rows');
+    if (!matchMedia('(hover: none)').matches || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    try { if (localStorage.getItem(key)) return; } catch (e) { return; }
+    setTimeout(() => {
+      const row = $$('[data-g-row]', list).find(r => actionsOf(r) && r.getBoundingClientRect().top >= 0 && r.getBoundingClientRect().bottom <= innerHeight); if (!row || document.hidden) return;
+      row.setAttribute('data-g-peeking', '');
+      row.addEventListener('animationend', () => { row.removeAttribute('data-g-peeking'); try { localStorage.setItem(key, '1'); } catch (e) {} }, { once: true });
+    }, 900);
+  }
 
   /* ---------- Select / combobox: initSelect builds the parts once (state lives in st); all events are delegated below ---------- */
   function selectParts(sel, id) {   // <div.g-select> around the <select>: a combobox button and a listbox panel (with a filter field when data-searchable)
@@ -1256,7 +1335,7 @@
     ['[data-g-file]', initFile], ['[data-g-number]', numSync],
     ['[data-g-edit]', initEdit], ['[data-g-color]', initColor], ['[data-g-password]', initPassword], ['[data-g-clear-input]', initClearInput],
     ['.g-root input:not([type]), .g-root input:is([type="text"], [type="search"], [type="email"], [type="url"], [type="tel"])', initAutoClear], ['select[data-g-select]', initSelect],
-    ['[data-g-menu]', initMenu], ['nav[data-g-overflow]:not([data-g-overflow="off"]), .g-root nav:not([data-g-pager], [data-g-overflow], :has(> ul[data-g-nav-auto]))', navOverflow], ['[role="tablist"]', initTabs], ['input[type="range"]', initSlider],
+    ['[data-g-menu]', initMenu], ['[data-g-peek]', initPeek], ['nav[data-g-overflow]:not([data-g-overflow="off"]), .g-root nav:not([data-g-pager], [data-g-overflow], :has(> ul[data-g-nav-auto]))', navOverflow], ['[role="tablist"]', initTabs], ['input[type="range"]', initSlider],
     ['table[data-g-selectable]', initTable], ['table', initSort], ['[data-g-more]', initMore], ['[data-g-pager]', pagerRender],
     ['[data-g-anim-loop]', initAnimLoop], ['[data-g-anim-random]', initAnimRandom], ['[data-g-clamp]', initClamp], ['[data-g-ruler]', n => ruler(n)], ['[data-ruler]', rulerOf], ['time', initAge]
   ];
@@ -2395,6 +2474,7 @@
     return { add(f) { subs.add(f); run(); return () => subs.delete(f); }, speed(v) { if (v === undefined) return k; k = Math.max(0, +v || 0); } };
   })();
   global.Glass.scene = scene;
+  global.Glass.rowActions = { open: r => rowOpen(r, true), close: r => rowOpen(r, false) };
 
   /* Touch hover. A finger on an element is a mouse over it: the element and its ancestors get [data-g-hover] (the kit's :hover rules have a twin with it) and the page gets
      mouseover / mouseenter (and mouseout / mouseleave when the finger leaves or lifts), so hover handlers of the page (a preview, a highlight) run on a touch screen too.

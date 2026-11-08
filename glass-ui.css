@@ -585,6 +585,27 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 }
 .g-select__empty { padding: var(--g-gap); font-size: var(--g-fs-footnote); color: var(--g-text-3); }
 
+/* ---------- Row actions (glass-ui.js "Row actions") ----------
+ * <li data-g-row><h4 data-g-swipe>…</h4><span data-g-actions><button aria-label="Delete" data-icon="trash-2" data-variant="ghost" data-size="sm"></button>…</span></li>
+ * The pill sits at the right edge of the row (give its vertical place with --g-actions-top). A pointer: shown by hover and focus inside the row. A finger: hidden until the row is swiped
+ * (data-g-open), and [data-g-swipe] slides left by --g-swipe, clipped at its own left edge so it does not run over what is left of it. */
+@property --g-swipe { syntax: '<length>'; inherits: true; initial-value: 0px; }
+[data-g-actions] { position: absolute; z-index: 3; top: var(--g-actions-top, 0); right: 0; display: flex; gap: 2px; padding: 2px; border-radius: var(--g-radius-pill); background: var(--g-fill); box-shadow: var(--g-rim), var(--g-shadow-float); }
+@media (hover: hover) {
+  [data-g-actions] { transition: opacity var(--g-dur, .2s); }
+  [data-g-row]:not(:hover, :focus-within, [data-g-open]) [data-g-actions] { opacity: 0; pointer-events: none; }
+}
+@media (hover: none) {
+  [data-g-row] { touch-action: pan-y; }
+  [data-g-row]:not([data-g-open]) [data-g-actions] { opacity: 0; pointer-events: none; }
+  [data-g-actions] { transition: opacity var(--g-dur, .2s); }
+}
+[data-g-swipe] { transform: translateX(var(--g-swipe)); clip-path: inset(-20px -20px -20px calc(-4px - var(--g-swipe))); transition: transform var(--g-dur-md) var(--g-ease), clip-path var(--g-dur-md) var(--g-ease); }
+[data-g-row][data-g-dragging] [data-g-swipe] { transition: none; }
+[data-g-row][data-g-peeking] { animation: g-peek 1.1s var(--g-ease) 1; }
+@keyframes g-peek { 0%, 100% { --g-swipe: 0px; } 35%, 60% { --g-swipe: -34px; } }
+@media (prefers-reduced-motion: reduce) { [data-g-row][data-g-peeking] { animation: none; } [data-g-swipe] { transition: none; } }
+
 /* ---------- Menu: the dropdown overlay (also the list of a select and the "More" of a nav) ----------
  * <button data-g-menu="#m">Actions</button>
  * <div role="menu" id="m"><button>Edit <kbd>F2</kbd></button> <a href="#">Share</a> <hr> <button data-variant="danger">Delete</button></div>

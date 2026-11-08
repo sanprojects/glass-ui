@@ -63,7 +63,7 @@ A floating `<nav>` bar that builds its links from page sections and folds the ov
 
 ### [Data and content](https://sanprojects.github.io/glass-ui/#data)
 
-Cards (static and fully clickable), badges, progress bars, ring and spinner, a sortable table with row selection and pagination, numbered and bulleted lists.
+Cards (static and fully clickable), badges, progress bars, ring and spinner, a sortable table with row selection and pagination, numbered and bulleted lists. Row actions (`data-g-row`, `data-g-actions`, `data-g-swipe`): one set of buttons per list row, shown as a glass pill on hover and focus, by a swipe to the left on a touch screen (`data-g-peek` on the list nudges the first row once so the swipe is found), and as a right-click menu.
 
 <img src="docs/data-1.webp" alt="Cards, badges, progress and table" width="100%">
 
