@@ -180,6 +180,7 @@
   const actionsOf = row => row.querySelector('[data-g-actions]');
   const reach = row => { const a = actionsOf(row); return a ? a.offsetWidth : 0; };
   function rowOpen(row, open) {
+    if (!open) row.removeAttribute('data-g-hov');
     if (open) {
       if (!actionsOf(row)) return;
       $$('[data-g-row][data-g-open]').forEach(r => r !== row && rowOpen(r, false));
@@ -249,7 +250,20 @@
     wheel.row.style.setProperty('--g-swipe', wheel.off + 'px'); clearTimeout(wheel.tm); wheel.tm = setTimeout(wheelEnd, 140);
   }, { capture: true, passive: false });
   /* the handle and the keyboard: [data-g-handle] toggles the tray; Tab onto a button of the tray opens it (Tab away or Esc closes); a button of the tray that was pressed closes it again unless it has data-g-keep */
-  on('click', '[data-g-handle]', (e, h) => { const row = rowOf(h); if (row && actionsOf(row)) { e.preventDefault(); rowOpen(row, !row.hasAttribute('data-g-open')); } });
+  on('click', '[data-g-handle]', (e, h) => { const row = rowOf(h); if (row && actionsOf(row)) { e.preventDefault(); if (row.hasAttribute('data-g-hov')) row.removeAttribute('data-g-hov'); else rowOpen(row, !row.hasAttribute('data-g-open')); } });
+  /* a mouse over the handle shows the tray; leaving the row hides it again (a click on the handle keeps it open) */
+  document.addEventListener('pointerover', e => {
+    if (e.pointerType !== 'mouse') return;
+    const h = e.target.closest && e.target.closest('[data-g-handle]'); const row = h && rowOf(h);
+    if (row && actionsOf(row) && !row.hasAttribute('data-g-open')) { rowOpen(row, true); row.setAttribute('data-g-hov', ''); row._gHovAt = Date.now(); }
+  });
+  /* the tray slides in under a cursor that is still on the handle: a click right then must not hit its first button */
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-g-actions] button'); const row = b && rowOf(b); if (row && row._gHovAt && Date.now() - row._gHovAt < 450) { e.stopPropagation(); e.preventDefault(); } }, true);
+  document.addEventListener('pointerout', e => {
+    if (e.pointerType !== 'mouse') return;
+    const row = e.target.closest && e.target.closest('[data-g-row][data-g-hov]');
+    if (row && !(e.relatedTarget && row.contains(e.relatedTarget))) { row.removeAttribute('data-g-hov'); rowOpen(row, false); }
+  });
   document.addEventListener('focusin', e => {
     const a = e.target.closest && e.target.closest('[data-g-actions]'), row = a && rowOf(a);
     if (row && !row.hasAttribute('data-g-open') && e.target.matches(':focus-visible')) { rowOpen(row, true); row.setAttribute('data-g-kb', ''); }
