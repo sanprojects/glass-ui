@@ -707,6 +707,14 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 .g-player-bar { --g-ink: #fff; --g-text: #fff; --g-text-2: #fff; --g-fill-recessed: rgba(255,255,255,.3); --g-fill-strong: rgba(255,255,255,.18);
   position: absolute; inset: auto 0 0; display: flex; align-items: center; gap: var(--g-gap-inner); padding: 14px 10px 6px 6px; background: linear-gradient(transparent, rgba(0,0,0,.65)); }
 .g-player-bar input[type="range"] { flex: 1; min-width: 0; touch-action: none; }
+/* the controls and the tap layer sit above the embed on their own compositing layers: a playing video on iOS is drawn over later siblings otherwise, and the bar vanishes */
+.g-player { isolation: isolate; transform: translateZ(0); }
+.g-player iframe { z-index: 0; }
+.g-player-tap, .g-player-bar { z-index: 2; transform: translateZ(0); -webkit-transform: translateZ(0); }
+.g-player-bar > button { flex: none; position: relative; }
+/* a speaker without waves is "sound off": it is crossed out */
+.g-player-bar > button[data-icon="volume"]::after { content: ""; display: block !important; position: absolute; left: 22%; right: 22%; top: calc(50% - 1px); height: 2px; border-radius: 1px; background: currentColor; rotate: -45deg; pointer-events: none; }
+@media (pointer: coarse) { .g-player-tap { inset: 0 0 52px; } .g-player-bar { padding: 14px 8px 4px 4px; } .g-player-bar > button { min-inline-size: 44px; min-block-size: 44px; } .g-player-bar input[type="range"] { min-block-size: 44px; } }
 
 /* ---------- Chart: a line chart drawn as SVG. Parts: .gl grid line, .ln the line, .pt a point (.plan hollow, .grab held), .hit a wide invisible target, .cr crosshair, .hv hover dot, text (.lb the label).
    .g-chart-anchor is a 1px marker the kit tooltip (a direct child .g-tooltip) hangs on; .g-chart.on shows the crosshair and the hover dot. ---------- */
