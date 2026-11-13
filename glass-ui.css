@@ -457,12 +457,16 @@
 [data-g-edit] { display: inline; font: inherit; color: inherit; cursor: text; outline: none; border-radius: .25em; -webkit-box-decoration-break: clone; box-decoration-break: clone;
   text-decoration: underline dotted transparent 1px; text-underline-offset: .22em; transition: text-decoration-color var(--g-dur), background var(--g-dur), box-shadow var(--g-dur); }
 /* scrub: a vertical drag on a number changes it; the page still pans sideways */
-input[type=number], [data-g-number] input, [data-g-scrub] { touch-action: pan-x; }
+input[type=number], [data-g-number] input { touch-action: pan-x; }
+[data-g-scrub] { touch-action: pan-x pan-y; }   /* a finger scrolls the page from a number; a short hold arms the pull (see the scrub in glass-ui.js) */
+[data-g-scrub][data-g-armed] { -webkit-touch-callout: none; }
 [data-g-scrub] { -webkit-user-drag: none; }
 [data-g-scrub]:not(:focus):not([data-g-editing]) { cursor: ns-resize; }   /* a number that can be pulled says so */
 [data-g-scrubbing], [data-g-scrub] { position: relative; top: var(--g-pull, 0px); }   /* held by the finger: the number follows it by the part of a notch not turned yet */
 [data-g-scrub]:not([data-g-scrubbing]) { transition: top .18s var(--g-ease, ease-out); }   /* and settles back on release */
 [data-g-scrubbing] { cursor: ns-resize; user-select: none; -webkit-user-select: none; }
+.g-scrub-tip { position: fixed; z-index: 2147483000; pointer-events: none; white-space: nowrap; padding: 8px 14px; border-radius: var(--g-radius-field); font: 600 20px/1.2 var(--g-font); font-variant-numeric: tabular-nums; color: var(--g-text-2); background: var(--g-fill-strong); backdrop-filter: var(--g-blur); box-shadow: var(--g-rim), var(--g-shadow-float); }   /* the value of a number held by a finger, above the finger */
+.g-scrub-tip b { color: var(--g-text); }
 [data-g-edit][data-g-scrubbing] { text-decoration-line: underline; text-decoration-style: solid; text-decoration-color: var(--g-text); background: color-mix(in srgb, var(--g-text) 16%, transparent); }
 @media (hover: hover) { [data-g-edit]:hover { text-decoration-color: var(--g-text-3); } }
 @media (hover: none) { [data-g-edit]:not(:focus) { text-decoration-color: var(--g-text-4); } }
@@ -474,7 +478,7 @@ input[type=number], [data-g-number] input, [data-g-scrub] { touch-action: pan-x;
 [data-g-edit][data-saved] { animation: g-edit-saved .6s var(--g-ease, ease-out); }
 /* data-g-edit="dblclick": plain text (the pointer and the hover of the surroundings) until it is double-clicked; then it looks like any edited text */
 [data-g-edit="dblclick"]:not([data-g-editing]) { text-decoration: none; cursor: inherit; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
-[data-g-edit="dblclick"][data-g-scrub]:not([data-g-editing]) { touch-action: pan-x; }   /* a number that is pulled: a pull needs no click first, so the vertical swipe is the page's to take only on the rest of the screen */
+[data-g-edit="dblclick"][data-g-scrub]:not([data-g-editing]) { touch-action: pan-x pan-y; }   /* a number that is pulled: a pull needs no click first, so the vertical swipe is the page's to take only on the rest of the screen */
 @media (hover: hover) { [data-g-edit="dblclick"]:not([data-g-editing]):hover { text-decoration: none; } }
 @media (hover: none) { [data-g-edit="dblclick"]:not([data-g-editing]) { text-decoration: none; } }
 @keyframes g-edit-saved { from { background: color-mix(in srgb, var(--g-text) 45%, transparent); } }

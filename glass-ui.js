@@ -1091,7 +1091,7 @@
   /* scrub: drag a number up or down to change it, one notch per 16px. Works on <input type="number">, on a number field's input ([data-g-number]), on
      any [data-g-scrub] element with numeric text (a [data-g-edit] one saves itself; others get a "change" with { value, was }). The notch follows the size of the number (0-99: 1, 100-999: 10, 1000-9999: 100 ...; a number with decimals steps by its last digit), so a small
      value moves gently and a big one quickly; data-step sets a fixed notch, min / max (or data-min / data-max on text) clamp. A tap still focuses, and a focused number is scrubbed too: tap it, then pull it. */
-  const SCRUB_SEL = 'input[type=number], [data-g-number] input, [data-g-scrub]', SCRUB_PX = 16, SCRUB_NUM = /^-?\d+(?:[.,]\d+)?$/;
+  const SCRUB_SEL = 'input[type=number], [data-g-number] input, [data-g-scrub]', SCRUB_PX = 16, SCRUB_HOLD = 220, SCRUB_NUM = /^-?\d+(?:[.,]\d+)?$/;
   const SCRUB_RANGE = /^(\d+(?:[.,]\d+)?)(\s*[–—-]\s*)(\d+(?:[.,]\d+)?)$/;   /* "8–12": the end under the finger is pulled, the other stays (the low end never passes the high one) */
   const scrubRead = n => (n.matches('input') ? n.value : n._gScrub != null ? n._gScrub : n.textContent).trim();   /* _gScrub: the number the drum is turning to (the text is the old one until the morph has started); typing clears it */
   ['input', 'focusin', 'focusout'].forEach(t => document.addEventListener(t, e => { if (e.target._gScrub != null) e.target._gScrub = null; }, true));
@@ -1122,6 +1122,7 @@
   }
   function scrubState(n, e) {
     const t = scrubRead(n), num = x => ({ v: parseFloat(x.replace(',', '.')), dec: (x.split(/[.,]/)[1] || '').length, comma: x.includes(',') });
+    if (!t && !n.matches('input') && n.hasAttribute('data-g-scrub')) return { t, v: 0, dec: 0, comma: false };   /* an empty field is pulled from 0 */
     if (SCRUB_NUM.test(t)) return { t, ...num(t) };
     const m = !n.matches('input') && SCRUB_RANGE.exec(t);
     if (!m) { const tk = !n.matches('input') && n.hasAttribute('data-g-scrub') && scrubToken(n, e, t); return tk ? { t, ...num(tk.s), tok: tk } : null; }
@@ -1185,30 +1186,43 @@
     try { navigator.vibrate && navigator.vibrate(7); } catch {}
   });
   let scrub = null, scrubbedAt = 0;
+  /* the finger covers the number it pulls: its value is also shown in a small glass bubble above the finger (the number inside a text in bold) while the pull lasts */
+  function scrubTip(s, e) {
+    let t = s.tip;
+    if (!t) { t = s.tip = document.createElement('div'); t.className = 'g-scrub-tip'; t.setAttribute('aria-hidden', 'true'); (s.n.closest('.g-root') || document.body).appendChild(t); }
+    const txt = scrubRead(s.n), tk = s.tok;
+    t.textContent = '';
+    if (tk) { const b = document.createElement('b'); b.textContent = txt.slice(tk.a, tk.b); t.append(txt.slice(0, tk.a), b, txt.slice(tk.b)); } else t.textContent = txt;
+    const w = t.offsetWidth, h = t.offsetHeight;
+    t.style.left = Math.max(8, Math.min(innerWidth - w - 8, e.clientX - w / 2)) + 'px'; t.style.top = Math.max(8, e.clientY - h - 56) + 'px';
+  }
   document.addEventListener('click', e => { if (Date.now() - scrubbedAt < 400 && e.target.closest(SCRUB_SEL)) { scrubbedAt = 0; e.stopImmediatePropagation(); e.preventDefault(); } }, true);   /* the click after a drag is not a tap */
   on('pointerdown', SCRUB_SEL, (e, n) => {
     if ((e.pointerType === 'mouse' && e.button !== 0) || n.disabled || n.readOnly) return;   /* a focused number is scrubbed too: tap it, then pull it */
     const st = scrubState(n, e); if (!st) return;
-    scrub = { n, id: e.pointerId, y: e.clientY, on: false, ...st };
+    scrub = { n, id: e.pointerId, y: e.clientY, x: e.clientX, on: false, armed: e.pointerType !== 'touch', ...st };
+    if (!scrub.armed) { const s = scrub; s.hold = setTimeout(() => { if (scrub !== s) return; s.armed = true; s.y = s.cy != null ? s.cy : s.y; n.setAttribute('data-g-armed', ''); try { navigator.vibrate && navigator.vibrate(10); } catch {} }, SCRUB_HOLD); }   /* a finger: a short hold first, so a swipe that starts on a number is the page's scroll */
   });
   window.addEventListener('pointermove', e => {
     const s = scrub; if (!s || e.pointerId !== s.id) return;
+    if (!s.armed) { if (Math.hypot(e.clientX - s.x, e.clientY - s.y) > 6) { clearTimeout(s.hold); scrub = null; } else s.cy = e.clientY; return; }   /* it moved before the hold: a scroll or a swipe, not a pull */
     let dy = s.y - e.clientY;
     if (!s.on) { if (Math.abs(dy) < 7) return; s.on = true; s.n.setAttribute('data-g-scrubbing', ''); if (document.activeElement === s.n) s.n.blur(); getSelection().removeAllRanges(); try { s.n.setPointerCapture(e.pointerId); } catch {} }
     e.preventDefault();
-    const k = Math.trunc(dy / SCRUB_PX); if (!k) return;
-    s.y -= k * SCRUB_PX;   /* the notches are spent: the next ones count from here, with the step of the new value */
-    s.v = scrubSet(s.n, s, k);
+    const k = Math.trunc(dy / SCRUB_PX);
+    if (k) { s.y -= k * SCRUB_PX; s.v = scrubSet(s.n, s, k); }   /* the notches are spent: the next ones count from here, with the step of the new value */
+    scrubTip(s, e);
   }, { passive: false });
   window.addEventListener('pointermove', e => {   /* the number is held by the finger: it follows it, and settles back when the notch is turned or the finger lets go */
     const s = scrub; if (!s || !s.on || e.pointerId !== s.id) return;
     s.n.style.setProperty('--g-pull', Math.max(-SCRUB_PX, Math.min(SCRUB_PX, e.clientY - s.y)) + 'px');
   }, { passive: true });
+  document.addEventListener('touchmove', e => { if (scrub && scrub.armed && e.cancelable) e.preventDefault(); }, { passive: false });   /* held: the finger pulls the number, the page stays put */
   document.addEventListener('dragstart', e => { const t = e.target, el = t && t.nodeType === 3 ? t.parentElement : t; if (scrub || (el && el.closest && el.closest(SCRUB_SEL))) e.preventDefault(); }, true);   /* a pull is never the browser's drag of the selected text (a focused number is selected whole) */
   function scrubEnd(e) {
-    const s = scrub; if (!s || e.pointerId !== s.id) return; scrub = null;
+    const s = scrub; if (!s || e.pointerId !== s.id) return; scrub = null; clearTimeout(s.hold); s.n.removeAttribute('data-g-armed');
     if (!s.on) return;
-    s.n.removeAttribute('data-g-scrubbing'); s.n.style.removeProperty('--g-pull');
+    s.n.removeAttribute('data-g-scrubbing'); s.n.style.removeProperty('--g-pull'); if (s.tip) s.tip.remove();
     scrubbedAt = Date.now();
     s.n.querySelectorAll('.g-reel').forEach(b => b._finish && b._finish());   /* a drum still turning is the plain number now: that is what is saved */
     if (s.n.matches('input')) { s.n.dispatchEvent(new Event('change', { bubbles: true })); const w = s.n.closest('[data-g-number]'); if (w) numSync(w); } else if (s.n.matches('[data-g-edit]')) editCommit(s.n); else fire(s.n, 'change', { value: scrubRead(s.n), was: s.t });
