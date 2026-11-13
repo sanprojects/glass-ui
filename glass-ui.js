@@ -170,14 +170,15 @@
 
   /* ---------- Row actions: one set of buttons, three ways to reach it ----------
    * <li data-g-row> <h4 data-g-swipe>…</h4> <span data-g-actions><button aria-label="Delete" data-icon="trash-2">…</button>…</span> </li>
-   *   a mouse: the actions are a glass pill at the right of the row, shown by hover and by focus inside the row (so also by Tab)
-   *   a finger: a swipe to the left slides [data-g-swipe] away and shows the pill under it; a swipe back, a tap outside, or Glass.rowActions.close(row) hides it
+   *   one tray of buttons under the right edge of the row, shown the same way everywhere: [data-g-swipe] slides left and the tray is revealed (like Mail on iOS)
+   *   a finger: swipe left; a trackpad: two fingers sideways (or Shift + wheel); a mouse: the [data-g-handle] handle (shown on hover); a keyboard: Tab onto the tray (Esc closes)
+   *   closing: a swipe back, a press outside, Esc, a pressed button (unless data-g-keep), or Glass.rowActions.close(row)
    *   everywhere: the same buttons as a menu on a right click, the menu key or Shift+F10 (data-g-nomenu on a button keeps it out of the menu: a drag handle)
    *   data-g-peek="name" on the list: once, the first row slides a little and back on a touch screen, so the swipe is found (remembered in localStorage under g-peek:name)
    * A swipe does not start on a link, a field, a contenteditable or inside [data-g-actions]. Glass.rowActions.open(row) / close(row) do it from a script. */
   const rowOf = n => n.closest && n.closest('[data-g-row]');
   const actionsOf = row => row.querySelector('[data-g-actions]');
-  const reach = row => { const a = actionsOf(row); return a ? a.offsetWidth + 8 : 0; };
+  const reach = row => { const a = actionsOf(row); return a ? a.offsetWidth : 0; };
   function rowOpen(row, open) {
     if (open) {
       if (!actionsOf(row)) return;
@@ -191,6 +192,7 @@
   document.addEventListener('pointerdown', e => {
     const row = rowOf(e.target);
     $$('[data-g-row][data-g-open]').forEach(r => { if (r !== row) rowOpen(r, false); });   /* a press outside the open row hides its actions */
+    if (row && row.hasAttribute('data-g-open') && !e.target.closest('[data-g-actions], [data-g-handle]')) { rowOpen(row, false); swiped = Date.now(); }   /* a press on the open row itself only closes it */
   }, true);
   /* the swipe runs on touch events, not pointer events: a row inside a horizontal scroll box (the workouts of /gym) loses its pointer events to that scroll on iOS (pointercancel), while a touchmove that is cancelled keeps both the events and the page still */
   document.addEventListener('touchstart', e => {
@@ -207,6 +209,7 @@
     if (!swipe.on) {
       if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { swipe = null; return; }   /* a scroll */
       if (Math.abs(dx) < 10 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      if (!swipe.base && dx > 0) { swipe = null; return; }   /* a closed row takes only a swipe to the left: one to the right is the page's (tabs that turn sideways) */
       swipe.on = true; swipe.row.setAttribute('data-g-dragging', '');
       const sel = getSelection && getSelection(); if (sel && !sel.isCollapsed) sel.empty();
     }
@@ -223,6 +226,48 @@
   document.addEventListener('touchend', () => swipeEnd(false), true);
   document.addEventListener('touchcancel', () => swipeEnd(true), true);
   document.addEventListener('click', e => { if (Date.now() - swiped < 400 && rowOf(e.target)) { e.stopPropagation(); e.preventDefault(); } }, true);
+  /* a trackpad (two fingers, sideways) or Shift + wheel moves the same tray: it follows the fingers and, when they lift (no wheel event for 140ms), opens or closes by where it is and which way it went.
+     A sideways move that would only scroll the page (to the right on a closed row, to the left on an open one) is left to the page. */
+  let wheel = null;
+  const wheelEnd = () => {
+    const w = wheel; if (!w) return; wheel = null; w.row.removeAttribute('data-g-dragging'); swiped = Date.now();
+    if (w.dir > 0 ? w.off < -w.W * .25 : w.off < -w.W * .75) { w.row.removeAttribute('data-g-open'); rowOpen(w.row, true); } else rowOpen(w.row, false);
+  };
+  document.addEventListener('wheel', e => {
+    if (e.ctrlKey || e.metaKey) return;
+    const k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1; let dx = e.deltaX * k; const dy = e.deltaY * k;
+    if (e.shiftKey && !dx) dx = dy;
+    if (!wheel) {
+      const row = rowOf(e.target); if (!row || !actionsOf(row) || e.target.closest('input, textarea, select, [data-g-no-swipe], [role="menu"]') || e.target.isContentEditable) return;
+      const open = row.hasAttribute('data-g-open'), W = reach(row);
+      if (!W || Math.abs(dx) < 2 || (!e.shiftKey && Math.abs(dx) < Math.abs(dy) * 1.2) || (open ? dx > 0 : dx < 0)) return;
+      wheel = { row, W, off: open ? -W : 0, dir: 0, tm: 0 };
+      $$('[data-g-row][data-g-open]').forEach(r => r !== row && rowOpen(r, false)); row.setAttribute('data-g-dragging', '');
+    }
+    if (e.cancelable) e.preventDefault();
+    wheel.off = Math.min(0, Math.max(-wheel.W, wheel.off - dx)); if (dx) wheel.dir = Math.sign(dx);
+    wheel.row.style.setProperty('--g-swipe', wheel.off + 'px'); clearTimeout(wheel.tm); wheel.tm = setTimeout(wheelEnd, 140);
+  }, { capture: true, passive: false });
+  /* the handle and the keyboard: [data-g-handle] toggles the tray; Tab onto a button of the tray opens it (Tab away or Esc closes); a button of the tray that was pressed closes it again unless it has data-g-keep */
+  on('click', '[data-g-handle]', (e, h) => { const row = rowOf(h); if (row && actionsOf(row)) { e.preventDefault(); rowOpen(row, !row.hasAttribute('data-g-open')); } });
+  document.addEventListener('focusin', e => {
+    const a = e.target.closest && e.target.closest('[data-g-actions]'), row = a && rowOf(a);
+    if (row && !row.hasAttribute('data-g-open') && e.target.matches(':focus-visible')) { rowOpen(row, true); row.setAttribute('data-g-kb', ''); }
+  });
+  document.addEventListener('focusout', e => {
+    const row = rowOf(e.target);
+    if (row && row.hasAttribute('data-g-kb') && !row.contains(e.relatedTarget)) { row.removeAttribute('data-g-kb'); rowOpen(row, false); }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    const row = document.querySelector('[data-g-row][data-g-open]'); if (!row) return;
+    row.removeAttribute('data-g-kb'); rowOpen(row, false);
+    const f = document.activeElement; if (f && f.closest && f.closest('[data-g-actions]')) { const h = row.querySelector('[data-g-handle]'); if (h) h.focus(); else if (f.blur) f.blur(); }
+  });
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('[data-g-actions] button, [data-g-actions] a'), row = b && rowOf(b);
+    if (row && !b.closest('[data-g-keep]')) setTimeout(() => { row.removeAttribute('data-g-kb'); rowOpen(row, false); }, 0);
+  });
   /* the same actions as a menu at the pointer: a throw-away 1px anchor and a role="menu" copy of the buttons; an item runs the original button */
   on('contextmenu', '[data-g-row]', (e, row) => {
     const acts = actionsOf(row); if (!acts || e.target.closest('input, textarea, select, a, [role="menu"]') || e.target.isContentEditable) return;
@@ -1143,7 +1188,9 @@
     if (st.rng) t = st.rng.side ? st.rng.other + st.rng.sep + t : t + st.rng.sep + st.rng.other;
     else if (st.tok) { const cur = scrubRead(n), tk = st.tok, nt = t; t = cur.slice(0, tk.a) + nt + cur.slice(tk.b); tk.b = tk.a + nt.length; }   /* the number is replaced inside the text; its place follows its new length */
     if (t !== scrubRead(n)) {
-      if (n.matches('input')) { n.value = t; n.dispatchEvent(new Event('input', { bubbles: true })); } else { const m = global.Glass && global.Glass.morph; n._gScrub = t; if (m && !document.hidden) m(n, t.replace(/&/g, '&amp;').replace(/</g, '&lt;')); else n.textContent = t; }   /* the same drum as every number of the kit */
+      if (n.matches('input')) { n.value = t; n.dispatchEvent(new Event('input', { bubbles: true })); } else { const m = global.Glass && global.Glass.morph; n._gScrub = t; const now = performance.now(), fast = now - (n._gScrubAt || 0) < 220; n._gScrubAt = now;
+        n.querySelectorAll('.g-reel').forEach(r => r._finish && r._finish());   /* a drum is never restarted in the middle of its run: it is finished (the plain number), then the next one turns */
+        if (m && !document.hidden && !fast) m(n, t.replace(/&/g, '&amp;').replace(/</g, '&lt;')); else n.textContent = t; }   /* a long pull (notches faster than the drum turns) shows the plain numbers, the drum comes back when the finger slows down */   /* the same drum as every number of the kit */
       try { navigator.vibrate && navigator.vibrate(7); } catch {}
     }
     return v;
@@ -1186,15 +1233,10 @@
     try { navigator.vibrate && navigator.vibrate(7); } catch {}
   });
   let scrub = null, scrubbedAt = 0;
-  /* the finger covers the number it pulls: its value is also shown in a small glass bubble above the finger (the number inside a text in bold) while the pull lasts */
-  function scrubTip(s, e) {
-    let t = s.tip;
-    if (!t) { t = s.tip = document.createElement('div'); t.className = 'g-scrub-tip'; t.setAttribute('aria-hidden', 'true'); (s.n.closest('.g-root') || document.body).appendChild(t); }
-    const txt = scrubRead(s.n), tk = s.tok;
-    t.textContent = '';
-    if (tk) { const b = document.createElement('b'); b.textContent = txt.slice(tk.a, tk.b); t.append(txt.slice(0, tk.a), b, txt.slice(tk.b)); } else t.textContent = txt;
-    const w = t.offsetWidth, h = t.offsetHeight;
-    t.style.left = Math.max(8, Math.min(innerWidth - w - 8, e.clientX - w / 2)) + 'px'; t.style.top = Math.max(8, e.clientY - h - 56) + 'px';
+  /* how far the number may stand above the finger: as far as there is room before the edge of the box that clips it (or of the screen), at most 36px */
+  function scrubLift(n) {
+    let top = 0; for (let p = n.parentElement; p && p !== document.documentElement; p = p.parentElement) { const o = getComputedStyle(p); if (o.overflowY !== 'visible' || o.clipPath !== 'none') top = Math.max(top, p.getBoundingClientRect().top); }
+    n.style.setProperty('--g-lift', Math.max(0, Math.min(36, Math.floor(n.getBoundingClientRect().top - top - 8))) + 'px');
   }
   document.addEventListener('click', e => { if (Date.now() - scrubbedAt < 400 && e.target.closest(SCRUB_SEL)) { scrubbedAt = 0; e.stopImmediatePropagation(); e.preventDefault(); } }, true);   /* the click after a drag is not a tap */
   on('pointerdown', SCRUB_SEL, (e, n) => {
@@ -1207,22 +1249,17 @@
     const s = scrub; if (!s || e.pointerId !== s.id) return;
     if (!s.armed) { if (Math.hypot(e.clientX - s.x, e.clientY - s.y) > 6) { clearTimeout(s.hold); scrub = null; } else s.cy = e.clientY; return; }   /* it moved before the hold: a scroll or a swipe, not a pull */
     let dy = s.y - e.clientY;
-    if (!s.on) { if (Math.abs(dy) < 7) return; s.on = true; s.n.setAttribute('data-g-scrubbing', ''); if (document.activeElement === s.n) s.n.blur(); getSelection().removeAllRanges(); try { s.n.setPointerCapture(e.pointerId); } catch {} }
+    if (!s.on) { if (Math.abs(dy) < 7) return; s.on = true; scrubLift(s.n); s.n.setAttribute('data-g-scrubbing', ''); if (document.activeElement === s.n) s.n.blur(); getSelection().removeAllRanges(); try { s.n.setPointerCapture(e.pointerId); } catch {} }
     e.preventDefault();
     const k = Math.trunc(dy / SCRUB_PX);
     if (k) { s.y -= k * SCRUB_PX; s.v = scrubSet(s.n, s, k); }   /* the notches are spent: the next ones count from here, with the step of the new value */
-    scrubTip(s, e);
   }, { passive: false });
-  window.addEventListener('pointermove', e => {   /* the number is held by the finger: it follows it, and settles back when the notch is turned or the finger lets go */
-    const s = scrub; if (!s || !s.on || e.pointerId !== s.id) return;
-    s.n.style.setProperty('--g-pull', Math.max(-SCRUB_PX, Math.min(SCRUB_PX, e.clientY - s.y)) + 'px');
-  }, { passive: true });
   document.addEventListener('touchmove', e => { if (scrub && scrub.armed && e.cancelable) e.preventDefault(); }, { passive: false });   /* held: the finger pulls the number, the page stays put */
   document.addEventListener('dragstart', e => { const t = e.target, el = t && t.nodeType === 3 ? t.parentElement : t; if (scrub || (el && el.closest && el.closest(SCRUB_SEL))) e.preventDefault(); }, true);   /* a pull is never the browser's drag of the selected text (a focused number is selected whole) */
   function scrubEnd(e) {
     const s = scrub; if (!s || e.pointerId !== s.id) return; scrub = null; clearTimeout(s.hold); s.n.removeAttribute('data-g-armed');
     if (!s.on) return;
-    s.n.removeAttribute('data-g-scrubbing'); s.n.style.removeProperty('--g-pull'); if (s.tip) s.tip.remove();
+    s.n.removeAttribute('data-g-scrubbing'); s.n.style.removeProperty('--g-lift');
     scrubbedAt = Date.now();
     s.n.querySelectorAll('.g-reel').forEach(b => b._finish && b._finish());   /* a drum still turning is the plain number now: that is what is saved */
     if (s.n.matches('input')) { s.n.dispatchEvent(new Event('change', { bubbles: true })); const w = s.n.closest('[data-g-number]'); if (w) numSync(w); } else if (s.n.matches('[data-g-edit]')) editCommit(s.n); else fire(s.n, 'change', { value: scrubRead(s.n), was: s.t });
