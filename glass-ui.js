@@ -1344,7 +1344,14 @@
   on('paste', '[data-g-edit]', (e, n) => {
     e.preventDefault();
     const t = (e.clipboardData.getData('text/plain') || '').replace(/\s*\n\s*/g, ' '), max = +n.getAttribute('data-max') || 0;
-    document.execCommand('insertText', false, max ? t.slice(0, Math.max(0, max - (n.textContent.length - (getSelection().toString().length)))) : t);
+    const ins = max ? t.slice(0, Math.max(0, max - (n.textContent.length - (getSelection().toString().length)))) : t;
+    let ok = false; try { ok = document.execCommand('insertText', false, ins); } catch (x) {}
+    if (!ok) {   // execCommand is refused (iOS Safari on a plaintext-only box, an empty selection): put the text in by hand
+      const g = getSelection(); let r = g.rangeCount && n.contains(g.getRangeAt(0).commonAncestorContainer) ? g.getRangeAt(0) : null;
+      if (!r) { r = document.createRange(); r.selectNodeContents(n); r.collapse(false); }
+      r.deleteContents(); const tn = document.createTextNode(ins); r.insertNode(tn); r.setStartAfter(tn); r.collapse(true); g.removeAllRanges(); g.addRange(r);
+      n.dispatchEvent(new Event('input', { bubbles: true }));
+    }
   });
   on('input', '[data-g-edit]', (e, n) => {
     const max = +n.getAttribute('data-max') || 0;
