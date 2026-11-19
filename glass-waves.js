@@ -61,7 +61,10 @@
 		var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
 		return gl.getShaderParameter(s, gl.COMPILE_STATUS) ? s : null;
 	}
-	function build() {
+	/* a throw half way (a context the browser has already lost: createShader gives null and shaderSource throws, iOS 16 on /balda,
+	   19.11.2026) must not leave a canvas with no uniforms behind: the next start() would take it as built and draw() would read loc.res of undefined */
+	function build() { try { if (make()) return true; } catch (e) {} cv = gl = null; return false; }
+	function make() {
 		cv = document.createElement('canvas');
 		cv.className = 'waves-canvas'; cv.setAttribute('aria-hidden', 'true');
 		gl = cv.getContext('webgl2', { antialias: false, alpha: false, powerPreference: 'low-power' });
