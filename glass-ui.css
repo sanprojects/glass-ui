@@ -310,8 +310,8 @@
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="outline"]:hover) { background: rgba(var(--g-ov),.12); } }
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="outline"][data-g-hover]) { background: rgba(var(--g-ov),.12); }
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="recessed"]) { background: var(--g-fill-recessed); box-shadow: var(--g-recess); }
-/* Plain = no pad at all, just the icon (or text) in the secondary colour: a close cross on a row, a speaker, a link icon. Not for a main action. */
-:where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="plain"]) { --h: var(--g-icon-md); padding: 0; border-radius: var(--g-radius-sm, 4px); background: none; box-shadow: none; backdrop-filter: none; color: var(--g-text-3); --g-icon-size: var(--g-icon-md); }
+/* Plain = no pad at all, just the icon (or text) in the secondary colour: a close cross on a row, a speaker, a link icon. Not for a main action. The box is at least 24 px (WCAG 2.5.8 target size); the icon stays 18. */
+:where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="plain"]) { --h: max(var(--g-icon-md), 24px); padding: 0; border-radius: var(--g-radius-sm, 4px); background: none; box-shadow: none; backdrop-filter: none; color: var(--g-text-3); --g-icon-size: var(--g-icon-md); }
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="plain"])::before { background-color: currentColor; }
 :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="plain"])::after { display: none; }
 @media (hover: hover) { :where(:is(.g-root,[role="listbox"]) :is(button:not([class^="g-"],[class*=" g-"],[role]:not([role="button"]),th *,[role="menu"] *,[role="listbox"] *,[role="tablist"] *),input:is([type="button"],[type="submit"],[type="reset"]),a:is([data-variant], [data-size], [data-icon]))[data-variant="plain"]:hover) { background: none; color: var(--g-text); } }
@@ -947,10 +947,10 @@ button.g-input-end[data-g-hover], .g-input-start[data-g-hover] { background: var
 :where(:is(.g-root,[role="listbox"]) th) { height: var(--g-h-md); padding: 0 var(--g-gap); text-align: left; font-size: var(--g-fs-caption); line-height: 1.33; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--g-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }   /* a head cell ends with an ellipsis too; it has no max-width: 0 (as td has): the columns share the width by what the heads and the cells hold, not equally */
 /* Sticky header and footer: in the workspace of a tools panel (where a table scrolls inside its figure) and on any table marked data-sticky; data-no-sticky turns it off.
  * They are plain glass, a little stronger than a panel (--g-fill-sticky), with a blur: the rows that scroll under them show through, blurred. The blur sits on the thead / tfoot itself: it does not work on cells. */
-:where(:is(.g-root,[role="listbox"]) :is(.g-shell--tools > main table, table[data-sticky]):not([data-no-sticky], [data-scroll-body]) > :is(thead, tfoot)) { position: sticky; z-index: 2; backdrop-filter: blur(24px); }
-:where(:is(.g-root,[role="listbox"]) :is(.g-shell--tools > main table, table[data-sticky]):not([data-no-sticky], [data-scroll-body]) > thead) { top: 0; }
-:where(:is(.g-root,[role="listbox"]) :is(.g-shell--tools > main table, table[data-sticky]):not([data-no-sticky], [data-scroll-body]) > :is(thead, tfoot) > tr > :is(th, td)) { background: var(--g-fill-sticky); }
-:where(:is(.g-root,[role="listbox"]) :is(.g-shell--tools > main table, table[data-sticky]):not([data-no-sticky], [data-scroll-body]) > tfoot) { bottom: 0; }
+:where(:is(.g-root,[role="listbox"]) :is(.g-shell--tools > :is(main, section) table, table[data-sticky]):not([data-no-sticky], [data-scroll-body]) > :is(thead, tfoot)) { position: sticky; z-index: 2; backdrop-filter: blur(24px); }
+:where(:is(.g-root,[role="listbox"]) :is(.g-shell--tools > :is(main, section) table, table[data-sticky]):not([data-no-sticky], [data-scroll-body]) > thead) { top: 0; }
+:where(:is(.g-root,[role="listbox"]) :is(.g-shell--tools > :is(main, section) table, table[data-sticky]):not([data-no-sticky], [data-scroll-body]) > :is(thead, tfoot) > tr > :is(th, td)) { background: var(--g-fill-sticky); }
+:where(:is(.g-root,[role="listbox"]) :is(.g-shell--tools > :is(main, section) table, table[data-sticky]):not([data-no-sticky], [data-scroll-body]) > tfoot) { bottom: 0; }
 /* Scrolling body: <table data-scroll-body> fills the height of its figure; the header and the footer stay where they are, only the rows scroll between them.
  * The rows are grids, so the columns of the header, the body and the footer line up without a table layout: they are of equal width, or as --g-cols says
  * (a grid-template-columns list: style="--g-cols: 3rem 1fr 8rem"). The width of a column no longer follows its content. */
@@ -1336,14 +1336,14 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 /* ---------- App shell: tool panel | workspace | inspector ----------
  * <div class="g-shell">
  *   <aside> … </aside>        tool panel (left)
- *   <main> … </main>          workspace (centre)
+ *   <main> … </main>          workspace (centre); a <section> when the page has a <main> of its own around the shell (a document has one <main>)
  *   <aside> … </aside>        inspector (right, the last aside): stronger glass
  * </div>   In a panel: .g-shell__head (tabs + button), .g-shell__row (title + action), .g-list for trees. */
 .g-shell { --g-shell-side: 280px; display: grid; grid-template-columns: var(--g-shell-side) minmax(0, 1fr) var(--g-shell-side); min-height: 560px; min-width: 0; overflow: hidden; border-radius: var(--g-radius-card); }
 .g-glass .g-shell { backdrop-filter: none; }
 .g-shell > aside { display: flex; flex-direction: column; gap: var(--g-gap); min-width: 0; padding: var(--g-pad); overflow: auto; background: var(--g-fill); }
 .g-shell > aside:last-child { background: var(--g-fill-strong); }
-.g-shell > main { display: grid; place-items: center; min-width: 0; padding: var(--g-pad); overflow: auto; background: var(--g-fill-work); }   /* the workspace sits deeper than the side panels, whatever is behind the shell */
+.g-shell > :is(main, section) { display: grid; place-items: center; min-width: 0; padding: var(--g-pad); overflow: auto; background: var(--g-fill-work); }   /* the workspace sits deeper than the side panels, whatever is behind the shell */
 .g-shell__head { display: flex; align-items: center; gap: var(--g-gap); }
 .g-shell__head [role="tablist"] { flex: 1; }
 .g-shell__head [role="tablist"] > * { flex: 1; }
@@ -1428,21 +1428,21 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 .g-cluster[data-align="end"] { justify-content: flex-end; }
 .g-cluster[data-align="between"] { justify-content: space-between; }
 
-/* ---------- Tools layout: <div class="g-shell g-shell--tools"><aside>…</aside><main>…</main></div>   (or <div class="g-shell" data-fixed>: the same layout, the panel stays, the workspace scrolls)
+/* ---------- Tools layout: <div class="g-shell g-shell--tools"><aside>…</aside><main>…</main></div> (the workspace is <main> or <section>)   (or <div class="g-shell" data-fixed>: the same layout, the panel stays, the workspace scrolls)
  * A toolbar on the left, the workspace on the right; they touch (the workspace is the darker one) and each scrolls on its own.
  * Under 900px they stack. The panels pad and space their blocks with --g-gap; give the shell a height (or flex: 1 in a column). */
 /* The panel is 300px, or --g-shell-min when a page needs more (a row of fixed cells: set --g-shell-min on the shell to their width plus the panel's padding). */
 :is(.g-shell--tools, .g-shell:where([data-fixed])) { --g-shell-side: max(300px, var(--g-shell-min, 0px)); grid-template-columns: var(--g-shell-side) minmax(0, 1fr); gap: 0; flex: 1 1 0; min-height: 0; }
-:is(.g-shell--tools, .g-shell:where([data-fixed])) > aside, :is(.g-shell--tools, .g-shell:where([data-fixed])) > main { min-height: 0; overflow: auto; overscroll-behavior: contain; }
+:is(.g-shell--tools, .g-shell:where([data-fixed])) > aside, :is(.g-shell--tools, .g-shell:where([data-fixed])) > :is(main, section) { min-height: 0; overflow: auto; overscroll-behavior: contain; }
 .g-shell:is(.g-shell--tools, :where([data-fixed])) > aside { gap: var(--g-gap); }
 :is(.g-shell--tools, .g-shell:where([data-fixed])):not(:has(> aside)) { grid-template-columns: minmax(0, 1fr); }   /* a workspace alone (a table on the whole width): no empty column for the panel */
-:is(.g-shell--tools, .g-shell:where([data-fixed])) > main { display: flex; flex-direction: column; gap: var(--g-gap); place-items: initial; align-content: normal; }
-:is(.g-shell--tools, .g-shell:where([data-fixed])) > main > article { flex: none; }   /* a card is clipped (overflow: hidden), so in a column it would shrink to its padding and cut its own text; the workspace scrolls instead */
+:is(.g-shell--tools, .g-shell:where([data-fixed])) > :is(main, section) { display: flex; flex-direction: column; gap: var(--g-gap); place-items: initial; align-content: normal; }
+:is(.g-shell--tools, .g-shell:where([data-fixed])) > :is(main, section) > article { flex: none; }   /* a card is clipped (overflow: hidden), so in a column it would shrink to its padding and cut its own text; the workspace scrolls instead */
 :is(.g-shell--tools, .g-shell:where([data-fixed])) > aside:last-child { background: var(--g-fill); }
 /* A second panel on the right: any element with data-g-aside after the workspace (a script's widget, or an <aside data-g-aside>), as wide as the left one (the same --g-shell-side, so a page that widens the first widens both). It is a panel like the left one; while it is hidden it takes no column. A page that shows it adds the width to --g-page-extra, so the workspace keeps its size. Under 900px it stacks like the panel. */
 :is(.g-shell--tools, .g-shell:where([data-fixed])):has(> aside) > [data-g-aside]:not([hidden]) { display: flex; flex-direction: column; gap: var(--g-gap); min-width: 0; min-height: 0; padding: var(--g-pad); overflow: auto; overscroll-behavior: contain; background: var(--g-fill); box-sizing: border-box; }
-:is(.g-shell--tools, .g-shell:where([data-fixed])):has(> aside):has(> main ~ [data-g-aside]:not([hidden])) { grid-template-columns: var(--g-shell-side) minmax(0, 1fr) var(--g-shell-side); }
-@media (max-width: 900px) { :is(.g-shell--tools, .g-shell:where([data-fixed])):has(> aside):has(> main ~ [data-g-aside]:not([hidden])) { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; } }
+:is(.g-shell--tools, .g-shell:where([data-fixed])):has(> aside):has(> :is(main, section) ~ [data-g-aside]:not([hidden])) { grid-template-columns: var(--g-shell-side) minmax(0, 1fr) var(--g-shell-side); }
+@media (max-width: 900px) { :is(.g-shell--tools, .g-shell:where([data-fixed])):has(> aside):has(> :is(main, section) ~ [data-g-aside]:not([hidden])) { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; } }
 /* .g-shell--stack: the panel is always on top on the whole width (what the narrow screen does), whatever the width */
 :is(.g-shell--tools, .g-shell:where([data-fixed])).g-shell--stack { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
 :is(.g-shell--tools, .g-shell:where([data-fixed])).g-shell--stack > aside { max-height: 45dvh; }

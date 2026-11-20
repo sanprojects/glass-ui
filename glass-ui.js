@@ -1714,9 +1714,9 @@
         if (/flex|grid/.test(cs.display)) { root.style.marginRight = '-' + (parseFloat(cs.columnGap) || 0) + 'px'; root.style.marginBottom = '-' + (parseFloat(cs.rowGap) || 0) + 'px'; }
       }
       const total = sHeight() || 1;
-      // each mark is as tall as its section's share, but never under one text line plus a gap (22 px): the short ones take it and the long ones give up the same amount.
-      // When even that does not fit (hundreds of sections), only the marks that are at least 22 px apart are drawn; a hidden section belongs to the mark before it
-      const MIN = 22, weighed = list.some(s => s.weight != null), wsum = list.reduce((a, s) => a + (weighed ? s.weight || 0 : Math.max(0, s.to - s.from)), 0) || 1;
+      // each mark is as tall as its section's share, but never under one text line plus a gap (24 px): the short ones take it and the long ones give up the same amount.
+      // When even that does not fit (hundreds of sections), only the marks that are at least 24 px apart are drawn; a hidden section belongs to the mark before it
+      const MIN = 24, weighed = list.some(s => s.weight != null), wsum = list.reduce((a, s) => a + (weighed ? s.weight || 0 : Math.max(0, s.to - s.from)), 0) || 1;
       const raw = list.map(s => (weighed ? s.weight || 0 : Math.max(0, s.to - s.from)) / (weighed ? wsum : total) * h);   // with weights the marks are as tall as the weights say, not as the sections are long
       const ys = []; let acc = weighed || !list.length ? 0 : list[0].from / total * h; raw.forEach(v => { ys.push(acc); acc += v; });
       let need = raw.reduce((a, v) => a + Math.max(0, MIN - v), 0), spare = raw.reduce((a, v) => a + Math.max(0, v - MIN), 0);
