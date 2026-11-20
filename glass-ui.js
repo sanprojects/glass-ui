@@ -2072,7 +2072,13 @@
     const radios = e => fieldsOf(form).filter(r => r.type === 'radio' && r.name === e.name);
     /* action="/section/{a}/{b}" -> { base: '/section', vars: ['a', 'b'] } (the base as the address carries it, percent-encoded); null: another site, or a {name} that is not a whole trailing segment */
     function template(f) {
-      const vars = [], a = (f.getAttribute('action') || '').trim().replace(/\{([^{}/]+)\}/g, (_, n) => '__g' + (vars.push(n) - 1) + '__');
+      const raw = (f.getAttribute('data-g-action') || f.getAttribute('action') || '').trim();   /* the template lives in data-g-action once the form is bound: a `{name}` in the real action would be an invalid character of an href */
+      const t = template1(f, raw), i = raw.indexOf('{');
+      if (t && i > 0 && f.getAttribute('action') === raw) { f.setAttribute('data-g-action', raw); f.setAttribute('action', raw.slice(0, i)); }   /* the action the browser sends to without the kit: the path up to the first {name} */
+      return t;
+    }
+    function template1(f, raw) {
+      const vars = [], a = raw.replace(/\{([^{}/]+)\}/g, (_, n) => '__g' + (vars.push(n) - 1) + '__');
       if (!a) return null;   /* no action: the form does not say what address it stands for (such a form is usually run by a script of the page) */
       let u; try { u = new URL(a, location.href); } catch (_) { return null; }
       if (u.origin !== location.origin) return null;
