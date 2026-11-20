@@ -1413,7 +1413,7 @@ button:is([data-hint], :where(.g-field[title]:not([data-no-hint], [data-no-hint]
 :where(.g-root article[data-tile]) { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--g-gap-inner); position: relative; width: 100%; max-width: var(--g-tile-max, 250px); aspect-ratio: 1 / 1; justify-self: center; min-width: 0; box-sizing: border-box; text-align: center; container-type: inline-size; transition: transform var(--g-dur-md) var(--g-ease); }
 :where(.g-root article[data-tile] > [data-icon]) { --g-icon-size: 40cqw; }
 :where(.g-root article[data-tile] > img) { width: 40cqw; height: auto; }
-:where(.g-root article[data-tile] > h4) { font-size: var(--g-fs-body); font-weight: 400; overflow-wrap: break-word; hyphens: auto; text-align: center; }
+:where(.g-root article[data-tile] > :is(h2, h3, h4)) { font-size: var(--g-fs-body); font-weight: 400; overflow-wrap: break-word; hyphens: auto; text-align: center; }
 :where(.g-root article[data-tile] > data) { position: absolute; top: var(--g-inset); right: var(--g-inset); bottom: auto; margin: 0; }
 @media (hover: hover) { :where(.g-root a:has(> article[data-tile]):hover > article[data-tile]) { transform: translateY(-3px); } }
 :where(.g-root a:has(> article[data-tile])[data-g-hover] > article[data-tile]) { transform: translateY(-3px); }
