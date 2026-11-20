@@ -27,7 +27,7 @@
 		' c+=(h(gl_FragCoord.xy+uT)-.5)/255.;\n' +
 		' o=vec4(c,1.);}';
 
-	var cv = null, gl = null, prog, loc, off = null, acc = 0, cols = null, colsAt = 0, saveAt = 0, saveTimer = 0, savedR = -1, watch = 0;
+	var cv = null, gl = null, prog, loc, off = null, acc = 0, cols = null, colsAt = 0, saveAt = 0, saveTimer = 0, savedR = -1, watch = 0, soft = false;
 	/* where the last page (or this one before a reload) left off: its time and its last frame (a small JPEG) are kept in localStorage (it is shared by tabs, so a link opened in a new tab goes on too); the time is taken up here, and the frame is painted
 	   before the first paint by an inline script after the scene (--g-waves-poster), so the background goes on from the same moment instead of starting over */
 	var KEY = 'g-waves';
@@ -68,6 +68,8 @@
 		cv = document.createElement('canvas');
 		cv.className = 'waves-canvas'; cv.setAttribute('aria-hidden', 'true');
 		gl = cv.getContext('webgl2', { antialias: false, alpha: false, powerPreference: 'low-power' });
+		/* a software rasteriser (SwiftShader, llvmpipe: no GPU, headless browsers, speed-test bots) runs this shader on the CPU and blocks the main thread for seconds; the CSS gradient stays there */
+		if (gl) { var ex = gl.getExtension('WEBGL_debug_renderer_info'), rn = ex ? String(gl.getParameter(ex.UNMASKED_RENDERER_WEBGL)) : ''; if (/swiftshader|llvmpipe|software|softpipe/i.test(rn)) { soft = true; gl = null; } }
 		var vs = gl && shader(gl.VERTEX_SHADER, VS), fs = gl && shader(gl.FRAGMENT_SHADER, FS);
 		if (!vs || !fs) { cv = gl = null; return false; }
 		prog = gl.createProgram(); gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
@@ -111,7 +113,7 @@
 	function haveColours() { return getComputedStyle(scene).getPropertyValue('--sc1').trim() !== '' || document.readyState === 'complete'; }
 	function start() {
 		if (!haveColours()) return;
-		if (!cv && !build()) return;
+		if (soft || (!cv && !build())) return;
 		if (!cv.parentNode) scene.appendChild(cv);
 		scene.classList.add('is-waves');
 		draw(); later();
