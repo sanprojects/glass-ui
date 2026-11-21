@@ -2201,13 +2201,15 @@
     }
     /* mine: the user changed this form (typed, chose, cleared, sent): it stands as the answer would draw it, so the request names it (X-G-Form: its id)
        and the server may send it back as <form id="..." data-g-same></form>, "as you have it". Not after a link or back / forward: the kit only
-       puts the values in then, the server draws the rest of the form (the tab that is chosen) */
-    function fetchPage(url, signal, mine) {
+       puts the values in then, the server draws the rest of the form (the tab that is chosen).
+       fresh: a new pick (submit button, clear cross, refresh): the browser's own HTTP cache is skipped too (cache: 'reload' sends Cache-Control: no-cache),
+       a plain link / back / forward / typing keeps it */
+    function fetchPage(url, signal, mine, fresh) {
       const key = (mine && form.id ? 'mine|' : '') + url;
       if (cache.has(key)) return cache.get(key);
       const headers = { 'X-G-Fetch': '1' };
       if (mine && form.id) headers['X-G-Form'] = form.id;
-      const p = fetch(url, { headers, signal, credentials: 'same-origin' }).then(res => {
+      const p = fetch(url, fresh ? { headers, signal, credentials: 'same-origin', cache: 'reload' } : { headers, signal, credentials: 'same-origin' }).then(res => {
         const u = new URL(res.url);
         if (res.status >= 500 || u.origin !== location.origin || !/html/i.test(res.headers.get('content-type') || '')) return null;
         return res.text().then(html => ({ url: u.pathname + u.search, html }));
@@ -2364,7 +2366,7 @@
       pending = url;
       hold(form, 'load', true);
       unfail(); spin(true);
-      fetchPage(url, c.signal, mine).then(r => {
+      fetchPage(url, c.signal, mine, fresh).then(r => {
         if (ctl !== c) return;   /* a newer one is on its way */
         ctl = null; pending = '';
         const put = r && apply(r.html, null, fresh);
