@@ -2380,7 +2380,8 @@
     const schedule = (url, ms) => { clearTimeout(timer); if (url === shown || !own(url)) timer = setTimeout(() => load(url, false, true, true), ms || DELAY); };   /* the page's own answer: at once */
     /* A POST form of this page is sent in the background too: what is typed, the focus and the scroll stay. The address stays (an answer that redirects
        to this page puts the new address into the history; one that redirects elsewhere is loaded there); a newer submit of the form cancels the older
-       one. An error, an answer that is not HTML (a file): the browser sends the form itself, as it would without the kit. */
+       one. An answer that is not HTML and not an error (a file), or from another site: the browser sends the form itself. An error with nothing to place (no <main>), or no
+       answer: the line stops and the form shows an alert with the status (g:error, see fail below). */
     const posts = new WeakMap(), passing = new WeakSet();   /* form -> the AbortController of its request on the way; a form the browser is sending itself (while its submit runs) */
     function post(f, by) {
       if (posts.has(f)) posts.get(f).abort();
@@ -2389,21 +2390,37 @@
       const data = by ? new FormData(f, by) : new FormData(f);
       const body = (f.enctype || '').toLowerCase() === 'multipart/form-data' ? data : new URLSearchParams([...data].filter(p => typeof p[1] === 'string'));
       const native = () => { if (posts.get(f) !== c) return; posts.delete(f); hold(f, 'post', false); passing.add(f); try { if (by) f.requestSubmit(by); else f.requestSubmit(); } finally { passing.delete(f); } };
+      /* No usable answer (a network failure, an error status with nothing to place - the edge's own 415 / 502 page): the line stops and the form shows the
+         status, never a line that runs on. g:error (cancelable; detail: status, statusText, url) first: a page that shows it itself cancels it.
+         data-error-answer="…" on the form is the text before the status. */
+      const fail = (status, statusText) => {
+        if (posts.get(f) !== c) return;
+        posts.delete(f); hold(f, 'post', false);
+        if (!f.dispatchEvent(new CustomEvent('g:error', { bubbles: true, cancelable: true, detail: { status, statusText: statusText || '', url: f.action } }))) return;
+        const a = el('div', 'g-alert');
+        a.setAttribute('data-tone', 'danger'); a.setAttribute('data-icon', 'triangle-alert'); a.setAttribute('role', 'alert'); a.setAttribute('data-g-error', '');
+        const lead = f.getAttribute('data-error-answer') || (status ? 'The server could not answer' : 'No answer from the server, try again');
+        a.textContent = lead + (status ? ' (' + status + (statusText ? ' ' + statusText : '') + ')' : '');
+        f.insertBefore(a, f.firstChild);
+      };
+      const old = f.querySelector(':scope > [data-g-error]'); if (old) old.remove();
       hold(f, 'post', true);
       fetch(f.action, { method: 'POST', body, headers: { 'X-G-Fetch': '1' }, signal: c.signal, credentials: 'same-origin' }).then(res => {
         const u = new URL(res.url), to = u.pathname + u.search;
         if (posts.get(f) !== c) return;
-        if (res.status >= 500 || u.origin !== location.origin || !/html/i.test(res.headers.get('content-type') || '')) return native();
+        const html = /html/i.test(res.headers.get('content-type') || '');
+        if (u.origin !== location.origin || (res.ok && !html)) return native();   /* another site, a file: the browser's */
+        if (!res.ok && !html) return fail(res.status, res.statusText);
         if (res.redirected && u.pathname !== location.pathname) { posts.delete(f); return location.assign(to); }   /* a GET: safe to ask again */
-        return res.text().then(html => {
+        return res.text().then(text => {
           if (posts.get(f) !== c) return;
+          if (!apply(text, f)) return res.ok ? native() : fail(res.status, res.statusText);   /* an error page of the site with its <main> is placed as any answer */
           posts.delete(f);
           if (res.redirected && to !== here()) history.pushState(null, '', to);
-          if (!apply(html, f)) return native();
           hold(f, 'post', false);
           fire(document, 'g:navigate', { url: location.href, title: document.title });
         });
-      }).catch(err => { if (err && err.name !== 'AbortError') native(); });
+      }).catch(err => { if (err && err.name !== 'AbortError') fail(0, ''); });
     }
     /* the field of the form an event of the page is about: one of the form, or the one a field of a copy stands for; null: not this form's */
     function ours(e) {
